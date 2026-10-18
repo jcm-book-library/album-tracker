@@ -1,0 +1,1207 @@
+<title>Sleeves &amp; Grooves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column on phone, two on laptop. Proton Seasons theme copied from the book tracker:
+   dark base tinted ~5% by the month, one soft colour per month in --accent. */
+:root{
+  --bg:#16141f; --surface:#1e1b2b; --raise:#2a2640; --line:#353050;
+  --fg:#f1effa; --muted:#a49fbf; --accent:#43ad8f; --accent-next:#7bae6a; --accent-ink:#ffffff; --accent-2:#c4f04a;
+  --danger:#ff7a7a;
+  --display:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+h1,h2,.num{font-family:var(--display)}
+#todayLabel{color:var(--accent)}
+h1{margin:0}
+.wordmark{font-family:"Atkinson Hyperlegible",var(--body);font-weight:700;font-size:clamp(26px,5vw,34px);line-height:1.1;letter-spacing:-.01em;color:#eef0fa;margin-top:6px;display:block}
+h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.01em}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tnum{font-variant-numeric:tabular-nums}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.status[data-state="live"] .dot{background:var(--accent)}
+.status[data-state="error"] .dot{background:var(--danger)}
+.status[data-state="loading"] .dot{background:var(--accent);animation:pulse 1s infinite alternate}
+@keyframes pulse{to{opacity:.3}}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--muted)}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-primary:hover{filter:brightness(1.08);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notice{background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-bottom:18px;font-size:14px}
+.notice[data-kind="error"]{border-left-color:var(--danger)}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .num{font-size:clamp(28px,4vw,40px);font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.stat .sub{font-size:13px;color:var(--muted)}
+.stat.streak{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 20%,var(--surface)),color-mix(in srgb,var(--accent-next) 8%,var(--surface)) 75%);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.stat.streak .num{color:color-mix(in srgb,var(--accent) 70%,#fff)}
+.goalbar{height:6px;border-radius:3px;background:var(--raise);overflow:hidden;margin-top:6px}
+.goalbar > i{display:block;height:100%;background:var(--accent-2);border-radius:3px;transition:width .4s}
+
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+
+/* day picker (Today / Yesterday / pick a date) */
+.logday{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.logday button{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 11px;cursor:pointer}
+.logday button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 22%,transparent);border-color:var(--accent);color:var(--fg)}
+.logday input[type=date]{font:inherit;font-size:12px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:3px 10px;color-scheme:dark;max-width:100%}
+.logday-banner{margin:10px 0 0;padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--accent) 16%,transparent);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+
+/* log a listen */
+.form-stack{display:flex;flex-direction:column;gap:12px}
+.form-stack input[type="search"],.form-stack input[type="text"],.form-stack input[type="number"]{width:100%}
+input[type="search"],input[type="text"],input[type="number"],input[type="date"],select,textarea{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;color-scheme:dark;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+.pick-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pick-list:empty{display:none}
+.pick-list button{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:8px 12px;border-top:1px solid var(--line)}
+.pick-list li:first-child button{border-top:0}
+.pick-list button:hover,.pick-list button:focus-visible{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.pick-list .t{font-weight:600;display:block}
+.pick-list .m{font-size:12px;color:var(--muted)}
+.picked{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line))}
+.picked .t{font-weight:600}
+.picked .m{font-size:12px;color:var(--muted)}
+.logrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.logrow label,.flabel{font-size:12px;color:var(--muted);font-weight:600}
+input.plays{width:84px}
+.linkbtn{border:0;background:none;color:color-mix(in srgb,var(--accent) 70%,#fff);font-weight:600;font-size:13px;padding:0;cursor:pointer}
+.linkbtn:hover{text-decoration:underline}
+
+/* rows used by On rotation / First listens / Recent entries */
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rows > li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.rows > li:first-child{border-top:0;padding-top:0}
+.rows .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.rows .m{font-size:13px;color:var(--muted);grid-column:1}
+.rows .acts{grid-row:1/3;grid-column:2;display:flex;gap:6px;align-items:center}
+.rows .wide{grid-column:1/-1}
+.rows .done{font-size:12px;color:var(--accent-2);font-weight:600}
+.rate-pick{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.rate-pick button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;padding:6px 0;min-width:0}
+.rate-pick button:hover{border-color:var(--accent);color:var(--fg)}
+.rate-pick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rate-bar{display:flex;gap:8px;align-items:center;margin-top:6px}
+.edit{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.edit input[type=number]{width:80px}
+.edit input[type=text]{flex:1 1 140px}
+.empty{color:var(--muted);font-size:14px}
+
+/* tabs */
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:20px;width:max-content;max-width:100%;overflow-x:auto}
+.tab{border:0;background:transparent;color:var(--muted);border-radius:8px;padding:7px 16px;font-weight:600;font-size:14px;white-space:nowrap}
+.tab[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 24%,var(--surface));color:var(--fg);box-shadow:inset 0 -2px 0 var(--accent)}
+
+/* library */
+.lib-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.lib-bar input[type="search"]{flex:1 1 220px;min-width:0}
+.fgroup{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+.fgroup .flabel{min-width:4.2em}
+.chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+.chip[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 24%,var(--surface));border-color:var(--accent);color:var(--fg)}
+.chip .n{font-variant-numeric:tabular-nums;opacity:.7;margin-left:4px;font-weight:500}
+.table-wrap{border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-top:12px;overflow:hidden}
+table.lib{width:100%;border-collapse:collapse;font-size:14px}
+.lib th{text-align:left;background:var(--raise);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:9px 10px;white-space:nowrap;user-select:none}
+.lib th[data-k]{cursor:pointer}
+.lib th[aria-sort="ascending"]::after{content:" ↑";color:var(--accent)} .lib th[aria-sort="descending"]::after{content:" ↓";color:var(--accent)}
+.lib th.num,.lib td.num{text-align:right}
+.lib td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
+.lib tbody tr.row{cursor:pointer}
+.lib tbody tr.row:hover td{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.lib tr.open td{background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.lib .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.lib .artist{overflow-wrap:anywhere}
+.pill{--c:var(--muted);display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent);border:1px solid color-mix(in srgb,var(--c) 38%,transparent)}
+.pill[data-dash]{border-style:dashed}
+.rating{font-family:var(--display);font-weight:700;color:color-mix(in srgb,var(--accent) 60%,#fff);white-space:nowrap}
+.rating small{font-weight:400;color:var(--muted);font-size:11px}
+.detail td{padding:6px 16px 16px;cursor:default}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:13px;margin:0 0 12px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;overflow-wrap:anywhere}
+.detail .acts{display:flex;gap:8px;flex-wrap:wrap}
+.lib-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+
+/* bars (used by later stages) */
+.hbars{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}
+.hbar{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
+.hbar .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .track{height:10px;background:var(--raise);border-radius:4px;overflow:hidden}
+.hbar .fill{display:block;height:100%;background:var(--accent);border-radius:4px}
+.hbar .val{font-variant-numeric:tabular-nums;color:var(--muted);min-width:3.5em;text-align:right}
+
+/* edit dialog */
+dialog{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:16px;padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 40px)}
+dialog::backdrop{background:rgba(8,6,14,.65)}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.dlg-head h2{font-size:20px}
+.dlg-body{padding:16px 20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.dlg-foot{display:flex;justify-content:space-between;gap:10px;padding:14px 20px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface)}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field input,.field select,.field textarea{width:100%}
+.field label{font-size:12px;color:var(--muted);font-weight:600}
+.field.w2{grid-column:span 2} .field.w4{grid-column:1/-1}
+.field textarea{min-height:70px;resize:vertical}
+.sec-label{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin-top:6px}
+
+@media (max-width:860px){
+  .grid{display:flex;flex-direction:column;gap:20px}
+  .col{display:contents}
+  .p-log{order:1}.p-rot{order:2}.p-first{order:3}.p-recent{order:4}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dlg-body{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* library: stacked cards, no sideways scroll */
+  .table-wrap{border:0;background:transparent;overflow:visible}
+  .lib thead{display:none}
+  .lib,.lib tbody,.lib tr,.lib td{display:block}
+  .lib tr.row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:12px 14px;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+  .lib td{padding:0;border:0}
+  .lib tbody tr.row:hover td,.lib tr.open td{background:transparent}
+  .lib tr.open{border-color:var(--accent)}
+  .lib td.c-title{order:1;flex:1 1 calc(100% - 70px);min-width:0}
+  .lib td.c-rating{order:2;flex:none;text-align:right}
+  .lib td.c-artist{order:3;flex:1 0 100%;color:var(--muted)}
+  .lib td.c-status{order:4}.lib td.c-genre{order:5}.lib td.c-format{order:6}
+  .lib td.c-year{order:7;color:var(--muted);font-size:12px;margin-left:auto}
+  .lib td:empty{display:none}
+  .lib tr.detail{margin:-6px 0 10px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+  .lib .detail td{padding:0}
+}
+@media (max-width:420px){.dlg-body{grid-template-columns:minmax(0,1fr)}.field.w2{grid-column:auto}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow" id="todayLabel">Today</div>
+      <h1><span class="wordmark">Sleeves &amp; Grooves</span></h1>
+    </div>
+    <div class="status" id="status" data-state="loading" role="status">
+      <span class="dot"></span><span id="statusText">Connecting to your sheet…</span>
+      <button class="btn" id="refreshBtn" type="button">Refresh</button>
+    </div>
+  </header>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-log" aria-selected="true" aria-controls="view-log" type="button">Log</button>
+    <button class="tab" role="tab" id="tab-library" aria-selected="false" aria-controls="view-library" type="button">Library</button>
+  </nav>
+
+  <!-- ===== Log ===== -->
+  <div id="view-log" role="tabpanel" aria-labelledby="tab-log">
+    <section class="stats" aria-label="Summary">
+      <div class="stat">
+        <span class="eyebrow" id="sHeardLabel">Heard this year</span>
+        <span class="num tnum" id="sHeard">–</span>
+        <span class="sub" id="sHeardSub"></span>
+        <div class="goalbar" aria-hidden="true"><i id="sHeardBar" style="width:0"></i></div>
+      </div>
+      <div class="stat">
+        <span class="eyebrow" id="sMonthLabel">Listens this month</span>
+        <span class="num tnum" id="sMonth">–</span>
+        <span class="sub" id="sMonthSub"></span>
+      </div>
+      <div class="stat streak">
+        <span class="eyebrow">Listening streak</span>
+        <span class="num tnum" id="sStreak">–</span>
+        <span class="sub" id="sStreakSub">days</span>
+      </div>
+      <div class="stat">
+        <span class="eyebrow">Owned on vinyl</span>
+        <span class="num tnum" id="sVinyl">–</span>
+        <span class="sub" id="sVinylSub"></span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="col">
+        <section class="panel p-log" aria-labelledby="logH">
+          <div class="panel-head"><h2 id="logH">Log a listen</h2></div>
+          <div class="form-stack">
+            <div>
+              <input type="search" id="lgSearch" placeholder="Search title or artist" aria-label="Search albums to log" autocomplete="off">
+              <ul class="pick-list" id="lgResults"></ul>
+              <div class="picked" id="lgPicked" hidden></div>
+            </div>
+            <div>
+              <div class="flabel" style="margin-bottom:6px">Day</div>
+              <div class="logday" role="group" aria-label="Day you're logging for">
+                <button type="button" data-day="0" aria-pressed="true">Today</button>
+                <button type="button" data-day="-1" aria-pressed="false">Yesterday</button>
+                <input type="date" id="logDate" aria-label="Pick a day to log for">
+              </div>
+              <div class="logday-banner" id="logDayBanner" hidden></div>
+            </div>
+            <div class="logrow">
+              <label for="lgPlays">Plays</label>
+              <input type="number" class="plays" id="lgPlays" min="1" max="99" value="1" inputmode="numeric">
+            </div>
+            <input type="text" id="lgNote" placeholder="Note (optional)" aria-label="Note" autocomplete="off">
+            <div><button class="btn btn-primary" id="lgSave" type="button" disabled>Save listen</button></div>
+          </div>
+        </section>
+
+        <section class="panel p-recent" aria-labelledby="recH">
+          <div class="panel-head"><h2 id="recH">Recent entries</h2><span class="muted small">Tap Edit to fix a date, plays or note</span></div>
+          <ul class="rows" id="recentList"></ul>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="panel p-rot" aria-labelledby="rotH">
+          <div class="panel-head"><h2 id="rotH">On rotation</h2><span class="muted small" id="rotNote"></span></div>
+          <ul class="rows" id="rotList"></ul>
+        </section>
+
+        <section class="panel p-first" aria-labelledby="fstH">
+          <div class="panel-head"><h2 id="fstH">First listens</h2><span class="muted small">Up next albums you've played but not rated</span></div>
+          <ul class="rows" id="firstList"></ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Library ===== -->
+  <div id="view-library" role="tabpanel" aria-labelledby="tab-library" hidden>
+    <div class="lib-bar">
+      <input type="search" id="libSearch" placeholder="Search title, artist, genre or notes" aria-label="Search albums">
+      <select id="libSort" aria-label="Sort by">
+        <option value="title">Sort: Title</option><option value="artist">Sort: Artist</option><option value="year">Sort: Year</option>
+        <option value="rating">Sort: Rating</option><option value="status">Sort: Status</option><option value="added">Sort: Added</option>
+      </select>
+      <button class="btn" id="libDir" type="button" aria-label="Reverse sort order">A→Z</button>
+      <button class="btn btn-primary" id="addAlbumBtn" type="button">Add album</button>
+    </div>
+    <div class="fgroup" id="fStatus" role="group" aria-label="Status"></div>
+    <div class="fgroup" id="fGenre" role="group" aria-label="Genre"></div>
+    <div class="fgroup" id="fColl" role="group" aria-label="Collection"></div>
+    <div class="table-wrap">
+      <table class="lib">
+        <thead><tr id="libHead"></tr></thead>
+        <tbody id="libBody"></tbody>
+      </table>
+    </div>
+    <div class="lib-foot"><span id="libCount"></span><button class="btn" id="libMore" type="button" hidden>Show 100 more</button></div>
+  </div>
+</div>
+
+<dialog id="gDlg" aria-labelledby="gTitle" style="width:min(520px,calc(100vw - 32px))">
+  <form id="gForm" method="dialog">
+    <div class="dlg-head"><h2 id="gTitle">Connect your Google Sheet</h2><button class="btn" type="button" id="gClose">Close</button></div>
+    <div style="padding:16px 20px;display:grid;gap:12px">
+      <p class="muted" style="margin:0;font-size:14px">Paste the OAuth Client ID from your Google Cloud project (the same one the book tracker uses). It's saved in this browser only.</p>
+      <div class="field"><label for="gClient">OAuth Client ID</label><input id="gClient" type="text" autocomplete="off" spellcheck="false" placeholder="1234…apps.googleusercontent.com"></div>
+    </div>
+    <div class="dlg-foot"><span class="muted" id="gMsg" style="font-size:13px;align-self:center"></span><button class="btn btn-primary" type="submit">Connect</button></div>
+  </form>
+</dialog>
+
+<dialog id="albumDlg" aria-labelledby="dlgTitle">
+  <form id="albumForm" method="dialog">
+    <div class="dlg-head"><h2 id="dlgTitle">Edit album</h2><button class="btn" type="button" id="dlgClose">Close</button></div>
+    <div class="dlg-body" id="dlgBody"></div>
+    <div class="dlg-foot"><span class="muted" id="dlgMsg" style="font-size:13px;align-self:center"></span><button class="btn btn-primary" type="submit" id="dlgSave">Save</button></div>
+  </form>
+</dialog>
+
+<script>
+const SHEET_ID = '1558jWeUc8gCzQuph6wOVyOocvTBhQf22UuCSXza8klc';
+const SERVER = 'Google Sheets';
+// This app only ever touches the 🎸 tab and tabs that start with 🎸.
+const TAB = '🎸', TAB_LOG = '🎸 Log', TAB_SET = '🎸 Settings';
+const qt = n => `'${n}'`;
+
+/* ---------- dates (local time) ---------- */
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = fromIso(s); d.setDate(d.getDate() + n); return iso(d); };
+const daysBetween = (a, b) => Math.round((fromIso(b) - fromIso(a)) / 864e5);
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmt = n => Number(n).toLocaleString('en-AU');
+const today = () => iso(new Date());
+const toNum = v => { const n = parseFloat(String(v ?? '').replace(/,/g, '')); return Number.isFinite(n) ? n : 0; };
+const toDate = v => {
+  const s = String(v ?? '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // dd/mm/yyyy as Sheets may format it in en-AU
+  return m ? `${m[3]}-${pad(+m[2])}-${pad(+m[1])}` : null;
+};
+const colLetter = i => { let s = ''; i++; while (i) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+const $ = id => document.getElementById(id);
+const norm = s => String(s ?? '').trim().toLowerCase();
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+
+/* ---------- Proton Seasons theme ---------- */
+const MC = ['#e8935a','#e07a7a','#d9738f','#c573b4','#a674e0','#7f6cf5','#6a7ff0','#5591e0','#3fa4b8','#43ad8f','#7bae6a','#d6a345'];
+const SEASON = ['Summer','Summer','Autumn','Autumn','Autumn','Winter','Winter','Winter','Spring','Spring','Spring','Summer'];
+const BASE = { bg:'#16141f', surface:'#1e1b2b', raise:'#2a2640', line:'#353050' };
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => '#' + hexRgb(a).map((v, i) => Math.round(v + (hexRgb(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
+function dayColour(isoDate) {
+  const y = +isoDate.slice(0, 4), m = +isoDate.slice(5, 7) - 1, d = +isoDate.slice(8, 10);
+  const len = new Date(y, m + 1, 0).getDate();
+  return mix(MC[m], MC[(m + 1) % 12], ((d - 1) / (len - 1)) * 0.6);
+}
+function applyTheme() {
+  const t = today(), m = +t.slice(5, 7) - 1, c = dayColour(t), r = document.documentElement.style;
+  r.setProperty('--accent', c);
+  r.setProperty('--accent-next', MC[(m + 1) % 12]);
+  r.setProperty('--bg', mix(BASE.bg, c, 0.05));
+  r.setProperty('--surface', mix(BASE.surface, c, 0.05));
+  r.setProperty('--raise', mix(BASE.raise, c, 0.06));
+  r.setProperty('--line', mix(BASE.line, c, 0.08));
+  setFavicon(c);
+}
+// A plain record in the month colour (no logo yet)
+function setFavicon(c) {
+  try {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="${c}"/><circle cx="16" cy="16" r="9" fill="none" stroke="#16141f" stroke-opacity=".35" stroke-width="1.5"/><circle cx="16" cy="16" r="4" fill="#16141f"/></svg>`;
+    let l = document.querySelector('link[rel="icon"]');
+    if (!l) { l = document.createElement('link'); l.rel = 'icon'; document.head.appendChild(l); }
+    l.type = 'image/svg+xml'; l.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+  } catch (e) {}
+}
+
+/* ---------- sheet model ---------- */
+// Columns are found BY HEADER NAME, so moving a column in the sheet never breaks the app.
+const FIELDS = [
+  { k: 'title', h: 'Title', t: 'text' }, { k: 'rating', h: 'Rating', t: 'num' }, { k: 'artist', h: 'Artist', t: 'text' },
+  { k: 'status', h: 'Status', t: 'select' }, { k: 'genre', h: 'Genre', t: 'select' }, { k: 'format', h: 'Format', t: 'select' },
+  { k: 'release', h: 'Release Date', t: 'date' }, { k: 'year', h: 'Year', t: 'num' }, { k: 'notes', h: 'Notes', t: 'text' },
+  { k: 'id', h: 'id', t: 'num' }, { k: 'plan', h: 'Plan', t: 'select' }, { k: 'upNext', h: 'Up next #', t: 'num' },
+  { k: 'why', h: 'Why', t: 'text' }, { k: 'added', h: 'Added', t: 'date' }, { k: 'planned', h: 'Planned', t: 'date' }
+];
+const FIELD = Object.fromEntries(FIELDS.map(f => [f.k, f]));
+const STATUSES = ['Coming Soon', 'Listen', 'Listened', 'Purchase', 'Owned'];
+const GENRES = ['Rock', 'Metal', 'Electronic', 'Hip Hop', 'Soul/R&B', 'Soundtrack', 'Pop'];
+const FORMATS = ['Vinyl (Owned)', 'Vinyl (Wanted)', 'CD', 'Digital', 'Streaming'];
+const PLANS = ['Up next', 'Soon', 'Someday'];
+const OPTS = { status: STATUSES, genre: GENRES, format: FORMATS, plan: PLANS };
+// Chip colours, approximating the sheet's dropdown chips
+const CHIP = {
+  status: { 'Coming Soon': '#f2c46d', 'Listen': '#6fb1f2', 'Listened': '#6cc18f', 'Purchase': '#f29a7a', 'Owned': '#b79af2' },
+  genre: { 'Rock': '#ef7b7b', 'Metal': '#a9aab8', 'Electronic': '#58d0e0', 'Hip Hop': '#e9d35a', 'Soul/R&B': '#f0a05a', 'Soundtrack': '#4fc3a8', 'Pop': '#ef88c4' },
+  format: { 'Vinyl (Owned)': '#b79af2', 'Vinyl (Wanted)': '#d3b8f5', 'CD': '#6fb1f2', 'Digital': '#6cc18f', 'Streaming': '#9aa3b8' }
+};
+const pill = (kind, v) => v ? `<span class="pill" ${kind === 'format' && v === 'Vinyl (Wanted)' ? 'data-dash' : ''} style="--c:${(CHIP[kind] || {})[v] || 'var(--muted)'}">${esc(v)}</span>` : '';
+
+// Derived meaning: Status mixes listening and buying
+const heard = a => toNum(a.rating) > 0 || a.status === 'Listened' || a.status === 'Owned';
+const owned = a => ['Vinyl (Owned)', 'CD', 'Digital'].includes(a.format) || a.status === 'Owned';
+const backlog = a => ['Listen', 'Purchase', 'Coming Soon'].includes(a.status) && !heard(a);
+const wantVinyl = a => a.format === 'Vinyl (Wanted)';
+
+/* ---------- snapshot (shown when there is no live connection) ---------- */
+const SNAP_ALBUMS = [
+  { id: '1001', title: 'Violator', artist: 'Depeche Mode', rating: '9', status: 'Owned', genre: 'Electronic', format: 'Vinyl (Owned)', year: '1990' },
+  { id: '1002', title: 'Mezzanine', artist: 'Massive Attack', rating: '9', status: 'Listened', genre: 'Electronic', format: 'CD', year: '1998' },
+  { id: '1003', title: 'Blackstar', artist: 'David Bowie', status: 'Listen', genre: 'Rock', format: 'Streaming', year: '2016', plan: 'Up next', upNext: '1', why: 'Everyone says the last album matters' },
+  { id: '1004', title: 'To Pimp a Butterfly', artist: 'Kendrick Lamar', status: 'Purchase', genre: 'Hip Hop', format: 'Vinyl (Wanted)', year: '2015', notes: 'JB' },
+  { id: '1005', title: 'Master of Puppets', artist: 'Metallica', rating: '8', status: 'Owned', genre: 'Metal', format: 'Vinyl (Owned)', year: '1986' },
+  { id: '1006', title: 'Dummy', artist: 'Portishead', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '1994', plan: 'Soon' }
+];
+// Dates are relative to today so the sample always looks recent: [days ago, album id, plays]
+const SNAP_LOG = [[0, '1001', 1], [1, '1005', 1], [2, '1002', 2], [3, '1003', 1], [5, '1003', 1], [6, '1001', 1], [9, '1005', 1]];
+function snapshotState() {
+  const t = today();
+  const albums = SNAP_ALBUMS.map((a, i) => ({ ...Object.fromEntries(FIELDS.map(f => [f.k, ''])), ...a, added: t, _row: i + 2 }));
+  const log = SNAP_LOG.map(([ago, id, plays], i) => {
+    const a = albums.find(x => x.id === id);
+    return { date: addDays(t, -ago), albumId: id, title: a.title, artist: a.artist, plays, loggedAt: `${addDays(t, -ago)}T09:${pad(i)}:00.000Z`, source: 'app', note: '', _row: i + 2 };
+  });
+  return { albums, log };
+}
+
+/* ---------- state ---------- */
+const snap = snapshotState();
+const state = {
+  albums: snap.albums, log: snap.log,
+  settings: { yearGoalAlbums: 52, rotationDays: 14, upNextSize: 10, albumOfDayMin: 8 },
+  mcp: null, google: false, live: false, busy: false, logMissing: false,
+  tab: 'log', logDate: null, pick: null, editingLog: null, ratePick: {},
+  lib: { q: '', status: 'All', genre: '', owned: false, want: false, sort: 'title', dir: 1, limit: 100, open: null },
+  ix: { byId: new Map(), plays: new Map() }
+};
+
+function buildIndex() {
+  const byId = new Map(), plays = new Map();
+  for (const a of state.albums) if (a.id) byId.set(String(toNum(a.id)), a);
+  for (const e of state.log) {
+    const k = e.albumId;
+    let p = plays.get(k); if (!p) { p = { plays: 0, last: '', n: 0 }; plays.set(k, p); }
+    p.plays += e.plays; p.n++; if (e.date > p.last) p.last = e.date;
+  }
+  state.ix = { byId, plays };
+}
+const albumOf = e => state.ix.byId.get(e.albumId) || null;
+
+/* ---------- connection helpers (from the book tracker) ---------- */
+const isLive = () => !!state.mcp && !(state.google && !google_.valid());
+const connectHint = () => state.google ? 'Press Connect at the top to sign in to Google.' : 'Open this page in Claude to connect it.';
+function setStatus(kind, text) { $('status').dataset.state = kind; $('statusText').textContent = text; }
+function notice(text, kind) { const n = $('notice'); if (!text) { n.hidden = true; return; } n.textContent = text; n.dataset.kind = kind || ''; n.hidden = false; }
+function explain(err) {
+  switch (err && err.code) {
+    case 'server_not_connected': return 'Google Sheets isn\'t connected for your account. Add it in claude.ai Settings → Connectors, then press Refresh.';
+    case 'google_signin': return 'Your Google sign-in has expired. Press Connect to sign in again.';
+    case 'needs_reauth': return 'Your Google Sheets connection has expired. Reconnect it in claude.ai Settings → Connectors, then press Refresh.';
+    case 'selection_required': return 'You have more than one Google Sheets connector. Choose one when Claude asks, then press Refresh.';
+    case 'not_in_manifest': case 'consent_required': return 'This page isn\'t allowed to use Google Sheets yet. Allow it from the page\'s permissions, then press Refresh.';
+    case 'blocked_by_policy': return 'Your organisation blocks Google Sheets for this page.';
+    case 'server_unavailable': return 'Google Sheets didn\'t answer in time. Press Refresh to try again.';
+    case 'tool_error': return 'Google Sheets reported a problem: ' + (err.message || 'unknown error') + '.';
+    case 'not_granted': case 'capability_disabled': case 'capability_removed': return 'This view can\'t reach your connectors. Open the page in Claude to connect your sheet.';
+    default: return 'Couldn\'t reach your sheet' + (err && err.message ? ': ' + err.message : '') + '. Press Refresh to try again.';
+  }
+}
+async function readRange(range) {
+  const res = await state.mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range }, { cache: false });
+  const p = res.payload;
+  return (p && Array.isArray(p.values)) ? p.values : [];
+}
+const putCell = (tab, col, row, v) => state.mcp.callTool(SERVER, 'update_values', { spreadsheetId: SHEET_ID, range: `${qt(tab)}!${col}${row}`, values: [[v]] }, { cache: false });
+const rowFromAppend = res => {
+  const p = (res && res.payload) || {};
+  const m = String((p.updates && p.updates.updatedRange) || p.updatedRange || '').match(/![A-Z]+(\d+)/);
+  return m ? Number(m[1]) : null;
+};
+
+/* ---------- loading ---------- */
+const colOf = (header, f) => header.findIndex(h => norm(h) === norm(f.h));
+
+async function refresh() {
+  if (!state.mcp) return;
+  setStatus('loading', 'Loading from your sheet…');
+  $('refreshBtn').disabled = true;
+  try {
+    const albums = await readRange(`${qt(TAB)}!A1:O`);
+    let log = [], settings = [], logMissing = false;
+    try { log = await readRange(`${qt(TAB_LOG)}!A1:H`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; logMissing = true; }
+    try { settings = await readRange(`${qt(TAB_SET)}!A1:B`); } catch (e) { if (e && e.code === 'google_signin') throw e; }
+    if (!albums.length) throw { code: 'tool_error', message: `the ${TAB} tab came back empty` };
+
+    const ah = (albums[0] || []).map(h => String(h).trim());
+    const cols = Object.fromEntries(FIELDS.map(f => [f.k, colOf(ah, f)]));
+    if (cols.title < 0) throw { code: 'tool_error', message: `the ${TAB} tab has no Title column` };
+    state.albums = albums.slice(1).map((r, i) => {
+      const o = { _row: i + 2 };
+      for (const f of FIELDS) o[f.k] = cols[f.k] >= 0 ? String(r[cols[f.k]] ?? '').trim() : '';
+      return o;
+    }).filter(a => a.title);
+
+    const lh = (log[0] || []).map(h => norm(h));
+    const li = k => lh.indexOf(k);
+    state.log = log.slice(1).map((r, i) => ({
+      date: toDate(r[li('date')]), albumId: li('albumid') >= 0 && String(r[li('albumid')] ?? '').trim() ? String(toNum(r[li('albumid')])) : '',
+      title: String(r[li('title')] ?? '').trim(), artist: String(r[li('artist')] ?? '').trim(),
+      plays: li('plays') >= 0 && String(r[li('plays')] ?? '').trim() !== '' ? toNum(r[li('plays')]) : 1,
+      loggedAt: String(r[li('loggedat')] ?? '').trim(), source: String(r[li('source')] ?? '').trim(), note: String(r[li('note')] ?? '').trim(), _row: i + 2
+    })).filter(e => e.date && e.plays > 0);
+    state.logMissing = logMissing || !lh.length;
+
+    for (const r of settings.slice(1)) {
+      const k = norm(r[0]), v = toNum(r[1]);
+      if (k === 'yeargoalalbums' && v) state.settings.yearGoalAlbums = v;
+      else if (k === 'rotationdays' && v) state.settings.rotationDays = v;
+      else if (k === 'upnextsize' && v) state.settings.upNextSize = v;
+      else if (k === 'albumofdaymin' && v) state.settings.albumOfDayMin = v;
+    }
+    state.live = true; state.editingLog = null;
+    notice(state.logMissing ? `The ${TAB_LOG} tab wasn't found or has no header row, so listens can't be logged yet.` : '', state.logMissing ? 'error' : '');
+    setStatus('live', 'Live from your sheet · ' + new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }));
+    renderAll();
+  } catch (err) {
+    setStatus('error', state.live ? 'Showing the last data loaded' : 'Showing a sample snapshot');
+    notice(explain(err), 'error');
+  } finally {
+    $('refreshBtn').disabled = false;
+  }
+}
+
+/* ---------- writes ---------- */
+// Dropdown values go in as plain strings (they must match the options exactly); numbers as numbers;
+// dates as yyyy-mm-dd; other text gets a leading apostrophe so Sheets keeps it as text.
+function cellValue(k, v) {
+  v = String(v ?? '').trim();
+  if (!v) return '';
+  const t = FIELD[k].t;
+  if (t === 'num') return toNum(v);
+  if (t === 'date') return toDate(v) || '';
+  if (t === 'select') return v;
+  return "'" + v;
+}
+// Find the row for an album id right before writing; abort unless it is found exactly once.
+async function findAlbumRow(id) {
+  id = toNum(id);
+  if (!id) throw { code: 'tool_error', message: 'This album has no id yet, so it can\'t be changed from the app' };
+  const header = ((await readRange(`${qt(TAB)}!A1:O1`))[0] || []).map(h => String(h).trim());
+  const idCol = colOf(header, FIELD.id);
+  if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no id column` };
+  const L = colLetter(idCol);
+  const ids = await readRange(`${qt(TAB)}!${L}1:${L}`);
+  const hits = ids.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(r[0]) === id ? i + 1 : 0).filter(Boolean);
+  if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? `id ${id} appears ${hits.length} times in ${TAB}, so nothing was written` : `id ${id} isn't in ${TAB} any more, so nothing was written` };
+  return { header, row: hits[0] };
+}
+// Changed cells only: one update per cell
+async function writeAlbumFields(id, fields) {
+  const { header, row } = await findAlbumRow(id);
+  const cols = {};
+  for (const k of Object.keys(fields)) {
+    if (k === 'id' || !FIELD[k]) continue;
+    const c = colOf(header, FIELD[k]);
+    if (c < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no "${FIELD[k].h}" column` };
+    cols[k] = c;
+  }
+  for (const [k, c] of Object.entries(cols)) await putCell(TAB, colLetter(c), row, cellValue(k, fields[k]));
+  const a = state.ix.byId.get(String(toNum(id)));
+  if (a) for (const k of Object.keys(cols)) a[k] = String(fields[k] ?? '').trim();
+}
+async function addAlbum(fields) {
+  const header = ((await readRange(`${qt(TAB)}!A1:O1`))[0] || []).map(h => String(h).trim());
+  const idCol = colOf(header, FIELD.id);
+  if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no id column` };
+  const L = colLetter(idCol);
+  const ids = (await readRange(`${qt(TAB)}!${L}2:${L}`)).map(r => toNum(r[0]));
+  const id = Math.max(1000, ...ids) + 1;
+  fields = { ...fields, added: today() };
+  const row = header.map(h => {
+    const f = FIELDS.find(x => norm(x.h) === norm(h));
+    if (!f) return '';
+    return f.k === 'id' ? id : cellValue(f.k, fields[f.k]);
+  });
+  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: SHEET_ID, range: `${qt(TAB)}!A1`, values: [row] }, { cache: false });
+  // Re-read the id column and confirm the new id landed exactly once
+  const after = await readRange(`${qt(TAB)}!${L}1:${L}`);
+  const hits = after.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(r[0]) === id ? i + 1 : 0).filter(Boolean);
+  if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? `the new id ${id} appears ${hits.length} times, check the sheet` : `the new id ${id} couldn't be found after saving, check the sheet` };
+  const a = { ...Object.fromEntries(FIELDS.map(f => [f.k, ''])), ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, String(v ?? '').trim()])), id: String(id), _row: rowFromAppend(res) || hits[0] };
+  state.albums.push(a);
+  return a;
+}
+
+const logDay = () => state.logDate || today();
+const dayLabel = d => d === today() ? 'Today' : d === addDays(today(), -1) ? 'Yesterday'
+  : fromIso(d).toLocaleDateString('en-AU', daysBetween(d, today()) < 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' });
+
+// Append one row to the Log tab, laid out by that tab's own header names
+async function appendLogRow({ album, date, plays, note }) {
+  const header = ((await readRange(`${qt(TAB_LOG)}!A1:H1`))[0] || []).map(h => norm(h));
+  if (!header.length) throw { code: 'tool_error', message: `the ${TAB_LOG} tab has no header row` };
+  const loggedAt = new Date().toISOString();
+  const vals = { date, albumid: toNum(album.id) || '', title: "'" + album.title, artist: album.artist ? "'" + album.artist : '', plays, loggedat: "'" + loggedAt, source: "'app", note: note ? "'" + note : '' };
+  const row = header.map(h => vals[h] ?? '');
+  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: SHEET_ID, range: `${qt(TAB_LOG)}!A1`, values: [row] }, { cache: false });
+  state.log.push({ date, albumId: String(toNum(album.id) || ''), title: album.title, artist: album.artist || '', plays, loggedAt, source: 'app', note: note || '', _row: rowFromAppend(res) });
+}
+
+async function logListen({ album, date, plays = 1, note = '' }, btn) {
+  if (state.busy) return false;
+  if (!isLive()) { notice('Logging needs the live connection. ' + connectHint(), 'error'); return false; }
+  if (!toNum(album.id)) { notice('That album has no id yet, so it can\'t be logged.', 'error'); return false; }
+  state.busy = true;
+  const old = btn && btn.textContent; let ok = false;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    await appendLogRow({ album, date, plays, note });
+    notice('');
+    ok = true;
+    setStatus('live', `Logged “${album.title}” · ` + new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }));
+    renderAll();
+  } catch (err) {
+    const unsure = err && (err.code === 'server_unavailable' || err.code === 'upstream_error' || err.code === 'cancelled');
+    notice(unsure ? 'The save may or may not have gone through. Checking your sheet now so nothing is logged twice.' : explain(err), 'error');
+    if (unsure) await refresh();
+  } finally {
+    state.busy = false;
+    if (btn) { btn.disabled = false; btn.textContent = old; }
+  }
+  return ok;
+}
+
+// Change one Log row. The row is found by its loggedAt (unique) right before writing.
+async function editLogEntry(e, change, btn) {
+  if (state.busy) return;
+  if (!isLive()) { notice('Editing needs the live connection. ' + connectHint(), 'error'); return; }
+  state.busy = true; btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
+  try {
+    const header = ((await readRange(`${qt(TAB_LOG)}!A1:H1`))[0] || []).map(h => norm(h));
+    const at = header.indexOf('loggedat');
+    if (at < 0) throw { code: 'tool_error', message: `the ${TAB_LOG} tab has no loggedAt column` };
+    const L = colLetter(at);
+    const col = await readRange(`${qt(TAB_LOG)}!${L}1:${L}`);
+    const hits = col.map((r, i) => i > 0 && String(r[0] ?? '').trim() === e.loggedAt ? i + 1 : 0).filter(Boolean);
+    if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? 'That entry matches more than one row, so nothing was written' : 'That entry isn\'t in the sheet any more, so nothing was written. Refreshing.' };
+    const row = hits[0];
+    const put = async (name, v) => { const c = header.indexOf(name); if (c < 0) throw { code: 'tool_error', message: `the ${TAB_LOG} tab has no ${name} column` }; await putCell(TAB_LOG, colLetter(c), row, v); };
+    if (change.date !== e.date) await put('date', change.date);
+    if (change.plays !== e.plays) await put('plays', change.plays);
+    if (change.note !== e.note) await put('note', change.note ? "'" + change.note : '');
+    Object.assign(e, change);
+    state.editingLog = null;
+    notice('');
+    setStatus('live', 'Entry updated');
+    renderAll();
+  } catch (err) {
+    notice('Couldn\'t change that entry: ' + (err.message || explain(err)), 'error');
+    if (err && /isn't in the sheet/.test(err.message || '')) refresh();
+  } finally {
+    state.busy = false; btn.disabled = false; btn.textContent = old;
+  }
+}
+
+async function rateAlbum(a, value, btn) {
+  if (state.busy) return;
+  if (!isLive()) { notice('Rating needs the live connection. ' + connectHint(), 'error'); return; }
+  state.busy = true; btn.disabled = true; const old = btn.textContent; btn.textContent = 'Saving…';
+  try {
+    const f = { rating: String(value) };
+    if (a.status === 'Listen') f.status = 'Listened';
+    await writeAlbumFields(a.id, f);
+    delete state.ratePick[a.id];
+    notice('');
+    setStatus('live', `Rated “${a.title}” ${value}/10`);
+    renderAll();
+  } catch (err) {
+    notice('Couldn\'t save the rating: ' + (err.message || explain(err)), 'error');
+  } finally {
+    state.busy = false; btn.disabled = false; btn.textContent = old;
+  }
+}
+
+/* ---------- Log tab ---------- */
+function streakInfo() {
+  const days = new Set(state.log.map(e => e.date)), t = today();
+  const done = days.has(t);
+  let d = done ? t : addDays(t, -1), count = 0;
+  while (days.has(d) && count < 5000) { count++; d = addDays(d, -1); }
+  return { count, done };
+}
+
+function renderStats() {
+  const t = today(), y = t.slice(0, 4), ym = t.slice(0, 7), goal = state.settings.yearGoalAlbums || 52;
+  const yearAlbums = new Set(), monthAlbums = new Set();
+  let monthPlays = 0;
+  for (const e of state.log) {
+    const key = e.albumId || 'x:' + norm(e.title);
+    if (e.date.startsWith(y)) yearAlbums.add(key);
+    if (e.date.startsWith(ym)) { monthPlays += e.plays; monthAlbums.add(key); }
+  }
+  $('sHeardLabel').textContent = `Heard in ${y}`;
+  $('sHeard').textContent = fmt(yearAlbums.size);
+  $('sHeardSub').textContent = `of ${fmt(goal)} album goal`;
+  $('sHeardBar').style.width = Math.min(100, yearAlbums.size / goal * 100) + '%';
+  $('sMonthLabel').textContent = `Listens in ${MONTHS[+t.slice(5, 7) - 1]}`;
+  $('sMonth').textContent = fmt(monthPlays);
+  $('sMonthSub').textContent = `${fmt(monthAlbums.size)} album${monthAlbums.size === 1 ? '' : 's'}`;
+  const { count, done } = streakInfo();
+  $('sStreak').textContent = fmt(count);
+  $('sStreakSub').textContent = count === 0 ? 'Log a listen to start a streak' : done ? 'days, including today' : `days. Log today to make it ${fmt(count + 1)}`;
+  const vinyl = state.albums.filter(a => a.format === 'Vinyl (Owned)').length, want = state.albums.filter(wantVinyl).length;
+  $('sVinyl').textContent = fmt(vinyl);
+  $('sVinylSub').textContent = want ? `${fmt(want)} more on the wish list` : 'records';
+  $('todayLabel').textContent = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · ' + SEASON[+t.slice(5, 7) - 1];
+}
+
+function rotation() {
+  const days = state.settings.rotationDays || 14, since = addDays(today(), -days);
+  const m = new Map();
+  for (const e of state.log) {
+    if (e.date < since) continue;
+    const k = e.albumId || 'x:' + norm(e.title);
+    let r = m.get(k); if (!r) { r = { key: k, id: e.albumId, title: e.title, artist: e.artist, plays: 0, last: '', today: 0 }; m.set(k, r); }
+    r.plays += e.plays; if (e.date > r.last) r.last = e.date;
+    if (e.date === today()) r.today += e.plays;
+  }
+  return [...m.values()].sort((a, b) => a.last < b.last ? 1 : a.last > b.last ? -1 : b.plays - a.plays);
+}
+
+function renderRotation() {
+  const days = state.settings.rotationDays || 14, list = rotation(), ul = $('rotList');
+  $('rotNote').textContent = `Played in the last ${days} days`;
+  ul.textContent = '';
+  if (!list.length) { ul.innerHTML = `<li class="empty wide">Nothing logged in the last ${days} days. Log a listen to start your rotation.</li>`; return; }
+  for (const r of list) {
+    const a = state.ix.byId.get(r.id);
+    const li = document.createElement('li');
+    li.innerHTML = '<div class="t"></div><div class="m tnum"></div><div class="acts"></div>';
+    li.querySelector('.t').textContent = a ? a.title : r.title;
+    li.querySelector('.m').textContent = `${(a ? a.artist : r.artist) || 'Unknown artist'} · ${r.plays} play${r.plays === 1 ? '' : 's'} in ${days} days · last ${dayLabel(r.last).toLowerCase()}`;
+    const acts = li.querySelector('.acts');
+    if (r.today) { const d = document.createElement('span'); d.className = 'done'; d.textContent = `✓ ${r.today}× today`; acts.appendChild(d); }
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-primary'; b.textContent = 'Played today';
+    if (!a) { b.disabled = true; b.title = 'This album isn\'t in the library any more'; }
+    else b.addEventListener('click', () => logListen({ album: a, date: today() }, b));
+    acts.appendChild(b);
+    ul.appendChild(li);
+  }
+}
+
+const upNextList = () => state.albums.filter(a => a.plan === 'Up next').sort((a, b) => (toNum(a.upNext) || 9999) - (toNum(b.upNext) || 9999));
+
+function renderFirst() {
+  const ul = $('firstList'); ul.textContent = '';
+  const list = upNextList().filter(a => !(toNum(a.rating) > 0) && state.ix.plays.has(String(toNum(a.id))));
+  if (!list.length) { ul.innerHTML = '<li class="empty wide">Nothing waiting. Up next albums show up here once you\'ve played them.</li>'; return; }
+  for (const a of list) {
+    const p = state.ix.plays.get(String(toNum(a.id)));
+    const li = document.createElement('li');
+    li.innerHTML = '<div class="t"></div><div class="m tnum"></div><div class="wide"><div class="rate-pick" role="group"></div><div class="rate-bar"></div></div>';
+    li.querySelector('.t').textContent = a.title;
+    li.querySelector('.m').textContent = `${a.artist || 'Unknown artist'} · ${p.plays} spin${p.plays === 1 ? '' : 's'}, not rated yet`;
+    const pick = li.querySelector('.rate-pick'), bar = li.querySelector('.rate-bar'), sel = state.ratePick[a.id];
+    for (let n = 1; n <= 10; n++) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = n; b.setAttribute('aria-pressed', String(sel === n));
+      b.setAttribute('aria-label', `Rate ${n} out of 10`);
+      b.addEventListener('click', () => { state.ratePick[a.id] = n; renderFirst(); });
+      pick.appendChild(b);
+    }
+    if (sel) {
+      const s = document.createElement('button'); s.type = 'button'; s.className = 'btn btn-primary'; s.textContent = `Save ${sel}/10`;
+      s.addEventListener('click', () => rateAlbum(a, sel, s));
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'btn'; c.textContent = 'Cancel';
+      c.addEventListener('click', () => { delete state.ratePick[a.id]; renderFirst(); });
+      const hint = document.createElement('span'); hint.className = 'muted small';
+      hint.textContent = a.status === 'Listen' ? 'Also sets Status to Listened' : '';
+      bar.append(s, c, hint);
+    }
+    ul.appendChild(li);
+  }
+}
+
+/* log a listen form */
+function setLogDay(d) {
+  state.logDate = d && d < today() ? d : null;
+  const cur = logDay();
+  document.querySelectorAll('.logday button').forEach(b => b.setAttribute('aria-pressed', String(addDays(today(), Number(b.dataset.day)) === cur && (cur !== today() || b.dataset.day === '0'))));
+  $('logDate').max = today();
+  $('logDate').value = state.logDate || '';
+  const ban = $('logDayBanner');
+  ban.hidden = !state.logDate;
+  if (state.logDate) ban.textContent = `Logging for ${fromIso(cur).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}.`;
+}
+function renderLogForm() {
+  const a = state.pick ? state.ix.byId.get(state.pick) : null;
+  const pk = $('lgPicked'), inp = $('lgSearch'), res = $('lgResults');
+  if (state.pick && !a) state.pick = null;
+  pk.hidden = !a; inp.hidden = !!a; res.hidden = !!a;
+  if (a) {
+    pk.innerHTML = '<div><div class="t"></div><div class="m"></div></div><button class="linkbtn" type="button">Change</button>';
+    pk.querySelector('.t').textContent = a.title;
+    pk.querySelector('.m').textContent = [a.artist, a.year].filter(Boolean).join(' · ');
+    pk.querySelector('button').addEventListener('click', () => { state.pick = null; renderLogForm(); inp.focus(); });
+  } else {
+    const q = norm(inp.value);
+    res.textContent = '';
+    if (q) {
+      const hits = state.albums.filter(x => x.id && (norm(x.title).includes(q) || norm(x.artist).includes(q)))
+        .sort((x, y) => (norm(y.title).startsWith(q) - norm(x.title).startsWith(q)) || x.title.localeCompare(y.title)).slice(0, 8);
+      if (!hits.length) res.innerHTML = '<li><div class="empty" style="padding:8px 12px">No match. Add it in the Library tab first.</div></li>';
+      for (const h of hits) {
+        const li = document.createElement('li');
+        li.innerHTML = '<button type="button"><span class="t"></span><span class="m"></span></button>';
+        li.querySelector('.t').textContent = h.title;
+        li.querySelector('.m').textContent = [h.artist, h.year].filter(Boolean).join(' · ');
+        li.querySelector('button').addEventListener('click', () => { state.pick = String(toNum(h.id)); inp.value = ''; renderLogForm(); });
+        res.appendChild(li);
+      }
+    }
+  }
+  $('lgSave').disabled = !a;
+}
+async function saveListen() {
+  const a = state.pick ? state.ix.byId.get(state.pick) : null;
+  if (!a) return;
+  const plays = Math.max(1, parseInt($('lgPlays').value, 10) || 1);
+  const ok = await logListen({ album: a, date: logDay(), plays, note: $('lgNote').value.trim() }, $('lgSave'));
+  if (ok) { state.pick = null; $('lgPlays').value = 1; $('lgNote').value = ''; renderLogForm(); }
+}
+
+/* recent entries */
+function renderRecent() {
+  const ul = $('recentList'); ul.textContent = '';
+  const list = [...state.log].sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : (a.loggedAt < b.loggedAt ? 1 : a.loggedAt > b.loggedAt ? -1 : (b._row || 0) - (a._row || 0))).slice(0, 15);
+  if (!list.length) { ul.innerHTML = '<li class="empty wide">No listens logged yet.</li>'; return; }
+  for (const e of list) {
+    const a = albumOf(e), open = state.editingLog === e.loggedAt && e.loggedAt;
+    const li = document.createElement('li');
+    li.innerHTML = '<div class="t"></div><div class="m"></div><div class="acts"></div>';
+    li.querySelector('.t').textContent = a ? a.title : e.title;
+    li.querySelector('.m').textContent = `${dayLabel(e.date)} · ${e.plays} play${e.plays === 1 ? '' : 's'}${(a ? a.artist : e.artist) ? ' · ' + (a ? a.artist : e.artist) : ''}${e.note ? ' · ' + e.note : ''}`;
+    if (e.loggedAt) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = open ? 'Close' : 'Edit';
+      b.addEventListener('click', () => { state.editingLog = open ? null : e.loggedAt; renderRecent(); });
+      li.querySelector('.acts').appendChild(b);
+    }
+    if (open) li.appendChild(logEditor(e));
+    ul.appendChild(li);
+  }
+}
+function logEditor(e) {
+  const f = document.createElement('div');
+  f.className = 'edit wide';
+  f.innerHTML = `<input type="date" aria-label="Day" max="${today()}"><input type="number" min="1" max="99" inputmode="numeric" aria-label="Plays"><input type="text" aria-label="Note" placeholder="Note">
+    <button class="btn btn-primary" type="button" data-a="save">Save</button><button class="btn" type="button" data-a="cancel">Cancel</button>`;
+  const [dIn, pIn, nIn] = f.querySelectorAll('input');
+  dIn.value = e.date; pIn.value = e.plays; nIn.value = e.note;
+  f.addEventListener('click', ev => {
+    const btn = ev.target.closest('button'), a = btn && btn.dataset.a;
+    if (a === 'cancel') { state.editingLog = null; renderRecent(); }
+    if (a === 'save') {
+      const d = toDate(dIn.value), p = parseInt(pIn.value, 10), n = nIn.value.trim();
+      if (!d || d > today() || !(p > 0)) { notice('Pick a day up to today and at least 1 play.', 'error'); return; }
+      if (d === e.date && p === e.plays && n === e.note) { state.editingLog = null; renderRecent(); return; }
+      editLogEntry(e, { date: d, plays: p, note: n }, btn);
+    }
+  });
+  return f;
+}
+
+function renderLogTab() {
+  renderStats(); renderRotation(); renderFirst(); renderRecent(); renderLogForm();
+}
+
+/* ---------- Library tab ---------- */
+const STATUS_ORDER = Object.fromEntries(STATUSES.map((s, i) => [s, i]));
+const LIB_COLS = [
+  { k: 'title', label: 'Title', cls: 'c-title', sort: 'title' }, { k: 'artist', label: 'Artist', cls: 'c-artist', sort: 'artist' },
+  { k: 'rating', label: 'Rating', cls: 'c-rating num', sort: 'rating' }, { k: 'status', label: 'Status', cls: 'c-status', sort: 'status' },
+  { k: 'genre', label: 'Genre', cls: 'c-genre' }, { k: 'format', label: 'Format', cls: 'c-format' }, { k: 'year', label: 'Year', cls: 'c-year num', sort: 'year' }
+];
+const NUMERIC_FIRST_DESC = ['year', 'rating', 'added'];
+function sortKey(a, k) {
+  if (k === 'year' || k === 'rating') return a[k] === '' ? -1 : toNum(a[k]);
+  if (k === 'status') return a.status in STATUS_ORDER ? STATUS_ORDER[a.status] : 99;
+  if (k === 'added') return a.added ? toDate(a.added) || '' : '';
+  return norm(a[k]);
+}
+function libFiltered() {
+  const L = state.lib, q = norm(L.q);
+  return state.albums.filter(a =>
+    (L.status === 'All' || a.status === L.status) && (!L.genre || a.genre === L.genre) &&
+    (!L.owned || owned(a)) && (!L.want || wantVinyl(a)) &&
+    (!q || [a.title, a.artist, a.genre, a.notes].some(v => norm(v).includes(q))));
+}
+function chipGroup(el, label, items, isOn, attr) {
+  el.innerHTML = `<span class="flabel">${label}</span>` + items.map(([v, text, n]) =>
+    `<button class="chip" type="button" data-f="${attr}" data-v="${esc(v)}" aria-pressed="${isOn(v)}">${esc(text)}${n == null ? '' : `<span class="n">${fmt(n)}</span>`}</button>`).join('');
+}
+function renderLibrary() {
+  const L = state.lib;
+  $('libSort').value = L.sort;
+  $('libDir').textContent = L.dir > 0 ? (['year', 'rating', 'added'].includes(L.sort) ? '1→9' : 'A→Z') : (['year', 'rating', 'added'].includes(L.sort) ? '9→1' : 'Z→A');
+  const sc = { All: state.albums.length };
+  for (const a of state.albums) sc[a.status] = (sc[a.status] || 0) + 1;
+  chipGroup($('fStatus'), 'Status', ['All', ...STATUSES].map(s => [s, s, sc[s] || 0]), v => L.status === v, 'status');
+  const genres = [...new Set([...GENRES, ...state.albums.map(a => a.genre).filter(Boolean)])];
+  const gc = {}; for (const a of state.albums) gc[a.genre] = (gc[a.genre] || 0) + 1;
+  chipGroup($('fGenre'), 'Genre', [['', 'All', null], ...genres.map(g => [g, g, gc[g] || 0])], v => L.genre === v, 'genre');
+  chipGroup($('fColl'), 'Show', [['owned', 'Owned', state.albums.filter(owned).length], ['want', 'Want on vinyl', state.albums.filter(wantVinyl).length]], v => L[v], 'coll');
+
+  $('libHead').innerHTML = LIB_COLS.map(c => `<th scope="col" ${c.sort ? `data-k="${c.sort}"` : ''} class="${c.cls.includes('num') ? 'num' : ''}" ${c.sort && L.sort === c.sort ? `aria-sort="${L.dir > 0 ? 'ascending' : 'descending'}"` : ''}>${c.label}</th>`).join('');
+  const rows = libFiltered().sort((a, b) => { const x = sortKey(a, L.sort), y = sortKey(b, L.sort); return (x < y ? -1 : x > y ? 1 : 0) * L.dir || norm(a.title).localeCompare(norm(b.title)); });
+  const body = $('libBody'); body.textContent = '';
+  if (!rows.length) body.innerHTML = `<tr><td colspan="${LIB_COLS.length}" class="muted" style="padding:18px">No albums match.</td></tr>`;
+  for (const a of rows.slice(0, L.limit)) {
+    const tr = document.createElement('tr');
+    tr.className = 'row' + (L.open === a.id ? ' open' : '');
+    tr.dataset.id = a.id; tr.tabIndex = 0;
+    const r = toNum(a.rating);
+    const cells = {
+      title: '', artist: '', rating: r ? `<span class="rating tnum">${esc(a.rating)}<small>/10</small></span>` : '',
+      status: pill('status', a.status), genre: pill('genre', a.genre), format: pill('format', a.format), year: esc(a.year)
+    };
+    tr.innerHTML = LIB_COLS.map(c => `<td class="${c.cls}${c.num ? ' tnum' : ''}">${cells[c.k]}</td>`).join('');
+    tr.querySelector('.c-title').innerHTML = '<span class="t"></span>';
+    tr.querySelector('.c-title .t').textContent = a.title;
+    tr.querySelector('.c-artist').textContent = a.artist;
+    body.appendChild(tr);
+    if (L.open === a.id) body.appendChild(detailRow(a));
+  }
+  $('libCount').textContent = `Showing ${fmt(Math.min(L.limit, rows.length))} of ${fmt(rows.length)} albums`;
+  $('libMore').hidden = rows.length <= L.limit;
+}
+function detailRow(a) {
+  const tr = document.createElement('tr');
+  tr.className = 'detail';
+  const td = document.createElement('td');
+  td.colSpan = LIB_COLS.length;
+  const p = state.ix.plays.get(String(toNum(a.id)));
+  const kv = [
+    ['Rating', toNum(a.rating) ? `${a.rating}/10` : ''], ['Status', a.status], ['Genre', a.genre], ['Format', a.format],
+    ['Release date', a.release], ['Year', a.year], ['Where to buy', a.notes],
+    ['Plan', a.plan ? a.plan + (a.plan === 'Up next' && a.upNext ? ' #' + a.upNext : '') : ''], ['Why', a.why],
+    ['Plays logged', p ? String(p.plays) : '0'], ['Last played', p && p.last ? `${dayLabel(p.last)} (${p.last})` : 'Never'],
+    ['Added', a.added], ['Planned', a.planned], ['id', a.id]
+  ].filter(([, v]) => v);
+  td.innerHTML = '<dl class="kv"></dl><div class="acts"><button class="btn btn-primary" type="button" data-edit>Edit album</button><button class="btn" type="button" data-log>Log a listen</button></div>';
+  const dl = td.querySelector('.kv');
+  for (const [k, v] of kv) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); }
+  tr.appendChild(td);
+  return tr;
+}
+
+/* ---------- edit / add dialog ---------- */
+const FORM = [
+  { sec: 'Album' }, { k: 'title', w: 'w2', req: true }, { k: 'artist', w: 'w2' },
+  { k: 'status', type: 'select' }, { k: 'genre', type: 'select' }, { k: 'format', type: 'select' },
+  { k: 'rating', type: 'number', label: 'Rating (1–10)' },
+  { k: 'release', type: 'date', label: 'Release date' }, { k: 'year', type: 'number' }, { k: 'notes', w: 'w2', label: 'Where to buy' },
+  { sec: 'Plan' }, { k: 'plan', type: 'select' }, { k: 'why', w: 'w2', label: 'Why it\'s on the list' }
+];
+let editing = null;
+function openAlbumDialog(album) {
+  editing = album;
+  $('dlgTitle').textContent = album ? 'Edit album' : 'Add an album';
+  $('dlgMsg').textContent = album ? `id ${album.id}` : 'A new id is given when you save';
+  const body = $('dlgBody'); body.textContent = '';
+  for (const f of FORM) {
+    if (f.sec) { const d = document.createElement('div'); d.className = 'sec-label'; d.textContent = f.sec; body.appendChild(d); continue; }
+    const wrap = document.createElement('div'); wrap.className = 'field ' + (f.w || '');
+    const id = 'f-' + f.k;
+    const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = f.label || (f.k[0].toUpperCase() + f.k.slice(1));
+    let el;
+    const raw = album ? (album[f.k] || '') : (f.k === 'status' ? 'Listen' : '');
+    const val = FIELD[f.k].t === 'date' ? (toDate(raw) || '') : raw;
+    if (f.type === 'select') {
+      el = document.createElement('select');
+      const opts = ['', ...OPTS[f.k]];
+      if (val && !opts.includes(val)) opts.push(val);
+      for (const o of opts) { const op = document.createElement('option'); op.value = o; op.textContent = o || '–'; el.appendChild(op); }
+    } else {
+      el = document.createElement('input'); el.type = f.type || 'text';
+      if (f.type === 'number') { el.inputMode = 'decimal'; el.step = f.k === 'rating' ? '0.5' : '1'; if (f.k === 'rating') { el.min = 1; el.max = 10; } }
+    }
+    el.id = id; el.name = f.k; el.value = f.type === 'number' ? (toNum(val) || (val === '0' ? 0 : '')) : val;
+    if (f.req) el.required = true;
+    wrap.append(lab, el); body.appendChild(wrap);
+  }
+  $('albumDlg').showModal();
+}
+async function saveAlbumDialog(e) {
+  e.preventDefault();
+  if (!isLive()) { $('dlgMsg').textContent = 'Saving needs the live connection to your sheet. ' + connectHint(); return; }
+  if (state.busy) return;
+  const data = {};
+  for (const f of FORM) if (f.k) data[f.k] = $('albumForm').elements[f.k].value.trim();
+  if (!data.title) { $('dlgMsg').textContent = 'A title is needed.'; return; }
+  if (data.rating && (toNum(data.rating) < 1 || toNum(data.rating) > 10)) { $('dlgMsg').textContent = 'Rating must be between 1 and 10.'; return; }
+  const btn = $('dlgSave'); btn.disabled = true; btn.textContent = 'Saving…'; state.busy = true;
+  try {
+    if (editing) {
+      const changed = {};
+      for (const [k, v] of Object.entries(data)) {
+        const old = String(editing[k] || '').trim(), t = FIELD[k].t;
+        const same = t === 'num' ? toNum(old) === toNum(v) && (!!old === !!v || toNum(v) === 0)
+          : t === 'date' ? (toDate(old) || '') === v : old === v;
+        if (!same) changed[k] = v;
+      }
+      // Changing the plan stamps Planned; a new Up next album joins the end of that list
+      if ('plan' in changed) {
+        changed.planned = today();
+        if (changed.plan === 'Up next') changed.upNext = String(upNextList().length + 1);
+        else if (editing.upNext) changed.upNext = '';
+      }
+      const n = Object.keys(changed).length;
+      if (n) await writeAlbumFields(editing.id, changed);
+      notice('');
+      setStatus('live', n ? `Saved ${n} change${n > 1 ? 's' : ''} to “${data.title}”` : 'No changes to save');
+    } else {
+      const a = await addAlbum(data);
+      state.lib.open = a.id;
+      setStatus('live', `Added “${a.title}” with id ${a.id}`);
+    }
+    $('albumDlg').close();
+    renderAll();
+  } catch (err) {
+    $('dlgMsg').textContent = (err && err.code && err.code !== 'tool_error') ? explain(err) : 'Not saved: ' + (err.message || 'unknown problem') + '.';
+  } finally { state.busy = false; btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+/* ---------- tabs and rendering ---------- */
+// Later stages (Plan, Dashboard, Tools, Discover) add an entry here plus a matching tab button and #view-<name> panel.
+const TABS = {
+  log: { render: renderLogTab },
+  library: { render: renderLibrary }
+};
+function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); }
+function renderAll() { applyTheme(); render(); }
+function showTab(name) {
+  if (!TABS[name]) name = 'log';
+  state.tab = name;
+  for (const t of Object.keys(TABS)) {
+    $('tab-' + t).setAttribute('aria-selected', String(t === name));
+    $('view-' + t).hidden = t !== name;
+  }
+  render();
+  lsSet('sg-tab', name);
+}
+for (const t of Object.keys(TABS)) $('tab-' + t).addEventListener('click', () => showTab(t));
+
+/* ---------- wiring ---------- */
+$('refreshBtn').addEventListener('click', () => state.google && !google_.valid() ? googleConnect() : refresh());
+document.querySelectorAll('.logday button').forEach(b => b.addEventListener('click', () => setLogDay(addDays(today(), Number(b.dataset.day)))));
+$('logDate').addEventListener('change', e => setLogDay(toDate(e.target.value)));
+$('lgSearch').addEventListener('input', renderLogForm);
+$('lgSave').addEventListener('click', saveListen);
+$('lgNote').addEventListener('keydown', e => { if (e.key === 'Enter') saveListen(); });
+
+let searchT;
+$('libSearch').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { state.lib.q = e.target.value; state.lib.limit = 100; renderLibrary(); }, 150); });
+$('libSort').addEventListener('change', e => { state.lib.sort = e.target.value; state.lib.dir = NUMERIC_FIRST_DESC.includes(e.target.value) ? -1 : 1; renderLibrary(); });
+$('libDir').addEventListener('click', () => { state.lib.dir *= -1; renderLibrary(); });
+$('libHead').addEventListener('click', e => {
+  const th = e.target.closest('th[data-k]'); if (!th) return; const L = state.lib, k = th.dataset.k;
+  if (L.sort === k) L.dir *= -1; else { L.sort = k; L.dir = NUMERIC_FIRST_DESC.includes(k) ? -1 : 1; }
+  renderLibrary();
+});
+$('view-library').addEventListener('click', e => {
+  const c = e.target.closest('.chip[data-f]'); if (!c) return;
+  const L = state.lib, v = c.dataset.v;
+  if (c.dataset.f === 'status') L.status = v;
+  else if (c.dataset.f === 'genre') L.genre = L.genre === v ? '' : v;
+  else L[v] = !L[v];
+  L.limit = 100; renderLibrary();
+});
+function libRowClick(e) {
+  const ed = e.target.closest('[data-edit]');
+  const tr = e.target.closest('tr');
+  const id = tr && (tr.dataset.id || (tr.previousElementSibling && tr.previousElementSibling.dataset.id));
+  if (ed) { const a = state.albums.find(x => x.id === id); if (a) openAlbumDialog(a); return; }
+  if (e.target.closest('[data-log]')) {
+    const a = state.albums.find(x => x.id === id);
+    if (a && a.id) { state.pick = String(toNum(a.id)); showTab('log'); }
+    return;
+  }
+  if (!tr || !tr.classList.contains('row')) return;
+  state.lib.open = state.lib.open === tr.dataset.id ? null : tr.dataset.id; renderLibrary();
+}
+$('libBody').addEventListener('click', libRowClick);
+$('libBody').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr.row')) { e.preventDefault(); libRowClick(e); } });
+$('libMore').addEventListener('click', () => { state.lib.limit += 100; renderLibrary(); });
+$('addAlbumBtn').addEventListener('click', () => openAlbumDialog(null));
+$('albumForm').addEventListener('submit', saveAlbumDialog);
+$('dlgClose').addEventListener('click', () => $('albumDlg').close());
+
+/* ---------- Google Sheets direct (GitHub Pages and other hosts outside claude.ai) ----------
+   Same calls as the claude.ai connector, sent straight to the Sheets API with a Google sign-in.
+   Writes use USER_ENTERED, like the connector, so ' prefixes, numbers and dates behave the same.
+   The Client ID is read (never written) from the book tracker's saved config, key mbl_config. */
+const google_ = {
+  cfgKey: 'sg-config', bookCfgKey: 'mbl_config', tokKey: 'sg-token', client: null,
+  clientId() {
+    try { const c = JSON.parse(lsGet(this.cfgKey) || 'null'); if (c && c.clientId) return c.clientId; } catch (e) {}
+    try { const b = JSON.parse(lsGet(this.bookCfgKey) || 'null'); if (b && b.clientId) return b.clientId; } catch (e) {}
+    return '';
+  },
+  saveClientId(id) { lsSet(this.cfgKey, JSON.stringify({ clientId: id })); },
+  tok() { try { return JSON.parse(lsGet(this.tokKey) || 'null'); } catch (e) { return null; } },
+  valid() { const t = this.tok(); return !!(t && t.exp > Date.now()); },
+  async callTool(server, tool, input) {
+    if (!this.valid()) { googleSignedOut(); throw { code: 'google_signin' }; }
+    const base = `https://sheets.googleapis.com/v4/spreadsheets/${input.spreadsheetId}/values/${encodeURIComponent(input.range)}`;
+    const url = tool === 'get_values' ? base
+      : tool === 'append_values' ? base + ':append?valueInputOption=USER_ENTERED'
+      : base + '?valueInputOption=USER_ENTERED';
+    const opts = { method: tool === 'get_values' ? 'GET' : tool === 'append_values' ? 'POST' : 'PUT', headers: { Authorization: 'Bearer ' + this.tok().t } };
+    if (tool !== 'get_values') { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify({ values: input.values }); }
+    const res = await fetch(url, opts);
+    if (res.status === 401) { try { localStorage.removeItem(this.tokKey); } catch (e) {} googleSignedOut(); throw { code: 'google_signin' }; }
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw { code: 'tool_error', message: (body.error && body.error.message) || 'HTTP ' + res.status };
+    return { payload: body };
+  }
+};
+function googleSignedOut() {
+  setStatus('error', state.live ? 'Signed out · showing the last data loaded' : 'Not connected · showing a sample snapshot');
+  $('refreshBtn').textContent = 'Connect';
+}
+function loadGis() {
+  return new Promise((ok, fail) => {
+    if (window.google && google.accounts && google.accounts.oauth2) return ok();
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = () => ok(); s.onerror = () => fail(new Error('Google sign-in didn\'t load'));
+    document.head.appendChild(s);
+  });
+}
+// Runs from a click, and stays synchronous once Google's script has loaded, so the sign-in popup isn't blocked
+function googleConnect() {
+  const id = google_.clientId();
+  if (!id) { $('gClient').value = ''; $('gMsg').textContent = ''; $('gDlg').showModal(); return; }
+  if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().then(googleConnect, err => notice(err.message, 'error')); return; }
+  try {
+    if (!google_.client) google_.client = google.accounts.oauth2.initTokenClient({
+      client_id: id, scope: 'https://www.googleapis.com/auth/spreadsheets',
+      callback: r => {
+        if (r.error) { notice('Google sign-in failed: ' + r.error, 'error'); return; }
+        lsSet(google_.tokKey, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in - 120) * 1000 }));
+        $('refreshBtn').textContent = 'Refresh';
+        refresh();
+      },
+      error_callback: e => notice('Google sign-in was closed or blocked' + (e && e.type ? ' (' + e.type + ')' : '') + '. Press Connect to try again.', 'error')
+    });
+    google_.client.requestAccessToken({ prompt: '' });
+  } catch (err) { notice(err.message, 'error'); }
+}
+function googleBoot() {
+  state.google = true; state.mcp = google_;
+  loadGis().catch(() => {});
+  if (google_.valid()) { refresh(); return; }
+  googleSignedOut();
+  notice(google_.clientId() ? 'Showing a sample snapshot. Press Connect to sign in to Google and load your sheet.' : 'Showing a sample snapshot. Press Connect to link your Google Sheet. You\'ll need the OAuth Client ID from your Google Cloud project.');
+}
+$('gClose').addEventListener('click', () => $('gDlg').close());
+$('gForm').addEventListener('submit', e => {
+  const v = $('gClient').value.trim();
+  if (!/\.apps\.googleusercontent\.com$/.test(v)) { e.preventDefault(); $('gMsg').textContent = 'That doesn\'t look like a Client ID.'; return; }
+  google_.saveClientId(v); google_.client = null;
+  googleConnect();
+});
+
+/* ---------- boot ---------- */
+window.__sg = { state, render: renderAll };
+setLogDay(null);
+renderAll();
+{ const t = lsGet('sg-tab'); if (t && TABS[t] && t !== 'log') showTab(t); }
+setStatus('loading', 'Connecting to your sheet…');
+(async () => {
+  try {
+    if (!(window.claude && window.claude.use)) { googleBoot(); return; }
+    const mcp = await window.claude.use('mcp');
+    if (!mcp) {
+      setStatus('error', 'Showing a sample snapshot');
+      notice('This view can\'t reach Google Sheets, so you\'re seeing a snapshot. Open the page in Claude to see live data and log listens.');
+      return;
+    }
+    state.mcp = mcp;
+    refresh();
+  } catch (err) {
+    setStatus('error', 'Showing a sample snapshot');
+    notice(explain(err), 'error');
+  }
+})();
+</script>

@@ -4,7 +4,7 @@ Album tracker, a sister app to the book tracker "Jackets & Manuscripts"
 (`jcm-book-library/my-book-library`). It is a friendlier front end for the
 🎸 tab of the "Entertainment Tracker" Google Sheet, which stays the source of truth.
 
-Status: planning. The sheet changes and first build are waiting on approval.
+Status: Stage 1 (Log, Library) live. Artifact: https://claude.ai/artifact/7WTduYo8DU1jx1Hjx25vd3
 See [ROADMAP.md](ROADMAP.md).
 
 ## Hosting (planned)
