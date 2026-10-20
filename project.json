@@ -1,0 +1,12 @@
+{
+  "name": "Sleeves & Grooves",
+  "repo": "album-tracker",
+  "purpose": "Logs album listening and keeps a library of albums, backed by the Entertainment Tracker Google Sheet.",
+  "family": "Entertainment",
+  "stage": "Building",
+  "live": "https://jcm-book-library.github.io/album-tracker/",
+  "tags": [
+    "media-tracker"
+  ],
+  "updated": "2026-10-19"
+}
