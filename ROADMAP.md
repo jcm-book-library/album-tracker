@@ -1,4 +1,4 @@
-# Sleeves & Grooves: roadmap
+# Music Collection: roadmap
 
 Started 2026-10-18.
 
@@ -46,6 +46,11 @@ Started 2026-10-18.
 - Option C: export a video (canvas + audio via MediaRecorder) of the album with its visual, to keep or share.
 - Storage: on the device (IndexedDB) or Google Drive, never in the Sheet.
 - Format-shifting music you own for private use is generally allowed in Australia; sharing the recordings isn't.
+
+### Cover art (GitHub Pages only)
+- Album covers kept as image files in your Google Drive (never in the public repo), loaded by the GitHub Pages version after Google sign-in. The sign-in would also ask for read access to that Drive folder.
+- The claude.ai artifact can't show them (it blocks images from other sites), so it keeps the generated record graphics.
+- Reuse whatever approach the sports-logos project settles on, so both work the same way.
 
 ### Not planned
 - Running on hardware MP3 players (iPod-style devices can't run web apps).
