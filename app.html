@@ -249,6 +249,65 @@ div.hbar{padding:3px 6px}
 }
 @media (min-width:861px) and (max-width:1100px){.dash-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
+/* tools and discover */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.why-chip{font-size:12px;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line))}
+.tool-wide{margin-top:20px}
+.tool-input{width:100%;font:inherit;font-size:15px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:10px}
+.tool-input:focus{border-color:var(--accent);outline:none}
+.own-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.own-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line);align-items:center}
+.own-list li:first-child{border-top:0}
+.own-list .t{font-weight:600;overflow-wrap:anywhere}
+.own-list .m{font-size:12px;color:var(--muted);grid-column:1;overflow-wrap:anywhere}
+.own-list .v{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--muted);min-width:0}
+.own-list .v.yes{color:color-mix(in srgb,var(--accent) 70%,#fff)}
+.dip{background:var(--raise);border-radius:12px;padding:14px 16px;margin-top:4px}
+.dip h3{font-family:var(--display);font-size:20px;margin:0;overflow-wrap:anywhere}
+.dip-line{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 12px;min-width:0}
+.dip .acts{display:flex;gap:8px;flex-wrap:wrap}
+.goal-big{font-family:var(--display);font-size:30px;font-weight:700}
+.goal-bar{height:10px;border-radius:999px;background:var(--raise);overflow:hidden;margin:8px 0 10px}
+.goal-bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.goal-out p{margin:0 0 6px}
+.yir-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.yir-tiles div{background:var(--raise);border-radius:10px;padding:10px 12px;min-width:0}
+.yir-tiles b{display:block;font-family:var(--display);font-size:22px}
+.yir-tiles span{font-size:12px;color:var(--muted)}
+.yir-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:14px}
+.yir-cols .sub-head{margin-top:0}
+.rec-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rec{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--bg);display:flex;flex-direction:column;gap:8px;min-width:0}
+.rec-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.rec-head > div:first-child{min-width:0;flex:1 1 160px}
+.rec .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.rec-actions{display:flex;gap:6px;flex-wrap:wrap}
+.rec .rec-why{display:flex;flex-wrap:wrap;gap:6px}
+.rec .rec-why:empty{display:none}
+.rec .rec-extra{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:0}
+.rec .rec-extra:empty{display:none}
+.nudge-list li.nonum .rate-wrap{grid-column:1/-1;display:flex;flex-direction:column;gap:6px}
+.nudge-more{margin-top:6px}
+.aotd{background:var(--raise);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:14px;padding:18px 20px}
+.aotd-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.aotd-top > div:first-child{min-width:0;flex:1 1 220px}
+.aotd h3{font-family:var(--display);font-size:clamp(24px,4vw,32px);line-height:1.15;margin:0;overflow-wrap:anywhere}
+.aotd .by{font-size:16px;margin-top:4px;overflow-wrap:anywhere}
+.aotd .big-rating{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;color:color-mix(in srgb,var(--accent) 60%,#fff)}
+.aotd .big-rating small{font-size:16px;font-weight:400;color:var(--muted)}
+.aotd .why-line{margin:12px 0 0;font-weight:600}
+.aotd .own-line{margin:6px 0 0;font-size:14px}
+.aotd .notes{margin:6px 0 0;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.aotd .dip-line{margin:12px 0 0}
+.yest{margin:10px 0 0;font-size:13px}
+.mini-list .nm.soft{white-space:normal;overflow:visible;overflow-wrap:anywhere}
+.mini-list .r{overflow-wrap:anywhere;white-space:normal;text-align:right}
+.mile-head{margin:16px 0 6px;display:flex;justify-content:space-between;gap:8px}
+.mile-head:first-child{margin-top:0}
+@media (max-width:860px){.yir-cols{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:700px){.rec-list{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){.yir-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tab{padding:7px 12px;font-size:13px}.tabs{scrollbar-width:thin}}
+
 /* edit dialog */
 dialog{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:16px;padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 40px)}
 dialog::backdrop{background:rgba(8,6,14,.65)}
@@ -309,6 +368,8 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     <button class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="view-plan" type="button">Plan</button>
     <button class="tab" role="tab" id="tab-library" aria-selected="false" aria-controls="view-library" type="button">Library</button>
     <button class="tab" role="tab" id="tab-dashboard" aria-selected="false" aria-controls="view-dashboard" type="button">Dashboard</button>
+    <button class="tab" role="tab" id="tab-tools" aria-selected="false" aria-controls="view-tools" type="button">Tools</button>
+    <button class="tab" role="tab" id="tab-discover" aria-selected="false" aria-controls="view-discover" type="button">Discover</button>
   </nav>
 
   <!-- ===== Log ===== -->
@@ -470,6 +531,50 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
         <ul class="mini-list" id="artPlays"></ul>
       </section>
     </div>
+  </div>
+
+  <!-- ===== Tools ===== -->
+  <div id="view-tools" role="tabpanel" aria-labelledby="tab-tools" hidden>
+    <div class="dash-2">
+      <section class="panel" aria-labelledby="dipH"><div class="panel-head"><h2 id="dipH">Lucky dip</h2><span class="muted small">Pick a mood, get an album</span></div>
+        <div class="chips" id="dipMoods" role="group" aria-label="Mood"></div><div id="dipCard"></div></section>
+      <section class="panel" aria-labelledby="ownH"><div class="panel-head"><h2 id="ownH">Do I own this?</h2><span class="muted small">Handy in a record shop</span></div>
+        <input type="search" id="ownQ" class="tool-input" placeholder="Title or artist" aria-label="Title or artist to check" autocomplete="off"><ul class="own-list" id="ownList"></ul></section>
+    </div>
+    <div class="dash-2 tool-wide">
+      <section class="panel" aria-labelledby="nudH"><div class="panel-head"><h2 id="nudH">Nudges</h2><span class="muted small">Things quietly waiting on you</span></div><div id="nudgeBox"></div></section>
+      <section class="panel" aria-labelledby="goalH"><div class="panel-head"><h2 id="goalH">Goal planner</h2><span class="muted small" id="goalYear"></span></div><div class="goal-out" id="goalOut"></div></section>
+    </div>
+    <section class="panel tool-wide" aria-labelledby="yirH">
+      <div class="panel-head"><h2 id="yirH">Year in review</h2><select id="yirYear" aria-label="Year"></select></div>
+      <div id="yirBox"></div>
+    </section>
+    <section class="panel tool-wide" aria-labelledby="recsH">
+      <div class="panel-head"><h2 id="recsH">Recommendations from my ratings</h2><span class="muted small">Scored on artist, genre and decade</span></div>
+      <div class="chips" id="recModes" role="group" aria-label="Mode">
+        <button class="chip" type="button" data-m="best" aria-pressed="true">Best match</button>
+        <button class="chip" type="button" data-m="artists" aria-pressed="false">More from favourite artists</button>
+        <button class="chip" type="button" data-m="change" aria-pressed="false">Change of pace</button>
+        <button class="chip" type="button" data-m="revisit" aria-pressed="false">Revisit a favourite</button>
+      </div>
+      <div id="recList" class="rec-list"></div>
+    </section>
+  </div>
+
+  <!-- ===== Discover ===== -->
+  <div id="view-discover" role="tabpanel" aria-labelledby="tab-discover" hidden>
+    <section class="panel" aria-labelledby="aotdH">
+      <div class="panel-head"><h2 id="aotdH">Album of the day</h2><span class="muted small" id="aotdDate"></span></div>
+      <div id="aotdBox"></div>
+    </section>
+    <div class="dash-2 tool-wide">
+      <section class="panel" aria-labelledby="odH"><div class="panel-head"><h2 id="odH">On this day</h2><span class="muted small">Plays and releases on today's date in earlier years</span></div><ul class="mini-list" id="onDayList"></ul></section>
+      <section class="panel" aria-labelledby="csH"><div class="panel-head"><h2 id="csH">Coming soon</h2><span class="muted small" id="soonNote2"></span></div><ul class="mini-list" id="soonList2"></ul></section>
+    </div>
+    <section class="panel tool-wide" aria-labelledby="anH">
+      <div class="panel-head"><h2 id="anH">Anniversaries</h2><span class="muted small" id="annivNote"></span></div>
+      <div id="annivBox"></div>
+    </section>
   </div>
 </div>
 
@@ -1359,17 +1464,20 @@ function planRow(a, { num, kind }) {
 const artistKey = s => norm(s).replace(/\s+/g, ' ').replace(/^the /, '');
 const avg1 = n => String(Number(n.toFixed(1)));
 function buildProfile() {
-  const art = new Map(), gen = new Map();
+  const art = new Map(), gen = new Map(), dec = new Map();
   for (const a of state.albums) {
     const r = toNum(a.rating);
     if (!(r > 0) || !heard(a)) continue;
     const k = artistKey(a.artist);
     if (k) { const x = art.get(k) || { n: 0, sum: 0 }; x.n++; x.sum += r; art.set(k, x); }
     if (a.genre) { const x = gen.get(a.genre) || { n: 0, sum: 0 }; x.n++; x.sum += r; gen.set(a.genre, x); }
+    const dc = decOf(a);
+    if (dc) { const x = dec.get(dc) || { n: 0, sum: 0 }; x.n++; x.sum += r; dec.set(dc, x); }
   }
-  return { art, gen };
+  return { art, gen, dec };
 }
-function scoreAlbum(a, P) {
+// withDecade adds the decade affinity used by the Tools recommendations; the sort deck leaves it off
+function scoreAlbum(a, P, withDecade = false) {
   let s = 0; const why = [];
   const x = P.art.get(artistKey(a.artist));
   if (x) {
@@ -1382,6 +1490,12 @@ function scoreAlbum(a, P) {
     const av = g.sum / g.n;
     s += (av - 5) * (g.n / (g.n + 3));
     if (av >= 6.5 && g.n >= 2) why.push(`${a.genre} avg ${avg1(av)}`);
+  }
+  const dx = withDecade && decOf(a) && P.dec.get(decOf(a));
+  if (dx) {
+    const av = dx.sum / dx.n;
+    s += (av - 5) * (dx.n / (dx.n + 3)) * 0.7;
+    if (av >= 6.5 && dx.n >= 2) why.push(`${decOf(a)}s avg ${avg1(av)}`);
   }
   if (a.status === 'Purchase' || a.buy) { s += 0.75; why.push(a.buy ? 'Ready to buy' : 'On the Purchase list'); }
   if (a.status === 'Coming Soon' && toNum(a.year) && toNum(a.year) <= +today().slice(0, 4)) { s += 0.5; why.push('Out now'); }
@@ -1712,13 +1826,456 @@ $('heat').addEventListener('keydown', e => { const c = e.target.closest('[data-d
 $('drillClose').addEventListener('click', () => $('drillDlg').close());
 $('drillDlg').addEventListener('click', e => { if (e.target === $('drillDlg')) $('drillDlg').close(); });
 
+/* ---------- Tools and Discover ---------- */
+const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const mkBtn = (label, cls, fn, o = {}) => {
+  const b = mk('button', cls, label); b.type = 'button';
+  if (o.disabled) b.disabled = true;
+  if (o.aria) b.setAttribute('aria-label', o.aria);
+  if (fn) b.addEventListener('click', () => fn(b));
+  return b;
+};
+const curYear = () => +today().slice(0, 4);
+// An album marked Coming Soon only counts once its year has arrived (same rule as the sort deck)
+const isOut = a => a.status !== 'Coming Soon' || (toNum(a.year) > 0 && toNum(a.year) <= curYear());
+const playedOf = a => state.ix.plays.get(String(toNum(a.id)));
+const decOf = a => { const y = toNum(a.year); return y >= 1000 ? Math.floor(y / 10) * 10 : 0; };
+const logToday = (a, btn) => logListen({ album: a, date: today() }, btn);
+const queueUp = a => { if (a.plan !== 'Up next') { setTier(a, 'Up next'); render(); } };
+const upNextBtn = a => mkBtn(a.plan === 'Up next' ? 'On Up next' : 'Up next', 'btn', () => queueUp(a), { disabled: a.plan === 'Up next', aria: `${a.plan === 'Up next' ? 'On Up next' : 'Add to Up next'}: ${a.title}` });
+const albumLine = (a, ...more) => [a.artist, a.year, a.genre, ...more].filter(Boolean).join(' · ');
+function ownInfo(a) {
+  if (a.format === 'Vinyl (Owned)') return { text: 'You own it on Vinyl', yes: true };
+  if (wantVinyl(a)) return { text: 'On your vinyl wish list', yes: false };
+  if (owned(a)) return { text: a.format === 'CD' ? 'You own it on CD' : a.format === 'Digital' ? 'You own it on Digital' : 'You own it', yes: true };
+  return { text: 'Not owned', yes: false };
+}
+function openDlg(a) { if (a) openAlbumDialog(a); }
+const tools = {
+  dip: { mood: 'Anything', id: null, last: null },
+  ownQ: '', more: {}, rateOpen: null, goalEdit: false, goalVal: '', goalMsg: '', yir: '', rec: 'best', annivOpen: {}
+};
+
+/* Lucky dip */
+const DIP_MOODS = [
+  ['Loud', 'Rock and Metal', a => ['Rock', 'Metal'].includes(a.genre), 'No Rock or Metal albums in your library yet.'],
+  ['Chill', 'Electronic, Soundtrack and Soul/R&B', a => ['Electronic', 'Soundtrack', 'Soul/R&B'].includes(a.genre), 'No Electronic, Soundtrack or Soul/R&B albums yet.'],
+  ['Throwback', 'Released before 2000', a => { const y = toNum(a.year); return y > 0 && y < 2000; }, 'Nothing released before 2000 (with a year filled in) yet.'],
+  ['Something new', 'From your listening backlog', a => backlog(a), 'Your listening backlog is empty. Nothing left unheard.'],
+  ['Old favourite', 'Rated 9 or 10', a => heard(a) && rOf(a) >= 9, 'No albums rated 9 or 10 yet.'],
+  ['Anything', 'Your whole library', () => true, 'Your library is empty.']
+];
+function renderDip() {
+  const d = tools.dip, box = $('dipCard');
+  $('dipMoods').innerHTML = DIP_MOODS.map(([m, hint]) => `<button class="chip" type="button" data-m="${esc(m)}" title="${esc(hint)}" aria-pressed="${d.mood === m}">${esc(m)}</button>`).join('');
+  const mood = DIP_MOODS.find(x => x[0] === d.mood) || DIP_MOODS[5];
+  const pool = state.albums.filter(a => a.id && isOut(a) && mood[2](a));
+  box.textContent = '';
+  if (!pool.length) { box.appendChild(mk('p', 'empty', mood[3])); return; }
+  let a = pool.find(x => x.id === d.id);
+  if (!a) {
+    const others = pool.filter(x => x.id !== d.last), from = others.length ? others : pool;
+    a = from[Math.floor(Math.random() * from.length)]; d.id = a.id;
+  }
+  const card = mk('div', 'dip');
+  card.append(mk('h3', null, a.title), mk('div', 'm muted small', albumLine(a) || 'Unknown artist'));
+  const line = mk('div', 'dip-line');
+  line.innerHTML = (rOf(a) ? `<span class="rating tnum">${esc(a.rating)}<small>/10</small></span>` : '<span class="muted small">Not rated yet</span>') + pill('status', a.status) + pill('format', a.format);
+  if (a.buy) line.appendChild(buyEl(a.buy));
+  const acts = mk('div', 'acts');
+  acts.append(
+    mkBtn('Another', 'btn btn-primary', () => { d.last = d.id; d.id = null; renderDip(); }, { disabled: pool.length < 2 }),
+    mkBtn('Log a listen today', 'btn', b => logToday(a, b)),
+    upNextBtn(a));
+  card.append(line, acts, mk('div', 'muted small', `${fmt(pool.length)} album${pool.length === 1 ? '' : 's'} fit “${d.mood}”`));
+  card.lastChild.style.marginTop = '8px';
+  box.appendChild(card);
+}
+
+/* Do I own this? */
+const normQ = t => String(t || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+function renderOwn() {
+  const q = normQ(tools.ownQ), box = $('ownList');
+  box.textContent = '';
+  if (q.length < 2) { box.appendChild(mk('li', 'muted small', 'Type a few letters of a title or artist.')); return; }
+  const words = q.split(' ');
+  const hits = state.albums.filter(a => { const h = normQ(a.title + ' ' + a.artist); return words.every(w => h.includes(w)); })
+    .sort((x, y) => (normQ(y.title).startsWith(q) - normQ(x.title).startsWith(q)) || norm(x.title).localeCompare(norm(y.title)));
+  if (!hits.length) { box.appendChild(mk('li', 'muted small', 'Nothing in your library matches that. It is not owned and not on a wish list.')); return; }
+  for (const a of hits.slice(0, 12)) {
+    const info = ownInfo(a), li = mk('li');
+    li.dataset.id = a.id;
+    li.append(mk('span', 't', a.title));
+    const r = mk('span', 'rating tnum'); r.innerHTML = rOf(a) ? `${esc(a.rating)}<small>/10</small>` : ''; li.append(r);
+    li.append(mk('span', 'm', [a.artist, a.year, a.status ? 'Status: ' + a.status : '', rOf(a) ? '' : 'Not rated'].filter(Boolean).join(' · ')));
+    const v = mk('span', 'v' + (info.yes ? ' yes' : ''), info.text);
+    if (wantVinyl(a) && a.buy) v.appendChild(buyEl(a.buy));
+    li.append(v);
+    box.appendChild(li);
+  }
+  if (hits.length > 12) box.appendChild(mk('li', 'muted small', `${hits.length - 12} more. Type a little more to narrow it down.`));
+}
+
+/* Nudges */
+function nudgeData() {
+  const t = today();
+  const stale = state.albums.filter(a => a.id && a.plan === 'Up next' && toDate(a.planned) && daysBetween(toDate(a.planned), t) > 60 && !playedOf(a))
+    .map(a => ({ a, gap: daysBetween(toDate(a.planned), t) })).sort((x, y) => y.gap - x.gap);
+  const first = state.albums.filter(a => a.id && !(rOf(a) > 0) && playedOf(a) && daysBetween(playedOf(a).last, t) >= 14)
+    .map(a => ({ a, gap: daysBetween(playedOf(a).last, t) })).sort((x, y) => y.gap - x.gap);
+  const wish = state.albums.filter(a => (wishList(a) || wantVinyl(a)) && !a.buy)
+    .map(a => ({ a })).sort((x, y) => rOf(y.a) - rOf(x.a) || norm(x.a.title).localeCompare(norm(y.a.title)));
+  return { stale, first, wish };
+}
+function renderNudges() {
+  const box = $('nudgeBox'), data = nudgeData();
+  box.textContent = '';
+  const groups = [
+    ['stale', 'Up next, never played', 'Planned over 60 days ago and not logged since', data.stale, (x, li) => {
+      li.querySelector('.m').textContent = `${albumLine(x.a)} · planned ${fmtDate(x.a.planned)}, ${x.gap} days ago`;
+      li.querySelector('.acts').appendChild(mkBtn('Log today', null, b => logToday(x.a, b), { aria: 'Log a listen today: ' + x.a.title }));
+    }],
+    ['first', 'First listens gone quiet', 'Played but not rated, nothing for 14+ days', data.first, (x, li) => {
+      const p = playedOf(x.a);
+      li.querySelector('.m').textContent = `${x.a.artist || 'Unknown artist'} · ${plural(p.plays, 'spin')}, last ${fmtDate(p.last)} (${x.gap} days ago)`;
+      li.querySelector('.acts').appendChild(mkBtn('Rate', null, () => { tools.rateOpen = tools.rateOpen === x.a.id ? null : x.a.id; renderNudges(); }, { aria: 'Rate ' + x.a.title }));
+      if (tools.rateOpen === x.a.id) li.appendChild(rateBlock(x.a));
+    }],
+    ['wish', 'Wish list without a Buy link', 'Add a shop link so it is one tap to buy', data.wish, (x, li) => {
+      li.querySelector('.m').textContent = [x.a.artist, x.a.year, rOf(x.a) ? `rated ${x.a.rating}/10` : '', x.a.format].filter(Boolean).join(' · ');
+      li.querySelector('.acts').appendChild(mkBtn('Edit', null, () => openDlg(x.a), { aria: 'Edit ' + x.a.title }));
+    }]
+  ];
+  let any = false;
+  for (const [key, title, note, items, fill] of groups) {
+    if (!items.length) continue;
+    any = true;
+    const head = mk('div', 'eyebrow sub-head', `${title} · ${items.length}`);
+    head.title = note;
+    box.append(head, mk('div', 'muted small', note));
+    const ol = mk('ol', 'plan-list nudge-list'); ol.dataset.nudge = key;
+    const all = tools.more[key], shown = all ? items : items.slice(0, 5);
+    for (const x of shown) {
+      const li = mk('li', 'nonum'); li.dataset.id = x.a.id || '';
+      li.innerHTML = '<span><span class="t"></span><br><span class="m"></span></span><span class="acts"></span>';
+      li.querySelector('.t').textContent = x.a.title;
+      fill(x, li);
+      ol.appendChild(li);
+    }
+    box.appendChild(ol);
+    if (items.length > 5) box.appendChild(mkBtn(all ? 'Show fewer' : `Show all ${items.length}`, 'linkbtn nudge-more', () => { tools.more[key] = !all; renderNudges(); }));
+  }
+  if (!any) box.appendChild(mk('p', 'empty', 'Nothing nagging. Up next albums are moving, first listens are rated, and every wish-list record has a Buy link.'));
+}
+function rateBlock(a) {
+  const wrap = mk('div', 'rate-wrap'), pick = mk('div', 'rate-pick'), bar = mk('div', 'rate-bar'), sel = state.ratePick[a.id];
+  pick.setAttribute('role', 'group');
+  for (let n = 1; n <= 10; n++) {
+    const b = mkBtn(String(n), null, () => { state.ratePick[a.id] = n; renderNudges(); }, { aria: `Rate ${n} out of 10` });
+    b.setAttribute('aria-pressed', String(sel === n)); pick.appendChild(b);
+  }
+  wrap.appendChild(pick);
+  if (sel) {
+    bar.append(mkBtn(`Save ${sel}/10`, 'btn btn-primary', b => rateAlbum(a, sel, b)),
+      mkBtn('Cancel', 'btn', () => { delete state.ratePick[a.id]; tools.rateOpen = null; renderNudges(); }));
+    if (a.status === 'Listen') bar.appendChild(mk('span', 'muted small', 'Also sets Status to Listened'));
+    wrap.appendChild(bar);
+  }
+  return wrap;
+}
+
+/* Goal planner */
+const firstLogMap = () => { const m = new Map(); for (const e of state.log) { const k = entryKey(e); if (!m.has(k) || e.date < m.get(k)) m.set(k, e.date); } return m; };
+function goalFigures() {
+  const t = today(), y = t.slice(0, 4), goal = state.settings.yearGoalAlbums || 52;
+  const heardKeys = new Set(); for (const e of state.log) if (e.date.startsWith(y)) heardKeys.add(entryKey(e));
+  const firsts = firstLogMap();
+  const fresh = [...heardKeys].filter(k => (firsts.get(k) || '').startsWith(y)).length;
+  const done = heardKeys.size, doy = daysBetween(`${y}-01-01`, t) + 1, diy = daysBetween(`${y}-01-01`, `${+y + 1}-01-01`);
+  const daysLeft = Math.max(1, diy - doy + 1), togo = Math.max(0, goal - done);
+  const proj = Math.round(done / doy * diy);
+  let finish = '';
+  if (done > 0) finish = addDays(`${y}-01-01`, Math.ceil(goal / done * doy) - 1);
+  return { y, goal, done, fresh, doy, diy, daysLeft, togo, perWeek: togo / (daysLeft / 7), proj, finish };
+}
+function renderGoal() {
+  const g = goalFigures(), out = $('goalOut');
+  $('goalYear').textContent = g.y;
+  out.textContent = '';
+  const big = mk('div', 'goal-big tnum', fmt(g.done)); big.append(' ', Object.assign(mk('span', 'muted', `of ${fmt(g.goal)} albums`), { style: 'font-size:16px' }));
+  const bar = mk('div', 'goal-bar'); bar.innerHTML = `<i style="width:${Math.min(100, g.done / g.goal * 100)}%"></i>`; bar.setAttribute('aria-hidden', 'true');
+  out.append(big, bar);
+  const p1 = mk('p'), p2 = mk('p', 'muted small');
+  if (g.togo) p1.innerHTML = `<b>${fmt(g.togo)}</b> to go in ${fmt(g.daysLeft)} days: about <b>${g.perWeek.toFixed(1)}</b> albums a week.`;
+  else p1.innerHTML = '<b>Goal reached.</b> Anything from here is a bonus.';
+  const gap = g.proj - g.goal;
+  p2.textContent = g.done
+    ? `At your current pace you'll finish ${g.y} on about ${fmt(g.proj)} albums (${gap >= 0 ? fmt(gap) + ' ahead' : fmt(-gap) + ' short'}). ${g.togo ? `You'd reach ${fmt(g.goal)} around ${fmtDate(g.finish)}.` : ''} ${fmt(g.fresh)} of the ${fmt(g.done)} were new to you this year.`.replace(/\s+/g, ' ')
+    : 'Nothing logged yet this year, so there is no pace to project. Log a listen to start.';
+  out.append(p1, p2);
+  const row = mk('div', 'logrow'); row.style.marginTop = '12px';
+  if (tools.goalEdit) {
+    const lab = mk('label', null, 'Albums this year'); lab.htmlFor = 'goalIn';
+    const inp = mk('input'); inp.type = 'number'; inp.id = 'goalIn'; inp.min = 1; inp.max = 1000; inp.inputMode = 'numeric'; inp.value = tools.goalVal;
+    inp.addEventListener('input', () => { tools.goalVal = inp.value; });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') saveGoal(); if (e.key === 'Escape') { tools.goalEdit = false; renderGoal(); } });
+    row.append(lab, inp, mkBtn('Save goal', 'btn btn-primary', () => saveGoal()), mkBtn('Cancel', 'btn', () => { tools.goalEdit = false; tools.goalMsg = ''; renderGoal(); }));
+    out.appendChild(row);
+    if (tools.goalMsg) out.appendChild(Object.assign(mk('p', 'small', tools.goalMsg), { style: 'margin:8px 0 0;color:var(--danger)' }));
+    setTimeout(() => { if (document.activeElement !== inp && tools.goalEdit && !$('view-tools').hidden) inp.focus(); });
+  } else {
+    row.appendChild(mkBtn('Change goal', 'btn', () => { tools.goalEdit = true; tools.goalVal = String(g.goal); tools.goalMsg = ''; renderGoal(); }));
+    out.appendChild(row);
+  }
+}
+// 🎸 Settings is key | value. Find the key's row (exactly one), change only its value cell, or add the row.
+async function saveSetting(key, value) {
+  const rows = await readRange(`${qt(TAB_SET)}!A1:A`);
+  const clean = v => norm(String(v ?? '').replace(/^'/, ''));
+  const hits = rows.map((r, i) => i > 0 && clean(r[0]) === norm(key) ? i + 1 : 0).filter(Boolean);
+  if (hits.length > 1) throw { code: 'tool_error', message: `“${key}” appears ${hits.length} times in ${TAB_SET}, so nothing was written` };
+  if (hits.length === 1) {
+    const cur = await readRange(`${qt(TAB_SET)}!B${hits[0]}`);
+    const was = cur[0] && String(cur[0][0] ?? '').trim();
+    if (was !== '' && was != null && toNum(was) === value) return false;
+    await putCell(TAB_SET, 'B', hits[0], value);
+    return true;
+  }
+  await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_SET)}!A1`, values: [["'" + key, value]] }, { cache: false });
+  return true;
+}
+async function saveGoal() {
+  const n = Number(String(tools.goalVal).trim());
+  if (!Number.isInteger(n) || n < 1 || n > 1000) { tools.goalMsg = 'Type a whole number from 1 to 1000.'; renderGoal(); return; }
+  if (!isLive()) { tools.goalMsg = 'Saving needs the live connection. ' + connectHint(); renderGoal(); return; }
+  if (state.busy) return;
+  state.busy = true;
+  try {
+    const wrote = await saveSetting('yearGoalAlbums', n);
+    state.settings.yearGoalAlbums = n; tools.goalEdit = false; tools.goalMsg = '';
+    notice('');
+    setStatus('live', wrote ? `Goal set to ${fmt(n)} albums` : `Goal is already ${fmt(n)} albums`);
+    state.busy = false;
+    renderAll();
+  } catch (err) {
+    state.busy = false;
+    tools.goalMsg = 'Not saved: ' + ((err && err.code === 'tool_error' && err.message) || explain(err));
+    renderGoal();
+  }
+}
+
+/* Year in review */
+function renderYear() {
+  const cur = String(curYear()), sel = $('yirYear'), box = $('yirBox');
+  const years = [...new Set([cur, ...state.log.map(e => e.date.slice(0, 4))])].sort().reverse();
+  if (!years.includes(tools.yir)) tools.yir = cur;
+  if ([...sel.options].map(o => o.value).join() !== years.join()) sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  sel.value = tools.yir;
+  const y = tools.yir, ents = state.log.filter(e => e.date.startsWith(y));
+  box.textContent = '';
+  if (!ents.length) { box.appendChild(mk('p', 'empty', state.log.length ? `No listens logged in ${y}. Pick another year, or log a listen to start ${y === cur ? 'this one' : 'it'}.` : 'No listens logged yet. Log one from the Log tab and your year in review fills in.')); return; }
+  const firsts = firstLogMap(), per = new Map(), art = new Map(), month = new Array(12).fill(0);
+  let plays = 0;
+  for (const e of ents) {
+    const k = entryKey(e), a = albumOf(e);
+    const x = per.get(k) || { k, a, title: a ? a.title : e.title, artist: a ? a.artist : e.artist, plays: 0, entries: [] };
+    x.plays += e.plays; x.entries.push(e); per.set(k, x);
+    plays += e.plays; month[+e.date.slice(5, 7) - 1] += e.plays;
+    const name = x.artist, ak = artistKey(name);
+    if (ak) { const z = art.get(ak) || { name, plays: 0, entries: [] }; z.plays += e.plays; z.entries.push(e); art.set(ak, z); }
+  }
+  const fresh = [...per.values()].filter(x => (firsts.get(x.k) || '').startsWith(y));
+  const best = month.indexOf(Math.max(...month));
+  const tile = (v, l) => `<div><b class="tnum">${v}</b><span>${l}</span></div>`;
+  box.innerHTML = `<div class="yir-tiles">${tile(fmt(plays), plays === 1 ? 'listen' : 'listens')}${tile(fmt(per.size), 'different albums')}${tile(fmt(fresh.length), 'new to you (first logged in ' + y + ')')}${tile(fmt(art.size), art.size === 1 ? 'artist' : 'artists')}</div>`;
+  box.appendChild(Object.assign(mk('p', null, `Busiest month: ${FULL_MONTHS[best]} with ${plural(month[best], 'listen')}.`), { style: 'margin:0' }));
+  const cols = mk('div', 'yir-cols');
+  const list = (title, items, empty) => {
+    const s = mk('section'), ul = mk('ul', 'mini-list');
+    s.appendChild(mk('div', 'eyebrow sub-head', title));
+    if (!items.length) ul.appendChild(mk('li', 'empty', empty));
+    for (const it of items) {
+      const li = mk('li'), b = mkBtn('', null, it.open); li.appendChild(b);
+      b.append(mk('span', 'nm soft', it.name), mk('span', 'r', it.val));
+      b.setAttribute('aria-label', it.aria);
+      ul.appendChild(li);
+    }
+    s.appendChild(ul); return s;
+  };
+  const topAlbums = [...per.values()].sort((p, q) => q.plays - p.plays || norm(p.title).localeCompare(norm(q.title))).slice(0, 5)
+    .map(x => ({ name: x.title, val: plural(x.plays, 'play'), aria: `${x.title}: ${plural(x.plays, 'play')}`, open: () => x.a ? openDlg(x.a) : drillLog(`${x.title} · ${y}`, x.entries) }));
+  const topArtists = [...art.values()].sort((p, q) => q.plays - p.plays || p.name.localeCompare(q.name)).slice(0, 5)
+    .map(x => ({ name: x.name, val: plural(x.plays, 'play'), aria: `${x.name}: ${plural(x.plays, 'play')}. Show what you played`, open: () => drillLog(`${x.name} · ${y}`, x.entries) }));
+  const finds = fresh.filter(x => x.a && rOf(x.a) > 0).sort((p, q) => rOf(q.a) - rOf(p.a) || q.plays - p.plays || norm(p.title).localeCompare(norm(q.title))).slice(0, 5)
+    .map(x => ({ name: x.title, val: `${x.a.rating}/10`, aria: `${x.title}, rated ${x.a.rating} out of 10`, open: () => openDlg(x.a) }));
+  cols.append(list('Top albums by plays', topAlbums, 'Nothing yet.'), list('Top artists by plays', topArtists, 'Nothing yet.'),
+    list(`Highest rated new in ${y}`, finds, `No albums first logged in ${y} have a rating yet.`));
+  box.appendChild(cols);
+}
+
+/* Recommendations from my ratings */
+const RECS = {
+  best: 'Nothing in your backlog to recommend. Add albums in the Library tab.',
+  artists: 'No backlog albums by artists you rate highly (7 or more on average) yet.',
+  change: 'No backlog albums in genres you rarely rate.',
+  revisit: 'No favourites waiting. Every album you rated 9 or 10 has been played in the last 180 days.'
+};
+function recPicks(mode) {
+  const P = buildProfile(), t = today();
+  if (mode === 'revisit') {
+    return state.albums.filter(a => a.id && heard(a) && rOf(a) >= 9).map(a => { const p = playedOf(a); return { a, last: p ? p.last : '', gap: p ? daysBetween(p.last, t) : 1e9 }; })
+      .filter(x => x.gap > 180).sort((p, q) => rOf(q.a) - rOf(p.a) || q.gap - p.gap || norm(p.a.title).localeCompare(norm(q.a.title))).slice(0, 5)
+      .map(x => ({ a: x.a, why: [`Rated ${x.a.rating}/10`, x.last ? `Last played ${fmtDate(x.last)}` : 'Never logged here'] }));
+  }
+  const pool = state.albums.filter(a => a.id && backlog(a) && isOut(a) && a.plan !== 'Up next');
+  const scored = pool.map(a => scoreAlbum(a, P, true));
+  if (mode === 'artists') {
+    return scored.map(x => ({ ...x, fav: P.art.get(artistKey(x.a.artist)) })).filter(x => x.fav && x.fav.sum / x.fav.n >= 7)
+      .sort((p, q) => q.fav.sum / q.fav.n - p.fav.sum / p.fav.n || q.fav.n - p.fav.n || q.s - p.s || p.a._row - q.a._row).slice(0, 5)
+      .map(x => ({ a: x.a, why: [`You rated ${x.fav.n} ${x.a.artist} album${x.fav.n === 1 ? '' : 's'} ${avg1(x.fav.sum / x.fav.n)} avg`, ...x.why.filter(w => !/^You rated/.test(w))].slice(0, 3) }));
+  }
+  if (mode === 'change') {
+    return scored.filter(x => x.a.genre).map(x => {
+      const g = P.gen.get(x.a.genre), avg = g ? g.sum / g.n : 0;
+      const pace = (g ? 1 / (1 + g.n) : 1) * 2 + (g ? (10 - avg) / 10 : 0.5) + x.s * 0.05;
+      const why = g ? [`Only ${g.n} ${x.a.genre} album${g.n === 1 ? '' : 's'} rated`, `${x.a.genre} avg ${avg1(avg)}`] : [`You haven't rated any ${x.a.genre} yet`];
+      return { a: x.a, pace, why };
+    }).sort((p, q) => q.pace - p.pace || p.a._row - q.a._row).slice(0, 5);
+  }
+  return scored.sort((p, q) => q.s - p.s || p.a._row - q.a._row).slice(0, 5).map(x => ({ a: x.a, why: x.why }));
+}
+function renderRecs() {
+  const box = $('recList'), mode = tools.rec;
+  $('recModes').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.m === mode)));
+  box.textContent = '';
+  const picks = recPicks(mode);
+  if (!picks.length) { box.appendChild(mk('p', 'empty', RECS[mode])); return; }
+  for (const { a, why } of picks) {
+    const el = mk('div', 'rec'); el.dataset.id = a.id;
+    el.innerHTML = '<div class="rec-head"><div><div class="t"></div><div class="muted small meta"></div></div><div class="rec-actions"></div></div><div class="rec-extra"></div><div class="rec-why"></div>';
+    el.querySelector('.t').textContent = a.title;
+    el.querySelector('.meta').textContent = albumLine(a, a.format);
+    const ex = el.querySelector('.rec-extra');
+    if (rOf(a)) ex.insertAdjacentHTML('beforeend', `<span class="rating tnum">${esc(a.rating)}<small>/10</small></span>`);
+    if (a.buy) ex.appendChild(buyEl(a.buy));
+    for (const w of why) el.querySelector('.rec-why').appendChild(mk('span', 'why-chip', w));
+    const acts = el.querySelector('.rec-actions');
+    acts.append(mkBtn('Open', 'btn', () => openDlg(a), { aria: 'Open ' + a.title }));
+    if (mode === 'revisit') { const b = mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)); b.dataset.act = 'log'; acts.appendChild(b); }
+    else { const b = mkBtn('Up next', 'btn btn-primary', () => queueUp(a), { aria: 'Add to Up next: ' + a.title }); b.dataset.act = 'up'; acts.appendChild(b); }
+    box.appendChild(el);
+  }
+}
+
+function renderTools() { renderDip(); renderOwn(); renderNudges(); renderGoal(); renderYear(); renderRecs(); }
+
+/* ---------- Discover tab ---------- */
+// Seeded shuffle: the same date always gives the same album, and a pool of n albums doesn't repeat for n days
+function mulberry32(seed) {
+  let a = seed | 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function aotdFor(dateIso) {
+  const min = state.settings.albumOfDayMin || 8;
+  const pool = state.albums.filter(a => heard(a) && rOf(a) >= min).sort((x, y) => (toNum(x.id) || 1e9 + x._row) - (toNum(y.id) || 1e9 + y._row));
+  if (!pool.length) return null;
+  const y = +dateIso.slice(0, 4), rnd = mulberry32(y * 7919 + 17);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return pool[daysBetween(`${y}-01-01`, dateIso) % pool.length];
+}
+function renderAotd() {
+  const box = $('aotdBox'), t = today(), min = state.settings.albumOfDayMin || 8;
+  $('aotdDate').textContent = `Same album all day, new one at midnight · rated ${min}+`;
+  box.textContent = '';
+  const a = aotdFor(t);
+  if (!a) { box.appendChild(mk('p', 'empty', `No albums rated ${min} or higher yet. Rate some albums and one will be picked each day.`)); return; }
+  const card = mk('div', 'aotd'), top = mk('div', 'aotd-top'), left = mk('div');
+  left.append(mk('h3', null, a.title), mk('div', 'by', a.artist || 'Unknown artist'));
+  const rt = mk('div', 'big-rating tnum'); rt.innerHTML = `${esc(a.rating)}<small>/10</small>`;
+  top.append(left, rt);
+  const p = playedOf(a), info = ownInfo(a);
+  card.appendChild(top);
+  card.appendChild(mk('p', 'why-line', ['Rated ' + a.rating, a.year, p ? `played ${plural(p.plays, 'time')}, last ${fmtDate(p.last)}` : 'not logged here yet'].filter(Boolean).join(' · ')));
+  card.appendChild(mk('p', 'own-line', [a.genre, a.format, info.text].filter(Boolean).join(' · ')));
+  if (a.notes) card.appendChild(mk('p', 'notes', a.notes));
+  const line = mk('div', 'dip-line');
+  line.appendChild(mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)));
+  if (a.buy) line.appendChild(buyEl(a.buy));
+  card.appendChild(line);
+  box.appendChild(card);
+  const y = aotdFor(addDays(t, -1));
+  box.appendChild(mk('p', 'yest muted', y ? `Yesterday's: ${y.title}${y.artist ? ' by ' + y.artist : ''}` : ''));
+}
+function miniRow(ul, main, right, onClick) {
+  const li = mk('li'), b = mkBtn('', null, onClick); li.appendChild(b);
+  b.append(mk('span', 'nm soft', main), mk('span', 'r', right));
+  if (!onClick) b.disabled = true;
+  ul.appendChild(li);
+}
+const yearsAgo = n => n === 1 ? '1 year ago' : `${n} years ago`;
+function renderOnDay() {
+  const ul = $('onDayList'), t = today(), md = t.slice(5), y = curYear();
+  ul.textContent = '';
+  const groups = new Map();
+  for (const e of state.log) {
+    const ey = +e.date.slice(0, 4);
+    if (e.date.slice(5) !== md || ey >= y) continue;
+    const k = ey + '|' + entryKey(e);
+    const g = groups.get(k) || { ago: y - ey, a: albumOf(e), title: e.title, artist: e.artist, plays: 0 }; g.plays += e.plays; groups.set(k, g);
+  }
+  const rows = [...groups.values()].map(g => ({ ago: g.ago, main: `${yearsAgo(g.ago)} you played ${g.a ? g.a.title : g.title}${g.plays > 1 ? ` (${g.plays}×)` : ''}`, right: (g.a ? g.a.artist : g.artist) || '', a: g.a }));
+  for (const a of state.albums) {
+    const d = toDate(a.release);
+    if (!d || d.slice(5) !== md || +d.slice(0, 4) > y) continue;
+    const ago = y - +d.slice(0, 4);
+    rows.push({ ago, main: ago === 0 ? `${a.title} is out today` : `${a.title} was released ${yearsAgo(ago)} today`, right: a.artist || '', a });
+  }
+  rows.sort((p, q) => p.ago - q.ago);
+  if (!rows.length) { ul.appendChild(mk('li', 'empty', 'Nothing on this date in earlier years: no plays logged and no release dates match.')); return; }
+  for (const r of rows) miniRow(ul, r.main, r.right, r.a ? () => openDlg(r.a) : null);
+}
+const MILESTONES = [10, 20, 25, 30, 40, 50, 60];
+function renderAnniv() {
+  const box = $('annivBox'), y = curYear();
+  box.textContent = '';
+  $('annivNote').textContent = `Albums turning 10, 20, 25, 30, 40, 50 or 60 in ${y}`;
+  let total = 0;
+  for (const m of MILESTONES) {
+    const list = state.albums.filter(a => toNum(a.year) === y - m).sort((p, q) => rOf(q) - rOf(p) || norm(p.title).localeCompare(norm(q.title)));
+    if (!list.length) continue;
+    total += list.length;
+    const head = mk('div', 'eyebrow mile-head'); head.append(mk('span', null, `${m} years · released ${y - m}`), mk('span', null, plural(list.length, 'album')));
+    head.dataset.milestone = m;
+    const ul = mk('ul', 'mini-list'), open = tools.annivOpen[m], shown = open ? list : list.slice(0, 6);
+    for (const a of shown) miniRow(ul, a.title, [a.artist, rOf(a) ? `${a.rating}/10` : ''].filter(Boolean).join(' · '), () => openDlg(a));
+    box.append(head, ul);
+    if (list.length > 6) box.appendChild(mkBtn(open ? 'Show fewer' : `Show all ${list.length}`, 'linkbtn', () => { tools.annivOpen[m] = !open; renderAnniv(); }));
+  }
+  if (!total) box.appendChild(mk('p', 'empty', `No albums in your library turn 10, 20, 25, 30, 40, 50 or 60 in ${y}.`));
+}
+function renderSoon() {
+  const ul = $('soonList2'), soon = state.albums.filter(a => a.status === 'Coming Soon').sort((p, q) => (toNum(p.year) || 9999) - (toNum(q.year) || 9999) || norm(p.title).localeCompare(norm(q.title)));
+  ul.textContent = '';
+  $('soonNote2').textContent = soon.length ? plural(soon.length, 'album') : '';
+  if (!soon.length) { ul.appendChild(mk('li', 'empty', 'Nothing marked Coming Soon.')); return; }
+  for (const a of soon) miniRow(ul, a.artist ? `${a.title} · ${a.artist}` : a.title, toNum(a.year) ? String(toNum(a.year)) : 'Year to come', () => openDlg(a));
+}
+function renderDiscover() { renderAotd(); renderOnDay(); renderSoon(); renderAnniv(); }
+
+$('dipMoods').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; tools.dip.last = tools.dip.id; tools.dip.mood = c.dataset.m; tools.dip.id = null; renderDip(); });
+$('ownQ').addEventListener('input', e => { tools.ownQ = e.target.value; renderOwn(); });
+$('yirYear').addEventListener('change', e => { tools.yir = e.target.value; renderYear(); });
+$('recModes').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; tools.rec = c.dataset.m; renderRecs(); });
+
 /* ---------- tabs and rendering ---------- */
-// Later stages (Tools, Discover) add an entry here plus a matching tab button and #view-<name> panel.
+// A tab needs an entry here, a tab button #tab-<name> and a panel #view-<name>.
 const TABS = {
   log: { render: renderLogTab },
   plan: { render: renderPlan },
   library: { render: renderLibrary },
-  dashboard: { render: renderDashboard }
+  dashboard: { render: renderDashboard },
+  tools: { render: renderTools },
+  discover: { render: renderDiscover }
 };
 function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); }
 function renderAll() { applyTheme(); render(); }
@@ -1730,6 +2287,8 @@ function showTab(name) {
     $('view-' + t).hidden = t !== name;
   }
   render();
+  // Six pills don't fit a phone: the bar scrolls inside itself, so keep the chosen one in view
+  try { $('tab-' + name).scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
   lsSet('sg-tab', name);
 }
 for (const t of Object.keys(TABS)) $('tab-' + t).addEventListener('click', () => showTab(t));
