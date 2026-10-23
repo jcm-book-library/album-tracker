@@ -67,7 +67,7 @@ button{font:inherit;cursor:pointer}
 /* log a listen */
 .form-stack{display:flex;flex-direction:column;gap:12px}
 .form-stack input[type="search"],.form-stack input[type="text"],.form-stack input[type="number"]{width:100%}
-input[type="search"],input[type="text"],input[type="number"],input[type="date"],select,textarea{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;color-scheme:dark;min-width:0}
+input[type="search"],input[type="text"],input[type="number"],input[type="date"],input[type="url"],select,textarea{font:inherit;font-size:14px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;color-scheme:dark;min-width:0}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
 .pick-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .pick-list:empty{display:none}
@@ -139,6 +139,52 @@ table.lib{width:100%;border-collapse:collapse;font-size:14px}
 .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
 .lib-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--muted);flex-wrap:wrap}
 
+/* buy link pill */
+.buy{display:inline-block;max-width:100%;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:var(--fg);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;background:color-mix(in srgb,var(--accent) 20%,transparent);border:1px solid color-mix(in srgb,var(--accent) 50%,transparent)}
+.buy:hover{background:color-mix(in srgb,var(--accent) 34%,transparent)}
+.buy-text{overflow-wrap:anywhere;font-size:12px}
+
+/* plan */
+.plan-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.plan-grid .col{gap:20px}
+.plan-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.plan-list li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.plan-list li:first-child{border-top:0}
+.plan-list .n{font-family:var(--display);font-weight:700;color:var(--accent);min-width:1.4em;text-align:right}
+.plan-list .t{font-weight:600;overflow-wrap:anywhere}
+.plan-list .m{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.plan-list .m .pill{margin-right:4px}
+.plan-list .why{grid-column:2/-1;font-size:12px;color:var(--fg);opacity:.85;font-style:italic;overflow-wrap:anywhere}
+.plan-list .why:empty{display:none}
+.plan-list .extra{grid-column:2/-1;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.plan-list .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.plan-list .acts button{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+.plan-list .acts button:hover{color:var(--fg);border-color:var(--accent)}
+.plan-list .acts button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 24%,var(--surface));border-color:var(--accent);color:var(--fg)}
+.plan-list .acts button:disabled{opacity:.35;cursor:default}
+.plan-list .whyedit{grid-column:2/-1;display:flex;gap:6px}
+.plan-list .whyedit input{flex:1;min-width:0;font:inherit;font-size:13px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:5px 9px}
+.plan-list .empty{display:block}
+.plan-list li.nonum{grid-template-columns:minmax(0,1fr) auto}
+.plan-list li.nonum .why,.plan-list li.nonum .extra{grid-column:1/-1}
+.up-detail li{padding:12px 0;align-items:start}
+.up-detail .n{font-size:22px;line-height:1.1}
+.up-detail .t{font-family:var(--display);font-size:17px}
+.sheet-list li.someday .t{color:var(--muted);font-weight:500}
+.plan-filter{width:100%;margin-bottom:10px}
+.wish-list li{grid-template-columns:minmax(0,1fr) auto}
+.wish-list .extra{grid-column:1/-1}
+.deck-card h3{font-family:var(--display);font-size:22px;margin:0;overflow-wrap:anywhere}
+.deck-card .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.deck-card .why-chip{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--raise);color:var(--fg)}
+.deck-card .deck-extra{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
+.deck-btns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+.deck-btns .btn{padding:10px 8px}
+.deck-btns kbd{font:inherit;font-size:11px;opacity:.6;margin-left:6px}
+@media (hover:none){.deck-btns kbd{display:none}}
+@media (max-width:860px){.plan-grid{display:flex;flex-direction:column}.plan-grid .col{display:contents}}
+@media (max-width:560px){.plan-list li{grid-template-columns:auto minmax(0,1fr)}.plan-list .acts{grid-column:2;justify-content:flex-start}.plan-list li.nonum{grid-template-columns:minmax(0,1fr)}.plan-list li.nonum .acts{grid-column:1}.deck-btns{grid-template-columns:repeat(2,minmax(0,1fr))}.plan-list li.wish{grid-template-columns:minmax(0,1fr) auto}}
+
 /* bars (used by later stages) */
 .hbars{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}
 .hbar{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px}
@@ -204,6 +250,7 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" id="tab-log" aria-selected="true" aria-controls="view-log" type="button">Log</button>
+    <button class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="view-plan" type="button">Plan</button>
     <button class="tab" role="tab" id="tab-library" aria-selected="false" aria-controls="view-library" type="button">Library</button>
   </nav>
 
@@ -281,6 +328,38 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     </div>
   </div>
 
+  <!-- ===== Plan ===== -->
+  <div id="view-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+    <div class="plan-grid">
+      <div class="col">
+        <section class="panel" aria-labelledby="upH">
+          <div class="panel-head"><h2 id="upH">Up next</h2><span class="muted small tnum" id="upNote"></span></div>
+          <ol class="plan-list up-detail" id="upList"></ol>
+        </section>
+        <section class="panel" aria-labelledby="deckH" id="deckPanel">
+          <div class="panel-head"><h2 id="deckH">Sort deck</h2><span class="muted small tnum" id="deckNote"></span></div>
+          <div id="deckBody"></div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="panel" aria-labelledby="soonH">
+          <div class="panel-head"><h2 id="soonH">Soon</h2><span class="muted small tnum" id="soonNote"></span></div>
+          <ol class="plan-list" id="soonList"></ol>
+        </section>
+        <section class="panel" aria-labelledby="wishH">
+          <div class="panel-head"><h2 id="wishH">Vinyl wish list</h2><span class="muted small">Heard and rated, still to buy</span></div>
+          <ol class="plan-list wish-list" id="wishList"></ol>
+        </section>
+        <section class="panel" aria-labelledby="blH">
+          <div class="panel-head"><h2 id="blH">Listening backlog</h2><span class="muted small tnum" id="blNote"></span></div>
+          <input type="search" class="plan-filter" id="blFilter" placeholder="Filter by title, artist or genre" aria-label="Filter the backlog">
+          <ol class="plan-list sheet-list" id="blList"></ol>
+          <button class="btn" type="button" id="blMore" hidden>Show 50 more</button>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== Library ===== -->
   <div id="view-library" role="tabpanel" aria-labelledby="tab-library" hidden>
     <div class="lib-bar">
@@ -347,6 +426,8 @@ const toDate = v => {
   m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // dd/mm/yyyy as Sheets may format it in en-AU
   return m ? `${m[3]}-${pad(+m[2])}-${pad(+m[1])}` : null;
 };
+// Dates are shown as "19 Oct 26"; Sheets keeps yyyy-mm-dd
+const fmtDate = v => { const d = toDate(v); return d ? `${+d.slice(8, 10)} ${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(2, 4)}` : String(v ?? ''); };
 const colLetter = i => { let s = ''; i++; while (i) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
 const $ = id => document.getElementById(id);
 const norm = s => String(s ?? '').trim().toLowerCase();
@@ -392,7 +473,7 @@ const FIELDS = [
   { k: 'status', h: 'Status', t: 'select' }, { k: 'genre', h: 'Genre', t: 'select' }, { k: 'format', h: 'Format', t: 'select' },
   { k: 'release', h: 'Release Date', t: 'date' }, { k: 'year', h: 'Year', t: 'num' }, { k: 'notes', h: 'Notes', t: 'text' },
   { k: 'id', h: 'id', t: 'num' }, { k: 'plan', h: 'Plan', t: 'select' }, { k: 'upNext', h: 'Up next #', t: 'num' },
-  { k: 'why', h: 'Why', t: 'text' }, { k: 'added', h: 'Added', t: 'date' }, { k: 'planned', h: 'Planned', t: 'date' }
+  { k: 'why', h: 'Why', t: 'text' }, { k: 'added', h: 'Added', t: 'date' }, { k: 'planned', h: 'Planned', t: 'date' }, { k: 'buy', h: 'Buy link', t: 'text' }
 ];
 const FIELD = Object.fromEntries(FIELDS.map(f => [f.k, f]));
 const STATUSES = ['Coming Soon', 'Listen', 'Listened', 'Purchase', 'Owned'];
@@ -408,20 +489,38 @@ const CHIP = {
 };
 const pill = (kind, v) => v ? `<span class="pill" ${kind === 'format' && v === 'Vinyl (Wanted)' ? 'data-dash' : ''} style="--c:${(CHIP[kind] || {})[v] || 'var(--muted)'}">${esc(v)}</span>` : '';
 
+// Buy links: only http(s) URLs become real links; anything else stays plain text
+const safeUrl = v => { try { const u = new URL(String(v ?? '').trim()); return /^https?:$/.test(u.protocol) ? u : null; } catch (e) { return null; } };
+const SHOPS = [['jbhifi', 'JB Hi-Fi'], ['ebay', 'eBay'], ['warnermusic', 'Warner'], ['midlandrecords', 'Midland']];
+function shopName(u) { const h = u.hostname.replace(/^www\./, ''); const s = SHOPS.find(([k]) => h.includes(k)); return s ? s[1] : h; }
+function buyEl(v) {
+  const u = safeUrl(v);
+  if (!u) { const t = document.createElement('span'); t.className = 'muted buy-text'; t.textContent = String(v ?? '').trim(); return t; }
+  const a = document.createElement('a');
+  a.className = 'buy'; a.href = u.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = u.href;
+  a.textContent = 'Buy · ' + shopName(u);
+  a.setAttribute('aria-label', 'Buy at ' + shopName(u));
+  return a;
+}
+
 // Derived meaning: Status mixes listening and buying
 const heard = a => toNum(a.rating) > 0 || a.status === 'Listened' || a.status === 'Owned';
 const owned = a => ['Vinyl (Owned)', 'CD', 'Digital'].includes(a.format) || a.status === 'Owned';
 const backlog = a => ['Listen', 'Purchase', 'Coming Soon'].includes(a.status) && !heard(a);
 const wantVinyl = a => a.format === 'Vinyl (Wanted)';
+const wishList = a => a.status === 'Purchase' && heard(a);
 
 /* ---------- snapshot (shown when there is no live connection) ---------- */
 const SNAP_ALBUMS = [
   { id: '1001', title: 'Violator', artist: 'Depeche Mode', rating: '9', status: 'Owned', genre: 'Electronic', format: 'Vinyl (Owned)', year: '1990' },
   { id: '1002', title: 'Mezzanine', artist: 'Massive Attack', rating: '9', status: 'Listened', genre: 'Electronic', format: 'CD', year: '1998' },
   { id: '1003', title: 'Blackstar', artist: 'David Bowie', status: 'Listen', genre: 'Rock', format: 'Streaming', year: '2016', plan: 'Up next', upNext: '1', why: 'Everyone says the last album matters' },
-  { id: '1004', title: 'To Pimp a Butterfly', artist: 'Kendrick Lamar', status: 'Purchase', genre: 'Hip Hop', format: 'Vinyl (Wanted)', year: '2015', notes: 'JB' },
+  { id: '1004', title: 'To Pimp a Butterfly', artist: 'Kendrick Lamar', status: 'Purchase', genre: 'Hip Hop', format: 'Vinyl (Wanted)', year: '2015', notes: 'JB', plan: 'Up next', upNext: '2', buy: 'https://www.jbhifi.com.au/products/to-pimp-a-butterfly' },
   { id: '1005', title: 'Master of Puppets', artist: 'Metallica', rating: '8', status: 'Owned', genre: 'Metal', format: 'Vinyl (Owned)', year: '1986' },
-  { id: '1006', title: 'Dummy', artist: 'Portishead', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '1994', plan: 'Soon' }
+  { id: '1006', title: 'Dummy', artist: 'Portishead', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '1994', plan: 'Soon' },
+  { id: '1007', title: 'Rumours', artist: 'Fleetwood Mac', rating: '9', status: 'Purchase', genre: 'Rock', format: 'Vinyl (Wanted)', year: '1977', buy: 'https://www.ebay.com.au/itm/1234567890' },
+  { id: '1008', title: 'Kid A', artist: 'Radiohead', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '2000' },
+  { id: '1009', title: 'Untrue', artist: 'Burial', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '2007', plan: 'Someday', planned: '2025-01-01' }
 ];
 // Dates are relative to today so the sample always looks recent: [days ago, album id, plays]
 const SNAP_LOG = [[0, '1001', 1], [1, '1005', 1], [2, '1002', 2], [3, '1003', 1], [5, '1003', 1], [6, '1001', 1], [9, '1005', 1]];
@@ -497,7 +596,7 @@ async function refresh() {
   setStatus('loading', 'Loading from your sheet…');
   $('refreshBtn').disabled = true;
   try {
-    const albums = await readRange(`${qt(TAB)}!A1:O`);
+    const albums = await readRange(`${qt(TAB)}!A1:P`);
     let log = [], settings = [], logMissing = false;
     try { log = await readRange(`${qt(TAB_LOG)}!A1:H`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; logMissing = true; }
     try { settings = await readRange(`${qt(TAB_SET)}!A1:B`); } catch (e) { if (e && e.code === 'google_signin') throw e; }
@@ -557,7 +656,7 @@ function cellValue(k, v) {
 async function findAlbumRow(id) {
   id = toNum(id);
   if (!id) throw { code: 'tool_error', message: 'This album has no id yet, so it can\'t be changed from the app' };
-  const header = ((await readRange(`${qt(TAB)}!A1:O1`))[0] || []).map(h => String(h).trim());
+  const header = ((await readRange(`${qt(TAB)}!A1:P1`))[0] || []).map(h => String(h).trim());
   const idCol = colOf(header, FIELD.id);
   if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no id column` };
   const L = colLetter(idCol);
@@ -581,7 +680,7 @@ async function writeAlbumFields(id, fields) {
   if (a) for (const k of Object.keys(cols)) a[k] = String(fields[k] ?? '').trim();
 }
 async function addAlbum(fields) {
-  const header = ((await readRange(`${qt(TAB)}!A1:O1`))[0] || []).map(h => String(h).trim());
+  const header = ((await readRange(`${qt(TAB)}!A1:P1`))[0] || []).map(h => String(h).trim());
   const idCol = colOf(header, FIELD.id);
   if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no id column` };
   const L = colLetter(idCol);
@@ -605,7 +704,7 @@ async function addAlbum(fields) {
 
 const logDay = () => state.logDate || today();
 const dayLabel = d => d === today() ? 'Today' : d === addDays(today(), -1) ? 'Yesterday'
-  : fromIso(d).toLocaleDateString('en-AU', daysBetween(d, today()) < 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' });
+  : daysBetween(d, today()) < 7 ? fromIso(d).toLocaleDateString('en-AU', { weekday: 'short' }) : fmtDate(d);
 
 // Append one row to the Log tab, laid out by that tab's own header names
 async function appendLogRow({ album, date, plays, note }) {
@@ -723,7 +822,7 @@ function renderStats() {
   const vinyl = state.albums.filter(a => a.format === 'Vinyl (Owned)').length, want = state.albums.filter(wantVinyl).length;
   $('sVinyl').textContent = fmt(vinyl);
   $('sVinylSub').textContent = want ? `${fmt(want)} more on the wish list` : 'records';
-  $('todayLabel').textContent = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · ' + SEASON[+t.slice(5, 7) - 1];
+  $('todayLabel').textContent = new Date().toLocaleDateString('en-AU', { weekday: 'long' }) + ' ' + fmtDate(t) + ' · ' + SEASON[+t.slice(5, 7) - 1];
 }
 
 function rotation() {
@@ -749,7 +848,7 @@ function renderRotation() {
     const li = document.createElement('li');
     li.innerHTML = '<div class="t"></div><div class="m tnum"></div><div class="acts"></div>';
     li.querySelector('.t').textContent = a ? a.title : r.title;
-    li.querySelector('.m').textContent = `${(a ? a.artist : r.artist) || 'Unknown artist'} · ${r.plays} play${r.plays === 1 ? '' : 's'} in ${days} days · last ${dayLabel(r.last).toLowerCase()}`;
+    li.querySelector('.m').textContent = `${(a ? a.artist : r.artist) || 'Unknown artist'} · ${r.plays} play${r.plays === 1 ? '' : 's'} in ${days} days · last ${/^\d/.test(dayLabel(r.last)) ? dayLabel(r.last) : dayLabel(r.last).toLowerCase()}`;
     const acts = li.querySelector('.acts');
     if (r.today) { const d = document.createElement('span'); d.className = 'done'; d.textContent = `✓ ${r.today}× today`; acts.appendChild(d); }
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-primary'; b.textContent = 'Played today';
@@ -760,7 +859,7 @@ function renderRotation() {
   }
 }
 
-const upNextList = () => state.albums.filter(a => a.plan === 'Up next').sort((a, b) => (toNum(a.upNext) || 9999) - (toNum(b.upNext) || 9999));
+const upNextList = () => state.albums.filter(a => a.plan === 'Up next').sort((a, b) => (toNum(a.upNext) || 9999) - (toNum(b.upNext) || 9999) || a._row - b._row);
 
 function renderFirst() {
   const ul = $('firstList'); ul.textContent = '';
@@ -801,7 +900,7 @@ function setLogDay(d) {
   $('logDate').value = state.logDate || '';
   const ban = $('logDayBanner');
   ban.hidden = !state.logDate;
-  if (state.logDate) ban.textContent = `Logging for ${fromIso(cur).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}.`;
+  if (state.logDate) ban.textContent = `Logging for ${fromIso(cur).toLocaleDateString('en-AU', { weekday: 'long' })} ${fmtDate(cur)}.`;
 }
 function renderLogForm() {
   const a = state.pick ? state.ix.byId.get(state.pick) : null;
@@ -952,14 +1051,15 @@ function detailRow(a) {
   const p = state.ix.plays.get(String(toNum(a.id)));
   const kv = [
     ['Rating', toNum(a.rating) ? `${a.rating}/10` : ''], ['Status', a.status], ['Genre', a.genre], ['Format', a.format],
-    ['Release date', a.release], ['Year', a.year], ['Where to buy', a.notes],
+    ['Release date', fmtDate(a.release)], ['Year', a.year], ['Where to buy', a.notes],
+    ['Buy link', a.buy ? buyEl(a.buy) : ''],
     ['Plan', a.plan ? a.plan + (a.plan === 'Up next' && a.upNext ? ' #' + a.upNext : '') : ''], ['Why', a.why],
-    ['Plays logged', p ? String(p.plays) : '0'], ['Last played', p && p.last ? `${dayLabel(p.last)} (${p.last})` : 'Never'],
-    ['Added', a.added], ['Planned', a.planned], ['id', a.id]
+    ['Plays logged', p ? String(p.plays) : '0'], ['Last played', p && p.last ? (daysBetween(p.last, today()) < 7 ? `${dayLabel(p.last)} · ${fmtDate(p.last)}` : fmtDate(p.last)) : 'Never'],
+    ['Added', fmtDate(a.added)], ['Planned', fmtDate(a.planned)], ['id', a.id]
   ].filter(([, v]) => v);
   td.innerHTML = '<dl class="kv"></dl><div class="acts"><button class="btn btn-primary" type="button" data-edit>Edit album</button><button class="btn" type="button" data-log>Log a listen</button></div>';
   const dl = td.querySelector('.kv');
-  for (const [k, v] of kv) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); }
+  for (const [k, v] of kv) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; if (v instanceof Node) dd.appendChild(v); else dd.textContent = v; dl.append(dt, dd); }
   tr.appendChild(td);
   return tr;
 }
@@ -969,7 +1069,7 @@ const FORM = [
   { sec: 'Album' }, { k: 'title', w: 'w2', req: true }, { k: 'artist', w: 'w2' },
   { k: 'status', type: 'select' }, { k: 'genre', type: 'select' }, { k: 'format', type: 'select' },
   { k: 'rating', type: 'number', label: 'Rating (1–10)' },
-  { k: 'release', type: 'date', label: 'Release date' }, { k: 'year', type: 'number' }, { k: 'notes', w: 'w2', label: 'Where to buy' },
+  { k: 'release', type: 'date', label: 'Release date' }, { k: 'year', type: 'number' }, { k: 'notes', w: 'w2', label: 'Where to buy' }, { k: 'buy', type: 'url', w: 'w4', label: 'Buy link' },
   { sec: 'Plan' }, { k: 'plan', type: 'select' }, { k: 'why', w: 'w2', label: 'Why it\'s on the list' }
 ];
 let editing = null;
@@ -1041,10 +1141,223 @@ async function saveAlbumDialog(e) {
   } finally { state.busy = false; btn.disabled = false; btn.textContent = 'Save'; }
 }
 
+/* ---------- Plan tab: Up next / Soon / Someday ---------- */
+const soonList = () => state.albums.filter(a => a.plan === 'Soon');
+const planUI = { whyOpen: null, deckSkipped: new Set(), deckDone: 0, filter: '', limit: 50 };
+
+// Plan writes go through a queue so rapid taps can't interleave. The screen updates first; every write
+// still finds its row by id (exactly one match) and only sends cells whose value actually changed.
+const planQ = { chain: Promise.resolve(), pending: 0, failed: '' };
+function planStatus() { setStatus('live', planQ.pending ? `Saving plan… (${planQ.pending})` : 'Plan saved'); }
+const sameVal = (k, a, b) => FIELD[k].t === 'num' ? toNum(a) === toNum(b) : FIELD[k].t === 'date' ? (toDate(a) || '') === (toDate(b) || '') : String(a ?? '').trim() === String(b ?? '').trim();
+function savePlan(a, fields) {
+  fields = Object.fromEntries(Object.entries(fields).filter(([k, v]) => !sameVal(k, a[k], v)));
+  if (!Object.keys(fields).length) return;
+  const prev = Object.fromEntries(Object.keys(fields).map(k => [k, a[k]]));
+  Object.assign(a, Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, String(v ?? '')])));
+  planQ.pending++; planStatus();
+  planQ.chain = planQ.chain.then(() => writeAlbumFields(a.id, fields)).catch(err => {
+    Object.assign(a, prev);
+    planQ.failed = `Couldn't save the plan change for “${a.title}”: ${(err && err.code === 'tool_error' && err.message) || explain(err)}`;
+    renderPlan();
+  }).finally(async () => {
+    planQ.pending--; planStatus();
+    if (!planQ.pending && planQ.failed) { const m = planQ.failed; planQ.failed = ''; await refresh(); notice(m, 'error'); }
+  });
+}
+function planGuard() {
+  if (isLive()) return true;
+  notice('Planning needs the live connection. ' + connectHint(), 'error');
+  return false;
+}
+// Keep Up next numbered 1..n, writing only the albums whose number changed
+function renumberUpNext() { upNextList().forEach((a, i) => savePlan(a, { upNext: i + 1 })); }
+function setTier(a, tier) {
+  if (!planGuard()) return;
+  const f = { plan: tier };
+  if (tier) f.planned = today();
+  if (tier === 'Up next' && a.plan !== 'Up next') f.upNext = upNextList().length + 1;
+  if (tier !== 'Up next' && a.upNext) f.upNext = '';
+  const wasUp = a.plan === 'Up next';
+  savePlan(a, f);
+  if (wasUp || tier === 'Up next') renumberUpNext();
+  renderPlan();
+}
+function moveUp(a, dir) {
+  if (!planGuard()) return;
+  const list = upNextList(), i = list.indexOf(a), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  list.forEach((x, n) => savePlan(x, { upNext: n + 1 }));
+  renderPlan();
+}
+function saveWhy(a, v) {
+  planUI.whyOpen = null;
+  if (planGuard() && v !== (a.why || '')) savePlan(a, { why: v });
+  renderPlan();
+}
+
+function planRow(a, { num, kind }) {
+  const li = document.createElement('li');
+  li.dataset.id = a.id; li.dataset.kind = kind;
+  if (kind === 'backlog' && a.plan === 'Someday') li.className = 'someday';
+  li.innerHTML = `<span class="n tnum">${num ?? ''}</span><span><span class="t"></span><br><span class="m"></span></span><span class="acts"></span><span class="why"></span>`;
+  if (num == null) { li.firstChild.remove(); li.classList.add('nonum'); }
+  li.querySelector('.t').textContent = a.title;
+  const m = li.querySelector('.m');
+  m.textContent = [a.artist, a.year, kind === 'backlog' ? a.genre : '', kind === 'backlog' && a.plan === 'Someday' ? 'Someday' : '', kind === 'backlog' && a.status === 'Coming Soon' ? 'Coming soon' : ''].filter(Boolean).join(' · ');
+  if (kind !== 'backlog' && a.genre) m.insertAdjacentHTML('afterbegin', pill('genre', a.genre));
+  if (kind !== 'backlog') li.querySelector('.why').textContent = a.why ? '“' + a.why + '”' : '';
+  if (a.buy) { const x = document.createElement('span'); x.className = 'extra'; x.appendChild(buyEl(a.buy)); li.querySelector('.why').after(x); }
+  const acts = li.querySelector('.acts');
+  const btn = (label, fn, o = {}) => {
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = label;
+    if (o.aria) x.setAttribute('aria-label', o.aria + ' ' + a.title);
+    if (o.disabled) x.disabled = true;
+    if (o.pressed != null) x.setAttribute('aria-pressed', String(o.pressed));
+    x.addEventListener('click', fn); acts.appendChild(x);
+  };
+  const whyBtn = () => btn('Why', () => { planUI.whyOpen = planUI.whyOpen === a.id ? null : a.id; renderPlan(); }, { aria: 'Edit why for' });
+  if (kind === 'up') {
+    btn('↑', () => moveUp(a, -1), { aria: 'Move up', disabled: num === 1 });
+    btn('↓', () => moveUp(a, 1), { aria: 'Move down', disabled: num === upNextList().length });
+    whyBtn();
+    btn('→ Soon', () => setTier(a, 'Soon'), { aria: 'Move to Soon:' });
+    btn('Remove', () => setTier(a, ''), { aria: 'Remove from the plan:' });
+  } else if (kind === 'soon') {
+    btn('→ Up next', () => setTier(a, 'Up next'), { aria: 'Move to Up next:' });
+    btn('→ Someday', () => setTier(a, 'Someday'), { aria: 'Move to Someday:' });
+    whyBtn();
+    btn('Remove', () => setTier(a, ''), { aria: 'Remove from the plan:' });
+  } else if (kind === 'backlog') {
+    btn('Up next', () => { if (a.plan !== 'Up next') setTier(a, 'Up next'); }, { aria: 'Add to Up next:', pressed: a.plan === 'Up next' });
+    btn('Soon', () => { if (a.plan !== 'Soon') setTier(a, 'Soon'); }, { aria: 'Add to Soon:', pressed: a.plan === 'Soon' });
+  }
+  if (planUI.whyOpen === a.id && (kind === 'up' || kind === 'soon')) {
+    const w = document.createElement('div'); w.className = 'whyedit';
+    w.innerHTML = '<input type="text" maxlength="200" aria-label="Why it\'s on the list" placeholder="Why it\'s on the list"><button class="btn btn-primary" type="button">Save</button>';
+    const inp = w.querySelector('input'); inp.value = a.why || '';
+    w.querySelector('button').addEventListener('click', () => saveWhy(a, inp.value.trim()));
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') saveWhy(a, inp.value.trim()); if (e.key === 'Escape') { planUI.whyOpen = null; renderPlan(); } });
+    li.appendChild(w);
+    setTimeout(() => inp.focus());
+  }
+  return li;
+}
+
+/* sort deck: how promising is an unsorted album, judged from what you've rated */
+const artistKey = s => norm(s).replace(/\s+/g, ' ').replace(/^the /, '');
+const avg1 = n => String(Number(n.toFixed(1)));
+function buildProfile() {
+  const art = new Map(), gen = new Map();
+  for (const a of state.albums) {
+    const r = toNum(a.rating);
+    if (!(r > 0) || !heard(a)) continue;
+    const k = artistKey(a.artist);
+    if (k) { const x = art.get(k) || { n: 0, sum: 0 }; x.n++; x.sum += r; art.set(k, x); }
+    if (a.genre) { const x = gen.get(a.genre) || { n: 0, sum: 0 }; x.n++; x.sum += r; gen.set(a.genre, x); }
+  }
+  return { art, gen };
+}
+function scoreAlbum(a, P) {
+  let s = 0; const why = [];
+  const x = P.art.get(artistKey(a.artist));
+  if (x) {
+    const av = x.sum / x.n;
+    s += (av - 5) * (x.n / (x.n + 1)) * 2;
+    if (av >= 6) why.push(`You rated ${x.n} ${a.artist} album${x.n === 1 ? '' : 's'} ${avg1(av)} avg`);
+  }
+  const g = a.genre && P.gen.get(a.genre);
+  if (g) {
+    const av = g.sum / g.n;
+    s += (av - 5) * (g.n / (g.n + 3));
+    if (av >= 6.5 && g.n >= 2) why.push(`${a.genre} avg ${avg1(av)}`);
+  }
+  if (a.status === 'Purchase' || a.buy) { s += 0.75; why.push(a.buy ? 'Ready to buy' : 'On the Purchase list'); }
+  if (a.status === 'Coming Soon' && toNum(a.year) && toNum(a.year) <= +today().slice(0, 4)) { s += 0.5; why.push('Out now'); }
+  return { a, s, why: why.slice(0, 3) };
+}
+const resurfaced = a => a.plan === 'Someday' && (!toDate(a.planned) || daysBetween(toDate(a.planned), today()) > 365);
+function deckQueue() {
+  const P = buildProfile();
+  return state.albums.filter(a => a.id && backlog(a) && (!a.plan || resurfaced(a)) && !planUI.deckSkipped.has(a.id))
+    .map(a => scoreAlbum(a, P)).sort((x, y) => y.s - x.s || x.a._row - y.a._row);
+}
+function renderDeck() {
+  const q = deckQueue(), box = $('deckBody');
+  $('deckNote').textContent = `${fmt(q.length)} to sort${planUI.deckDone ? ` · ${planUI.deckDone} sorted this visit` : ''}`;
+  if (!q.length) { box.innerHTML = '<p class="empty">All sorted. Albums you put in Someday come back here after a year.</p>'; return; }
+  const { a, why } = q[0];
+  box.innerHTML = `<div class="deck-card" data-id=""><h3></h3><div class="m muted"></div><div class="chips"></div><div class="deck-extra"></div>
+    <div class="deck-btns"><button class="btn btn-primary" type="button" data-t="Up next">Up next<kbd>1</kbd></button><button class="btn" type="button" data-t="Soon">Soon<kbd>2</kbd></button>
+    <button class="btn" type="button" data-t="Someday">Someday<kbd>3</kbd></button><button class="btn" type="button" data-t="">Skip<kbd>4</kbd></button></div></div>`;
+  box.firstChild.dataset.id = a.id;
+  box.querySelector('h3').textContent = a.title;
+  box.querySelector('.m').textContent = [a.artist, a.year, a.genre, resurfaced(a) ? 'Back from Someday' : ''].filter(Boolean).join(' · ');
+  const ch = box.querySelector('.chips');
+  for (const t of why) { const c = document.createElement('span'); c.className = 'why-chip'; c.textContent = t; ch.appendChild(c); }
+  if (!why.length) ch.remove();
+  const ex = box.querySelector('.deck-extra');
+  if (a.buy) ex.appendChild(buyEl(a.buy));
+  if (a.notes) { const n = document.createElement('span'); n.className = 'muted small'; n.textContent = 'Where to buy: ' + a.notes; ex.appendChild(n); }
+  if (!ex.childNodes.length) ex.remove();
+  box.querySelectorAll('.deck-btns button').forEach(x => x.addEventListener('click', () => deckPick(a, x.dataset.t)));
+}
+function deckPick(a, tier) {
+  if (tier) { if (!planGuard()) return; planUI.deckDone++; setTier(a, tier); }
+  else { planUI.deckSkipped.add(a.id); renderDeck(); }
+}
+document.addEventListener('keydown', e => {
+  if (state.tab !== 'plan' || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.querySelector('dialog[open]')) return;
+  const i = ['1', '2', '3', '4'].indexOf(e.key);
+  if (i < 0) return;
+  const btn = document.querySelectorAll('#deckBody .deck-btns button')[i];
+  if (btn) { e.preventDefault(); btn.click(); }
+});
+
+function renderPlan() {
+  const ups = upNextList(), soon = soonList(), size = state.settings.upNextSize || 10;
+  $('upNote').textContent = `${ups.length} of ${size}`;
+  $('soonNote').textContent = `${soon.length} album${soon.length === 1 ? '' : 's'}`;
+  const fill = (el, list, kind, empty) => {
+    el.textContent = '';
+    if (!list.length) { el.innerHTML = `<li class="empty muted">${empty}</li>`; return; }
+    list.forEach((a, i) => el.appendChild(planRow(a, { num: kind === 'up' ? i + 1 : null, kind })));
+  };
+  fill($('upList'), ups, 'up', 'Nothing queued. Pick albums from the deck or the backlog below.');
+  fill($('soonList'), soon, 'soon', 'Nothing here yet.');
+
+  const wl = $('wishList'); wl.textContent = '';
+  const wish = state.albums.filter(wishList).sort((x, y) => toNum(y.rating) - toNum(x.rating) || norm(x.title).localeCompare(norm(y.title)));
+  if (!wish.length) wl.innerHTML = '<li class="empty muted">Nothing yet. Rated albums marked Purchase show up here.</li>';
+  for (const a of wish) {
+    const li = document.createElement('li'); li.dataset.id = a.id; li.className = 'wish';
+    li.innerHTML = '<span><span class="t"></span><br><span class="m"></span></span><span class="rating tnum"></span><span class="extra"></span>';
+    li.querySelector('.t').textContent = a.title;
+    li.querySelector('.m').textContent = a.artist || '';
+    li.querySelector('.rating').innerHTML = `${esc(a.rating)}<small>/10</small>`;
+    const ex = li.querySelector('.extra');
+    if (a.buy) ex.appendChild(buyEl(a.buy)); else ex.remove();
+    wl.appendChild(li);
+  }
+
+  const q = norm(planUI.filter);
+  const rest = state.albums.filter(a => a.id && backlog(a) && (!q || [a.title, a.artist, a.genre].some(v => norm(v).includes(q)))).sort((x, y) => x._row - y._row);
+  $('blNote').textContent = `${fmt(rest.length)} album${rest.length === 1 ? '' : 's'} in sheet order`;
+  const bl = $('blList'); bl.textContent = '';
+  if (!rest.length) bl.innerHTML = '<li class="empty muted">No backlog albums match.</li>';
+  for (const a of rest.slice(0, planUI.limit)) bl.appendChild(planRow(a, { kind: 'backlog' }));
+  $('blMore').hidden = rest.length <= planUI.limit;
+  renderDeck();
+}
+$('blFilter').addEventListener('input', e => { planUI.filter = e.target.value; planUI.limit = 50; renderPlan(); });
+$('blMore').addEventListener('click', () => { planUI.limit += 50; renderPlan(); });
+
 /* ---------- tabs and rendering ---------- */
 // Later stages (Plan, Dashboard, Tools, Discover) add an entry here plus a matching tab button and #view-<name> panel.
 const TABS = {
   log: { render: renderLogTab },
+  plan: { render: renderPlan },
   library: { render: renderLibrary }
 };
 function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); }
