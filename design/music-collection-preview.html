@@ -280,12 +280,12 @@ h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 6vw, 
 
 <script>
 const P = [
-  { k: 'canary',    n: 'Canary',        m: 'Jan–Feb', c: '#f4cf2d', months: [0, 1] },
-  { k: 'tangerine', n: 'Tangerine',     m: 'Mar–Apr', c: '#ff8a2a', months: [2, 3] },
-  { k: 'crimson',   n: 'Crimson',       m: 'May–Jun', c: '#ff4357', months: [4, 5] },
-  { k: 'magenta',   n: 'Magenta',       m: 'Jul–Aug', c: '#e056dc', months: [6, 7] },
-  { k: 'midnight',  n: 'Midnight blue', m: 'Sep–Oct', c: '#5aa3f5', months: [8, 9] },
-  { k: 'emerald',   n: 'Emerald',       m: 'Nov–Dec', c: '#3bd1a0', months: [10, 11] }
+  { k: 'emerald',   n: 'Emerald',       m: 'Jan–Feb', c: '#3bd1a0', months: [0, 1] },
+  { k: 'canary',    n: 'Canary',        m: 'Mar–Apr', c: '#f4cf2d', months: [2, 3] },
+  { k: 'midnight',  n: 'Midnight blue', m: 'May–Jun', c: '#5aa3f5', months: [4, 5] },
+  { k: 'tangerine', n: 'Tangerine',     m: 'Jul–Aug', c: '#ff8a2a', months: [6, 7] },
+  { k: 'magenta',   n: 'Magenta',       m: 'Sep–Oct', c: '#e056dc', months: [8, 9] },
+  { k: 'crimson',   n: 'Crimson',       m: 'Nov–Dec', c: '#ff4357', months: [10, 11] }
 ];
 const F = [
   { k: 'sleeve', n: 'Sleeve', d: 'Fraunces', b: 'Atkinson Hyperlegible', df: "'Fraunces', Georgia, serif", bf: "'Atkinson Hyperlegible', system-ui, sans-serif", note: 'A soft, warm serif like an old record sleeve.' },
@@ -295,7 +295,7 @@ const F = [
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const root = document.documentElement;
 const now = new Date();
-const state = { p: (P.find(x => x.months.includes(now.getMonth())) || P[4]).k, f: 'sleeve', bg: 'marble' };
+const state = { p: (P.find(x => x.months.includes(now.getMonth())) || P[4]).k, f: 'label', bg: 'marble' };
 const $ = id => document.getElementById(id);
 
 function apply() {
