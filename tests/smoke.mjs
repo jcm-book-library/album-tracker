@@ -16,7 +16,7 @@ const APP = resolve(process.env.APP_HTML || join(here, '..', 'app.html'));
 const OUT = join(here, 'out');
 const FIXTURE = JSON.parse(readFileSync(join(here, 'fixture-albums.json'), 'utf8'));
 const VIEWPORTS = [
-  { name: 'laptop', width: 1366, height: 900 },
+  { name: 'laptop', width: 1280, height: 900 },
   { name: 'phone', width: 390, height: 844 },
 ];
 
@@ -67,6 +67,28 @@ function installStub(seed) {
   window.__forbidden = [];
   window.__errors = [];
   window.__sheet = tabs;
+
+  // Stage 2 sample data, applied here (not in the fixture): a "Buy link" column (P), a plan with
+  // Up next 1..3 (numbered against sheet order), two Soon, and one Someday planned long ago.
+  {
+    const t = tabs['🎸'], rows = t.slice(1);
+    while (t[0].length < 16) t[0].push('');
+    t[0][15] = 'Buy link';
+    for (const r of rows) while (r.length < 16) r.push('');
+    const listen = rows.filter(r => r[3] === 'Listen' && !r[1]);
+    const purchaseNew = rows.filter(r => r[3] === 'Purchase' && !r[1]);
+    const purchaseRated = rows.filter(r => r[3] === 'Purchase' && r[1]);
+    [[listen[0], 3], [listen[1], 2], [listen[2], 1]].forEach(([r, n]) => { r[10] = 'Up next'; r[11] = String(n); r[14] = '2026-10-01'; });
+    listen[1][12] = 'Heard it is a classic';
+    listen[3][10] = 'Soon'; listen[3][14] = '2026-10-02';
+    listen[4][10] = 'Soon'; listen[4][14] = '2026-10-02';
+    listen[4][15] = 'https://' + 'verylonghostname'.repeat(8) + '.example.com/' + 'x'.repeat(120);
+    listen[5][10] = 'Someday'; listen[5][14] = '2025-01-01';
+    listen[6][15] = 'javascript:alert(1)';
+    const shops = ['https://www.jbhifi.com.au/products/test-1', 'https://www.ebay.com.au/itm/123456', 'https://www.warnermusic.com.au/shop/test-3', 'https://midlandrecords.com.au/products/test-4', 'https://www.jbhifi.com.au/products/test-5'];
+    [...purchaseNew.slice(0, 3), ...purchaseRated.slice(0, 2)].forEach((r, i) => { r[15] = shops[i]; });
+    window.__plan = { someday: listen[5][0], upNextRows: [listen[2][0], listen[1][0], listen[0][0]] };
+  }
 
   const colToNum = s => { let n = 0; for (const ch of s.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64); return n - 1; };
   const numToCol = n => { let s = ''; n += 1; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
@@ -224,6 +246,107 @@ const PANEL_STATE = i => {
 
 const overflow = () => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth });
 
+// ---------- Plan tab ----------
+const sheetRow = (id) => window.__sheet['🎸'].findIndex((r, i) => i > 0 && r[9] === id) + 1;
+const waitSaved = page => page.waitForFunction(() => document.getElementById('statusText').textContent === 'Plan saved', null, { timeout: 8000 });
+
+async function planTests(page, vp) {
+  const n = vp.name;
+  await page.locator('#tab-plan').click();
+  await page.waitForTimeout(200);
+
+  // Up next renders in Up next # order, not sheet order
+  const up = await page.evaluate(() => [...document.querySelectorAll('#upList > li')].map(li => ({ n: li.querySelector('.n').textContent, t: li.querySelector('.t').textContent })));
+  const want = await page.evaluate(() => window.__plan.upNextRows);
+  record(n, 'Plan: Up next lists albums in Up next # order', JSON.stringify(up.map(x => x.t)) === JSON.stringify(want) && up.map(x => x.n).join() === '1,2,3', JSON.stringify(up));
+  const note = await page.locator('#upNote').textContent();
+  record(n, 'Plan: Up next shows "3 of 10"', note.trim() === '3 of 10', note);
+  const whyShown = await page.locator('#upList .why').allTextContents();
+  record(n, 'Plan: Up next shows the Why text', whyShown.some(t => t.includes('Heard it is a classic')));
+  const counts = await page.evaluate(() => ({ soon: document.querySelectorAll('#soonList > li:not(.empty)').length, wish: document.querySelectorAll('#wishList > li:not(.empty)').length, bl: document.querySelectorAll('#blList > li:not(.empty)').length }));
+  record(n, 'Plan: Soon, wish list and backlog all render', counts.soon === 2 && counts.wish > 0 && counts.bl > 10, JSON.stringify(counts));
+
+  // Buy links are real, safe anchors; non-http values never become links
+  const buys = await page.evaluate(() => [...document.querySelectorAll('#view-plan a.buy')].map(a => ({ href: a.href, target: a.target, rel: a.rel, text: a.textContent })));
+  record(n, 'Plan: Buy links open in a new tab with rel=noopener', buys.length > 0 && buys.every(b => b.target === '_blank' && /noopener/.test(b.rel) && /^https?:/.test(b.href)), `${buys.length} link(s)`);
+  record(n, 'Plan: Buy links are labelled by shop', buys.some(b => /JB Hi-Fi/.test(b.text)) && buys.some(b => /eBay/.test(b.text)), buys.slice(0, 3).map(b => b.text).join(' | '));
+  const bad = await page.evaluate(() => [...document.querySelectorAll('a[href^="javascript:"]')].length);
+  record(n, 'Plan: javascript: values never become links', bad === 0);
+
+  // No sideways scroll with a very long URL on screen
+  let o = await page.evaluate(overflow);
+  record(n, 'Plan: no sideways scroll (long Buy link on screen)', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+
+  // Deck: tapping Up next writes exactly K, L and O of that album's row
+  const deckId = await page.locator('#deckBody .deck-card').getAttribute('data-id');
+  const row = await page.evaluate(sheetRow, deckId);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#deckBody .deck-btns button[data-t="Up next"]').click();
+  await waitSaved(page);
+  const w1 = await page.evaluate(() => window.__writes.map(w => ({ sheet: w.sheet, range: w.range, values: w.values })));
+  const wantRanges = [`K${row}`, `L${row}`, `O${row}`].sort();
+  const gotRanges = w1.map(w => w.range.replace("'🎸'!", '')).sort();
+  record(n, 'Plan: deck "Up next" writes only K, L and O of that album row', JSON.stringify(gotRanges) === JSON.stringify(wantRanges) && w1.every(w => w.sheet === '🎸'), JSON.stringify(w1.map(w => [w.range, w.values[0][0]])));
+  const cells = await page.evaluate(r => { const x = window.__sheet['🎸'][r - 1]; return [x[10], x[11], x[14]]; }, row);
+  const todayIso = await page.evaluate(() => today());
+  record(n, 'Plan: deck "Up next" stores Plan, Up next #4 and Planned=today', cells[0] === 'Up next' && cells[1] === '4' && cells[2] === todayIso, JSON.stringify(cells));
+
+  // Move item 3 up: Up next # is written for the two swapped rows only
+  const ids = await page.evaluate(() => [...document.querySelectorAll('#upList > li')].map(li => li.dataset.id));
+  const rows = await Promise.all(ids.map(id => page.evaluate(sheetRow, id)));
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#upList > li:nth-child(3) button[aria-label^="Move up"]').click();
+  await waitSaved(page);
+  const w2 = await page.evaluate(() => window.__writes.map(w => ({ sheet: w.sheet, range: w.range, v: w.values[0][0] })));
+  const want2 = [`L${rows[1]}`, `L${rows[2]}`].sort();
+  record(n, 'Plan: moving item 3 up writes Up next # for the two swapped rows only', JSON.stringify(w2.map(w => w.range.replace("'🎸'!", '')).sort()) === JSON.stringify(want2), JSON.stringify(w2.map(w => [w.range, w.v])));
+  const order2 = await page.evaluate(() => [...document.querySelectorAll('#upList > li')].map(li => li.dataset.id));
+  record(n, 'Plan: moved item swaps places on screen', order2[1] === ids[2] && order2[2] === ids[1], order2.join());
+  const nums = await page.evaluate(() => [...document.querySelectorAll('#upList .n')].map(e => e.textContent).join());
+  record(n, 'Plan: Up next stays numbered 1..N', nums === '1,2,3,4', nums);
+
+  // Remove from Up next renumbers, writing only the numbers that changed
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#upList > li:nth-child(1) button[aria-label^="Remove"]').click();
+  await waitSaved(page);
+  const w3 = await page.evaluate(() => window.__writes.map(w => w.range.replace("'🎸'!", '')));
+  record(n, 'Plan: removing the first Up next clears Plan/# and renumbers the rest (K, L + 3 renumbers)', w3.filter(r => r[0] === 'K').length === 1 && w3.filter(r => r[0] === 'L').length === 4 && !w3.some(r => r[0] === 'O'), w3.join());
+
+  // Resurfaced Someday album comes back in the deck (skip with key 4)
+  const someday = await page.evaluate(() => window.__plan.someday);
+  let found = false;
+  for (let i = 0; i < 200 && !found; i++) {
+    const h = await page.locator('#deckBody h3').textContent().catch(() => '');
+    if (h === someday) { found = true; break; }
+    await page.keyboard.press('4');
+  }
+  const label = found ? await page.locator('#deckBody .m').textContent() : '';
+  record(n, 'Plan: resurfaced Someday album appears in the deck as "Back from Someday"', found && /Back from Someday/.test(label), label);
+  const wr = await page.evaluate(() => window.__writes.length);
+  record(n, 'Plan: skipping deck cards writes nothing', wr === w3.length, `${wr} writes`);
+
+  // Keyboard shortcut 2 sends the card to Soon
+  if (found) {
+    await page.evaluate(() => { window.__writes.length = 0; });
+    await page.keyboard.press('2');
+    await waitSaved(page);
+    const w4 = await page.evaluate(() => window.__writes.map(w => w.range.replace("'🎸'!", '')));
+    record(n, 'Plan: key 2 on the deck writes Plan and Planned only (no Up next #)', w4.length === 2 && w4.every(r => /^[KO]\d+$/.test(r)), w4.join());
+  }
+
+  // Dates read like "19 Oct 26"
+  await page.locator('#tab-log').click();
+  const rec = await page.locator('#recentList').textContent();
+  record(n, 'Dates: Log shows "d Mon yy" for older entries', /(^|[^\d])\d{1,2} [A-Z][a-z]{2} \d{2}(?!\d)/.test(rec), rec.slice(0, 80));
+  await page.locator('#tab-plan').click();
+
+  o = await page.evaluate(overflow);
+  record(n, 'Plan: no sideways scroll after interactions', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  const wAll = await page.evaluate(() => window.__writes.concat([]).every(w => w.sheet.startsWith('🎸')));
+  record(n, 'Plan: every write stays on a 🎸 tab', wAll);
+  await page.screenshot({ path: join(OUT, `${n}-plan.png`), fullPage: true });
+}
+
 // ---------- runner ----------
 const results = [];
 const record = (vp, name, ok, detail = '') => {
@@ -292,6 +415,8 @@ async function runViewport(browser, vp, seed, wrapperUrl) {
     const o = await page.evaluate(overflow);
     record(vp.name, 'no sideways scroll after visiting all tabs', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
   }
+
+  await planTests(page, vp);
 
   const forbidden = await page.evaluate(() => window.__forbidden);
   record(vp.name, 'no access outside 🎸 tabs (window.__forbidden empty)', forbidden.length === 0,
