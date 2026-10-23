@@ -36,3 +36,11 @@ See [ROADMAP.md](ROADMAP.md).
 - New tab `🎸 Settings`: `key | value` (`yearGoalAlbums` 52, `rotationDays` 14,
   `upNextSize` 10, `albumOfDayMin` 8).
 - Checked by script afterwards: A–I identical to the backup, ids unique and sequential.
+
+### 2026-10-23 (Stage 2 prep)
+
+- Backup: full copy of 🎸 kept as `🎸 backup 2026-10-23`.
+- 🎸 gained column P, `Buy link`: the shop URL behind each "JB" / "HERE" note,
+  copied from the Notes hyperlinks (24 albums), stored as plain text so the app can read it.
+  Notes keeps its text and links as before.
+- Checked by script afterwards: A–O identical to the backup, all 24 links match their Notes hyperlink.
