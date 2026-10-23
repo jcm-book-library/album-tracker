@@ -1,22 +1,24 @@
 {
-  "name": "Sleeves & Grooves",
-  "short_name": "Sleeves",
-  "description": "Album tracker",
+  "name": "Music Collection",
+  "short_name": "Music",
+  "description": "Music collection and listening log",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#202230",
-  "theme_color": "#202230",
+  "background_color": "#0e0f16",
+  "theme_color": "#0e0f16",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

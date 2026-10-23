@@ -1,4 +1,4 @@
-// Smoke test for app.html (Sleeves & Grooves).
+// Smoke test for app.html (Music Collection).
 // Loads the page in headless Chromium at laptop and phone widths, with a stubbed
 // window.claude.use('mcp') backed by an in-memory copy of the 🎸 sheet tabs.
 //
@@ -597,8 +597,8 @@ const MOOD_RULES = {
 const SIX = ['Log', 'Plan', 'Library', 'Dashboard', 'Tools', 'Discover'];
 
 // A fresh page on the live stub, already on the given tab
-async function freshPage(browser, vp, seed, url, tab, { clockTo } = {}) {
-  const ctx = await openContext(browser, vp, seed);
+async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion } = {}) {
+  const ctx = await openContext(browser, vp, seed, { reducedMotion });
   if (clockTo) await ctx.context.clock.setFixedTime(clockTo);
   await ctx.page.goto(url);
   await ctx.page.waitForLoadState('load');
@@ -1123,6 +1123,97 @@ async function tracksTests(browser, vp, seed, url) {
   await m.context.close();
 }
 
+// ---------- Music Collection: name, pressings, Look panel ----------
+const PRESS_HEX = { emerald: '#3bd1a0', canary: '#f4cf2d', midnight: '#5aa3f5', tangerine: '#ff8a2a', magenta: '#e056dc', crimson: '#ff4357' };
+const hexToRgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
+const MARK_ANIMS = () => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.id === 'headMark').length;
+
+async function lookTests(browser, vp, seed, url) {
+  const n = vp.name;
+  // Name
+  let f = await freshPage(browser, vp, seed, url, 'log', { clockTo: '2026-10-24T10:00:00' });
+  const title = await f.page.title();
+  const h1 = await f.page.locator('h1').textContent();
+  const visible = await f.page.evaluate(() => document.body.innerText);
+  record(n, 'Name: the title and header say "Music Collection"', title === 'Music Collection' && h1.trim() === 'Music Collection', `${title} | ${h1}`);
+  record(n, 'Name: the old name appears nowhere in the visible text', !/sleeves|grooves/i.test(visible));
+  const eyebrow = (await f.page.locator('#todayLabel').textContent()).trim();
+  record(n, 'Pressing: the header eyebrow reads "Saturday 24 Oct 26 · Magenta pressing" (no season)', eyebrow === 'Saturday 24 Oct 26 · Magenta pressing', eyebrow);
+  record(n, 'Pressing: the header has the record mark and the marble ground sits behind the page', await f.page.evaluate(() => !!document.querySelector('header svg#headMark use') && getComputedStyle(document.querySelector('.ground')).position === 'fixed' && getComputedStyle(document.querySelector('.wrap')).zIndex === '1'));
+  record(n, 'Pressing: the page is dark only', await f.page.evaluate(() => getComputedStyle(document.documentElement).colorScheme === 'dark'));
+  // Active tab pill follows the pressing
+  const pill = await f.page.evaluate(() => getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor);
+  record(n, 'Pressing: the active tab pill is the pressing colour (magenta)', pill === hexToRgb(PRESS_HEX.magenta), pill);
+  await f.context.close();
+
+  // Pressing by month, with no drift inside a pressing
+  for (const [d, want] of [['2026-01-02', 'emerald'], ['2026-03-05', 'canary'], ['2026-10-01', 'magenta'], ['2026-10-31', 'magenta'], ['2026-12-15', 'crimson']]) {
+    const m = await freshPage(browser, vp, seed, url, 'log', { clockTo: `${d}T12:00:00` });
+    const got = await m.page.evaluate(() => document.documentElement.dataset.p);
+    const tab = await m.page.evaluate(() => getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor);
+    record(n, `Pressing: ${d} is ${want}`, got === want && tab === hexToRgb(PRESS_HEX[want]), `${got}, tab ${tab}`);
+    await m.context.close();
+  }
+
+  // Look panel
+  const l = await freshPage(browser, vp, seed, url, 'tools', { clockTo: '2026-10-24T12:00:00' });
+  const page = l.page;
+  const dp = () => page.evaluate(() => document.documentElement.dataset.p);
+  record(n, 'Look: the panel is at the bottom of Tools with "This month (auto)" selected', await page.evaluate(() => {
+    const secs = [...document.querySelectorAll('#view-tools > section')]; const last = secs[secs.length - 1];
+    return last.querySelector('h2').textContent === 'Look' && document.getElementById('lookPressing').selectedOptions[0].textContent === 'This month (auto)';
+  }));
+  await page.selectOption('#lookPressing', 'crimson');
+  record(n, 'Look: choosing Crimson sets data-p crimson', (await dp()) === 'crimson');
+  record(n, 'Look: the header eyebrow follows the chosen pressing', /Crimson pressing$/.test((await page.locator('#todayLabel').textContent()).trim()));
+  record(n, 'Look: the choice is stored in sg-pressing', (await page.evaluate(() => localStorage.getItem('sg-pressing'))) === 'crimson');
+  await page.reload(); await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  record(n, 'Look: Crimson persists after reload', (await dp()) === 'crimson' && (await page.locator('#lookPressing').inputValue()) === 'crimson');
+  // Charts, heatmap and the pill read the pressing
+  await page.locator('#tab-dashboard').click(); await page.waitForTimeout(250);
+  const dashCol = await page.evaluate(() => {
+    const ch = window.Chart && Chart.getChart(document.getElementById('monthChart'));
+    const cell = document.querySelector('#heat i.c[data-d]');
+    return { bar: ch ? ch.data.datasets[0].backgroundColor[0] : null, heat: cell ? getComputedStyle(cell).backgroundColor : null,
+      pill: getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor };
+  });
+  record(n, 'Look: Dashboard bars and the pill use the pressing colour', dashCol.pill === hexToRgb(PRESS_HEX.crimson) && (!HAVE_CHART || (dashCol.bar || '').startsWith(PRESS_HEX.crimson)), JSON.stringify(dashCol));
+  record(n, 'Look: the Dashboard heatmap cells are tinted from the pressing', !!dashCol.heat && /^rgb/.test(dashCol.heat), dashCol.heat);
+  await page.locator('#tab-tools').click();
+  await page.selectOption('#lookPressing', 'auto');
+  record(n, 'Look: "This month (auto)" returns to the month\'s pressing (magenta)', (await dp()) === 'magenta' && (await page.evaluate(() => localStorage.getItem('sg-pressing'))) === null);
+  // Plain dark
+  const discShown = () => page.evaluate(() => getComputedStyle(document.querySelector('.disc')).display !== 'none');
+  record(n, 'Look: the marble record is shown by default', await discShown());
+  await page.selectOption('#lookBg', 'plain');
+  record(n, 'Look: Plain dark hides the disc', !(await discShown()) && (await page.evaluate(() => localStorage.getItem('sg-bg'))) === 'plain');
+  await page.reload(); await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  record(n, 'Look: Plain dark persists after reload', !(await discShown()) && (await page.locator('#lookBg').inputValue()) === 'plain');
+  await page.selectOption('#lookBg', 'marble');
+  record(n, 'Look: Marble record brings the disc back', await discShown());
+  // Every tab, crimson + plain: no sideways scroll
+  await page.selectOption('#lookPressing', 'crimson'); await page.selectOption('#lookBg', 'plain');
+  const bad = [];
+  for (const t of ['log', 'plan', 'library', 'dashboard', 'tools', 'discover']) {
+    await page.locator(`#tab-${t}`).click(); await page.waitForTimeout(150);
+    const o = await page.evaluate(overflow); if (o.sw > o.iw) bad.push(`${t} ${o.sw}>${o.iw}`);
+  }
+  record(n, 'Look: no sideways scroll on any tab with Crimson and Plain dark', bad.length === 0, bad.join(', '));
+  record(n, 'Look: changing the look writes nothing to the sheet', (await page.evaluate(() => window.__writes.length)) === 0);
+  record(n, 'Look: no console errors', l.problems.length === 0, l.problems.slice(0, 2).join(' | '));
+  await l.context.close();
+
+  // Header mark spins once after Refresh (not with reduced motion)
+  for (const reduce of [false, true]) {
+    const r = await freshPage(browser, vp, seed, url, 'log', reduce ? { reducedMotion: 'reduce' } : {});
+    await r.page.locator('#refreshBtn').click();
+    await r.page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live') && !document.getElementById('refreshBtn').disabled);
+    const anims = await r.page.evaluate(MARK_ANIMS);
+    record(n, reduce ? 'Motion: with reduced motion the header mark has no running animation after Refresh' : 'Motion: the header mark spins after Refresh', reduce ? anims === 0 : anims === 1, `${anims} animation(s)`);
+    await r.context.close();
+  }
+}
+
 // ---------- runner ----------
 const results = [];
 const record = (vp, name, ok, detail = '') => {
@@ -1136,8 +1227,8 @@ const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.u
 const CHART_LOCAL = join(here, 'node_modules', 'chart.js', 'dist', 'chart.umd.js');
 const HAVE_CHART = existsSync(CHART_LOCAL);
 
-async function openContext(browser, vp, seed, { blockChart = false } = {}) {
-  const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+async function openContext(browser, vp, seed, { blockChart = false, reducedMotion } = {}) {
+  const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}) });
   let externalBlocked = 0;
   await context.route('**/*', route => {
     const u = route.request().url();
@@ -1226,6 +1317,7 @@ async function runViewport(browser, vp, seed, wrapperUrl, rawUrl) {
   await goalTests(browser, vp, seed, wrapperUrl);
   await discoverTests(browser, vp, seed, wrapperUrl);
   await tracksTests(browser, vp, seed, wrapperUrl);
+  await lookTests(browser, vp, seed, wrapperUrl);
 }
 
 async function main() {
