@@ -62,4 +62,5 @@ See [ROADMAP.md](ROADMAP.md).
   - `albumId` links to the album's `id` in 🎸. `copied` is the date the track was copied to MP3 (blank = not yet).
   - Deleting a track in the app clears that row's cells (found by id first). The row itself
     stays, empty, so no other row moves; the app skips empty rows.
+  - New tracks (and albums) are appended below the last used row, so a cleared row is never refilled or overwritten.
 - 🎸 itself is unchanged.

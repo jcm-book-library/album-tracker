@@ -322,6 +322,52 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 .field textarea{min-height:70px;resize:vertical}
 .sec-label{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin-top:6px}
 
+/* tracks dialog */
+.trk-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px}
+.trk-prog{display:flex;flex-direction:column;gap:8px}
+.trk-prog-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.trk-prog-text{font-family:var(--display);font-weight:700;font-size:18px}
+.trk-bar{height:8px;border-radius:999px;background:var(--raise);overflow:hidden}
+.trk-bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.trk-msg{margin:0;padding:8px 12px;border-radius:8px;background:var(--raise);border-left:3px solid var(--accent);font-size:13px;overflow-wrap:anywhere}
+.trk-msg[data-kind="error"]{border-left-color:var(--danger)}
+.trk-side-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 4px}
+.trk-side + .trk-side{margin-top:14px}
+.trk-list{list-style:none;margin:0;padding:0}
+.trk-row{display:grid;grid-template-columns:3em minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.trk-row .pos{font-family:var(--display);font-weight:700;color:var(--accent)}
+.trk-row.done .pos{color:var(--accent-2)}
+.trk-row .t{font-weight:600;overflow-wrap:anywhere}
+.trk-row .m{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.trk-row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;min-width:0}
+.trk-row .acts .btn{padding:4px 10px;font-size:12px}
+.trk-row .ask{font-size:13px;overflow-wrap:anywhere}
+.trk-copied[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 24%,var(--surface));border-color:var(--accent)}
+.trk-edit,.pv-row{display:grid;gap:6px;align-items:center;min-width:0}
+.trk-edit{grid-column:1/-1;grid-template-columns:4em 4em minmax(0,1fr) 5.5em;grid-template-areas:"s n t l" "o o o o" "b b b b"}
+.trk-edit .e-note{grid-area:o}
+.trk-edit .e-btns{grid-area:b;display:flex;gap:6px}
+.trk-edit input,.pv-row input,.trk-one input,#trkPaste{width:100%}
+.trk-add{border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:10px}
+#trkPaste{min-height:110px;resize:vertical}
+.pv-row{grid-template-columns:3.6em 3.6em minmax(0,1fr) 5.5em 2.4em;grid-template-areas:"s n t l x"}
+.pv-row [data-f="side"],.trk-edit [data-f="side"]{grid-area:s}.pv-row [data-f="no"],.trk-edit [data-f="no"]{grid-area:n}
+.pv-row [data-f="title"],.trk-edit [data-f="title"]{grid-area:t}.pv-row [data-f="length"],.trk-edit [data-f="length"]{grid-area:l}
+.pv-row .x{grid-area:x;padding:4px 0}
+.trk-one{display:grid;grid-template-columns:4em 4em minmax(0,1fr) 5.5em auto;gap:8px;align-items:end}
+.trk-one .field{min-width:0}
+@media (max-width:560px){
+  .trk-body{padding:14px 16px 18px}
+  .trk-row{grid-template-columns:3em minmax(0,1fr)}
+  .trk-row .acts{grid-column:2;justify-content:flex-start}
+  .trk-edit{grid-template-columns:3.6em 3.6em minmax(0,1fr)}
+  .trk-edit{grid-template-areas:"s n l" "t t t" "o o o" "b b b"}
+  .pv-row{grid-template-columns:3.4em 3.4em minmax(0,1fr) 2.4em;grid-template-areas:"s n l x" "t t t t"}
+  .trk-one{grid-template-columns:3.6em 3.6em minmax(0,1fr)}
+  .trk-one .field.len{grid-column:1/3}
+  .trk-one .btn{grid-column:3}
+}
+
 @media (max-width:860px){
   .grid{display:flex;flex-direction:column;gap:20px}
   .col{display:contents}
@@ -599,8 +645,37 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   <form id="albumForm" method="dialog">
     <div class="dlg-head"><h2 id="dlgTitle">Edit album</h2><button class="btn" type="button" id="dlgClose">Close</button></div>
     <div class="dlg-body" id="dlgBody"></div>
-    <div class="dlg-foot"><span class="muted" id="dlgMsg" style="font-size:13px;align-self:center"></span><button class="btn btn-primary" type="submit" id="dlgSave">Save</button></div>
+    <div class="dlg-foot"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex-wrap:wrap"><button class="btn" type="button" id="dlgTracks" hidden>Tracks</button><span class="muted" id="dlgMsg" style="font-size:13px;align-self:center"></span></div><button class="btn btn-primary" type="submit" id="dlgSave">Save</button></div>
   </form>
+</dialog>
+
+<dialog id="tracksDlg" aria-labelledby="trkTitle">
+  <div class="dlg-head"><div style="min-width:0"><h2 id="trkTitle" style="overflow-wrap:anywhere">Tracks</h2><div class="muted" id="trkSub" style="font-size:13px;overflow-wrap:anywhere"></div></div><button class="btn" type="button" id="trkClose">Close</button></div>
+  <div class="trk-body">
+    <p class="trk-msg" id="trkMsg" role="status" hidden></p>
+    <div class="trk-prog" id="trkProg">
+      <div class="trk-prog-top"><span class="trk-prog-text tnum" id="trkProgText"></span><button class="btn" type="button" id="trkAll">Mark all copied</button></div>
+      <div class="trk-bar" aria-hidden="true"><i id="trkBar" style="width:0"></i></div>
+    </div>
+    <div id="trkList"></div>
+    <section class="trk-add" id="trkAdd" aria-labelledby="trkAddH">
+      <h2 id="trkAddH">Add tracks</h2>
+      <div class="field">
+        <label for="trkPaste">Paste the tracklist, one track per line</label>
+        <textarea id="trkPaste" rows="5" spellcheck="false" placeholder="A1 Israel's Son 5:12&#10;A2. Another Song (3:48)&#10;B1 - Flip Side - 4:26&#10;Or just song names, one per line"></textarea>
+      </div>
+      <div id="trkPreview"></div>
+      <div><button class="btn btn-primary" type="button" id="trkSavePaste" hidden>Save tracks</button></div>
+      <div class="eyebrow">Or add one track</div>
+      <div class="trk-one">
+        <div class="field"><label for="trkOneSide">Side</label><input type="text" id="trkOneSide" maxlength="3" autocomplete="off" placeholder="A"></div>
+        <div class="field"><label for="trkOneNo">No</label><input type="text" id="trkOneNo" inputmode="numeric" autocomplete="off"></div>
+        <div class="field"><label for="trkOneTitle">Title</label><input type="text" id="trkOneTitle" autocomplete="off"></div>
+        <div class="field len"><label for="trkOneLen">Length</label><input type="text" id="trkOneLen" autocomplete="off" placeholder="m:ss"></div>
+        <button class="btn btn-primary" type="button" id="trkOneAdd">Add track</button>
+      </div>
+    </section>
+  </div>
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -614,7 +689,7 @@ function saveCfg(patch) { lsSet('sg-config', JSON.stringify({ ...sgCfg(), ...pat
 function sheetId() { return BUILT_SHEET_ID || sgCfg().sheetId || ''; }
 const SERVER = 'Google Sheets';
 // This app only ever touches the 🎸 tab and tabs that start with 🎸.
-const TAB = '🎸', TAB_LOG = '🎸 Log', TAB_SET = '🎸 Settings';
+const TAB = '🎸', TAB_LOG = '🎸 Log', TAB_SET = '🎸 Settings', TAB_TRK = '🎸 Tracks';
 const qt = n => `'${n}'`;
 
 /* ---------- dates (local time) ---------- */
@@ -731,6 +806,12 @@ const SNAP_ALBUMS = [
 ];
 // Dates are relative to today so the sample always looks recent: [days ago, album id, plays]
 const SNAP_LOG = [[0, '1001', 1], [1, '1005', 1], [2, '1002', 2], [3, '1003', 1], [5, '1003', 1], [6, '1001', 1], [9, '1005', 1], [33, '1002', 1], [47, '1005', 2], [62, '1001', 1], [90, '1008', 1]];
+// A few tracks on one snapshot album so the Tracks view isn't empty: [side, no, title, length, days ago copied (null = not yet)]
+const SNAP_TRACKS = [
+  ['A', 1, 'World in My Eyes', '4:26', 6], ['A', 2, 'Sweetest Perfection', '4:43', 6], ['A', 3, 'Personal Jesus', '4:56', 3],
+  ['A', 4, 'Halo', '4:30', null], ['A', 5, 'Waiting for the Night', '6:07', null],
+  ['B', 1, 'Enjoy the Silence', '6:12', null], ['B', 2, 'Policy of Truth', '4:55', null], ['B', 3, 'Blue Dress', '5:41', null], ['B', 4, 'Clean', '5:26', null]
+];
 function snapshotState() {
   const t = today();
   const albums = SNAP_ALBUMS.map((a, i) => ({ ...Object.fromEntries(FIELDS.map(f => [f.k, ''])), ...a, added: t, _row: i + 2 }));
@@ -738,29 +819,31 @@ function snapshotState() {
     const a = albums.find(x => x.id === id);
     return { date: addDays(t, -ago), albumId: id, title: a.title, artist: a.artist, plays, loggedAt: `${addDays(t, -ago)}T09:${pad(i)}:00.000Z`, source: 'app', note: '', _row: i + 2 };
   });
-  return { albums, log };
+  const tracks = SNAP_TRACKS.map(([side, no, title, length, ago], i) => ({ id: String(5001 + i), albumId: '1001', album: 'Violator', side, no: String(no), title, length, copied: ago == null ? '' : addDays(t, -ago), note: '', _row: i + 2 }));
+  return { albums, log, tracks };
 }
 
 /* ---------- state ---------- */
 const snap = snapshotState();
 const state = {
-  albums: snap.albums, log: snap.log,
+  albums: snap.albums, log: snap.log, tracks: snap.tracks, tracksMissing: false,
   settings: { yearGoalAlbums: 52, rotationDays: 14, upNextSize: 10, albumOfDayMin: 8 },
   mcp: null, google: false, live: false, busy: false, logMissing: false,
   tab: 'log', logDate: null, pick: null, editingLog: null, ratePick: {},
-  lib: { q: '', status: 'All', genre: '', owned: false, want: false, sort: 'title', dir: 1, limit: 100, open: null },
-  ix: { byId: new Map(), plays: new Map() }
+  lib: { q: '', status: 'All', genre: '', owned: false, want: false, copied: false, sort: 'title', dir: 1, limit: 100, open: null },
+  ix: { byId: new Map(), plays: new Map(), tracks: new Map() }
 };
 
 function buildIndex() {
-  const byId = new Map(), plays = new Map();
+  const byId = new Map(), plays = new Map(), tracks = new Map();
   for (const a of state.albums) if (a.id) byId.set(String(toNum(a.id)), a);
+  for (const t of state.tracks) { let l = tracks.get(t.albumId); if (!l) tracks.set(t.albumId, l = []); l.push(t); }
   for (const e of state.log) {
     const k = e.albumId;
     let p = plays.get(k); if (!p) { p = { plays: 0, last: '', n: 0 }; plays.set(k, p); }
     p.plays += e.plays; p.n++; if (e.date > p.last) p.last = e.date;
   }
-  state.ix = { byId, plays };
+  state.ix = { byId, plays, tracks };
 }
 const albumOf = e => state.ix.byId.get(e.albumId) || null;
 
@@ -814,6 +897,8 @@ async function refresh() {
     let log = [], settings = [], logMissing = false;
     try { log = await readRange(`${qt(TAB_LOG)}!A1:H`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; logMissing = true; }
     try { settings = await readRange(`${qt(TAB_SET)}!A1:B`); } catch (e) { if (e && e.code === 'google_signin') throw e; }
+    let trkRows = [], trkMissing = false;
+    try { trkRows = await readRange(`${qt(TAB_TRK)}!A1:I`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; trkMissing = true; }
     if (!albums.length) throw { code: 'tool_error', message: `the ${TAB} tab came back empty` };
 
     const ah = (albums[0] || []).map(h => String(h).trim());
@@ -834,6 +919,8 @@ async function refresh() {
       loggedAt: String(r[li('loggedat')] ?? '').trim(), source: String(r[li('source')] ?? '').trim(), note: String(r[li('note')] ?? '').trim(), _row: i + 2
     })).filter(e => e.date && e.plays > 0);
     state.logMissing = logMissing || !lh.length;
+    const parsedTracks = trkMissing ? null : parseTracks(trkRows);
+    state.tracks = parsedTracks || []; state.tracksMissing = !parsedTracks;
 
     for (const r of settings.slice(1)) {
       const k = norm(r[0]), v = toNum(r[1]);
@@ -907,7 +994,9 @@ async function addAlbum(fields) {
     if (!f) return '';
     return f.k === 'id' ? id : cellValue(f.k, fields[f.k]);
   });
-  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB)}!A1`, values: [row] }, { cache: false });
+  // Append from the row after the last used one, so a blank row in the middle is never filled
+  const lastRow = (await readRange(`${qt(TAB)}!A1:${colLetter(header.length - 1)}`)).length;
+  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB)}!A${lastRow + 1}`, values: [row] }, { cache: false });
   // Re-read the id column and confirm the new id landed exactly once
   const after = await readRange(`${qt(TAB)}!${L}1:${L}`);
   const hits = after.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(r[0]) === id ? i + 1 : 0).filter(Boolean);
@@ -1170,6 +1259,7 @@ function renderRecent() {
       b.addEventListener('click', () => { state.editingLog = open ? null : e.loggedAt; renderRecent(); });
       li.querySelector('.acts').appendChild(b);
     }
+    if (a && toNum(a.id)) { const tb = document.createElement('button'); tb.type = 'button'; tb.className = 'btn'; tb.textContent = 'Tracks'; tb.setAttribute('aria-label', 'Tracks for ' + a.title); tb.addEventListener('click', () => openTracks(a)); li.querySelector('.acts').appendChild(tb); }
     if (open) li.appendChild(logEditor(e));
     ul.appendChild(li);
   }
@@ -1216,7 +1306,7 @@ function libFiltered() {
   const L = state.lib, q = norm(L.q);
   return state.albums.filter(a =>
     (L.status === 'All' || a.status === L.status) && (!L.genre || a.genre === L.genre) &&
-    (!L.owned || owned(a)) && (!L.want || wantVinyl(a)) &&
+    (!L.owned || owned(a)) && (!L.want || wantVinyl(a)) && (!L.copied || trkStat(a).copied > 0) &&
     (!q || [a.title, a.artist, a.genre, a.notes].some(v => norm(v).includes(q))));
 }
 function chipGroup(el, label, items, isOn, attr) {
@@ -1233,7 +1323,7 @@ function renderLibrary() {
   const genres = [...new Set([...GENRES, ...state.albums.map(a => a.genre).filter(Boolean)])];
   const gc = {}; for (const a of state.albums) gc[a.genre] = (gc[a.genre] || 0) + 1;
   chipGroup($('fGenre'), 'Genre', [['', 'All', null], ...genres.map(g => [g, g, gc[g] || 0])], v => L.genre === v, 'genre');
-  chipGroup($('fColl'), 'Show', [['owned', 'Owned', state.albums.filter(owned).length], ['want', 'Want on vinyl', state.albums.filter(wantVinyl).length]], v => L[v], 'coll');
+  chipGroup($('fColl'), 'Show', [['owned', 'Owned', state.albums.filter(owned).length], ['want', 'Want on vinyl', state.albums.filter(wantVinyl).length], ['copied', 'Copied', state.albums.filter(a => trkStat(a).copied > 0).length]], v => L[v], 'coll');
 
   $('libHead').innerHTML = LIB_COLS.map(c => `<th scope="col" ${c.sort ? `data-k="${c.sort}"` : ''} class="${c.cls.includes('num') ? 'num' : ''}" ${c.sort && L.sort === c.sort ? `aria-sort="${L.dir > 0 ? 'ascending' : 'descending'}"` : ''}>${c.label}</th>`).join('');
   const rows = libFiltered().sort((a, b) => { const x = sortKey(a, L.sort), y = sortKey(b, L.sort); return (x < y ? -1 : x > y ? 1 : 0) * L.dir || norm(a.title).localeCompare(norm(b.title)); });
@@ -1251,6 +1341,8 @@ function renderLibrary() {
     tr.innerHTML = LIB_COLS.map(c => `<td class="${c.cls}${c.num ? ' tnum' : ''}">${cells[c.k]}</td>`).join('');
     tr.querySelector('.c-title').innerHTML = '<span class="t"></span>';
     tr.querySelector('.c-title .t').textContent = a.title;
+    const ts = trkStat(a);
+    if (ts.total) { const g = document.createElement('span'); g.className = 'trk-tag muted small tnum'; g.style.display = 'block'; g.textContent = `${ts.copied}/${ts.total} copied`; tr.querySelector('.c-title').appendChild(g); }
     tr.querySelector('.c-artist').textContent = a.artist;
     body.appendChild(tr);
     if (L.open === a.id) body.appendChild(detailRow(a));
@@ -1263,16 +1355,17 @@ function detailRow(a) {
   tr.className = 'detail';
   const td = document.createElement('td');
   td.colSpan = LIB_COLS.length;
-  const p = state.ix.plays.get(String(toNum(a.id)));
+  const p = state.ix.plays.get(String(toNum(a.id))), ts = trkStat(a);
   const kv = [
     ['Rating', toNum(a.rating) ? `${a.rating}/10` : ''], ['Status', a.status], ['Genre', a.genre], ['Format', a.format],
     ['Release date', fmtDate(a.release)], ['Year', a.year], ['Where to buy', a.notes],
     ['Buy link', a.buy ? buyEl(a.buy) : ''],
     ['Plan', a.plan ? a.plan + (a.plan === 'Up next' && a.upNext ? ' #' + a.upNext : '') : ''], ['Why', a.why],
+    ['Tracks copied', ts.total ? `${ts.copied}/${ts.total} copied` : ''],
     ['Plays logged', p ? String(p.plays) : '0'], ['Last played', p && p.last ? (daysBetween(p.last, today()) < 7 ? `${dayLabel(p.last)} · ${fmtDate(p.last)}` : fmtDate(p.last)) : 'Never'],
     ['Added', fmtDate(a.added)], ['Planned', fmtDate(a.planned)], ['id', a.id]
   ].filter(([, v]) => v);
-  td.innerHTML = '<dl class="kv"></dl><div class="acts"><button class="btn btn-primary" type="button" data-edit>Edit album</button><button class="btn" type="button" data-log>Log a listen</button></div>';
+  td.innerHTML = '<dl class="kv"></dl><div class="acts"><button class="btn btn-primary" type="button" data-edit>Edit album</button><button class="btn" type="button" data-log>Log a listen</button><button class="btn" type="button" data-tracks>Tracks</button></div>';
   const dl = td.querySelector('.kv');
   for (const [k, v] of kv) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; if (v instanceof Node) dd.appendChild(v); else dd.textContent = v; dl.append(dt, dd); }
   tr.appendChild(td);
@@ -1292,6 +1385,7 @@ function openAlbumDialog(album) {
   editing = album;
   $('dlgTitle').textContent = album ? 'Edit album' : 'Add an album';
   $('dlgMsg').textContent = album ? `id ${album.id}` : 'A new id is given when you save';
+  $('dlgTracks').hidden = !(album && toNum(album.id));
   const body = $('dlgBody'); body.textContent = '';
   for (const f of FORM) {
     if (f.sec) { const d = document.createElement('div'); d.className = 'sec-label'; d.textContent = f.sec; body.appendChild(d); continue; }
@@ -1689,7 +1783,8 @@ function renderDashboard() {
     tile('owned', 'Owned', fmt(ownedL.length), `${fmt(vinyl.length)} on vinyl`) +
     tile('wish', 'Vinyl wish list', fmt(wish.length), 'still to buy') +
     tile('backlog', 'Listening backlog', fmt(bl.length), 'still to hear') +
-    tile('artists', 'Artists heard', fmt(artistsHeard.size), 'different artists');
+    tile('artists', 'Artists heard', fmt(artistsHeard.size), 'different artists') +
+    tile('copied', 'Copied to MP3', fmt(state.tracks.filter(t => t.copied).length), `${plural(trkComplete(), 'album')} complete`);
 
   renderMonthly(dashYear());
   renderHeat(dashYear());
@@ -2200,6 +2295,7 @@ function renderAotd() {
   if (a.notes) card.appendChild(mk('p', 'notes', a.notes));
   const line = mk('div', 'dip-line');
   line.appendChild(mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)));
+  line.appendChild(mkBtn('Tracks', 'btn', () => openTracks(a), { aria: 'Tracks for ' + a.title }));
   if (a.buy) line.appendChild(buyEl(a.buy));
   card.appendChild(line);
   box.appendChild(card);
@@ -2267,6 +2363,359 @@ $('ownQ').addEventListener('input', e => { tools.ownQ = e.target.value; renderOw
 $('yirYear').addEventListener('change', e => { tools.yir = e.target.value; renderYear(); });
 $('recModes').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; tools.rec = c.dataset.m; renderRecs(); });
 
+/* ---------- Tracks (the 🎸 Tracks tab) ---------- */
+// One row per track: id | albumId | album | side | no | title | length | copied | note. Columns are found by header name.
+// Deleting a track clears its row's cells (the row stays, empty) so no other row moves.
+const TRK_FIELDS = ['id', 'albumId', 'album', 'side', 'no', 'title', 'length', 'copied', 'note'];
+const trkCol = (header, k) => header.findIndex(h => norm(h) === k.toLowerCase());
+function parseTracks(rows) {
+  const h = (rows[0] || []).map(norm), ix = k => h.indexOf(k.toLowerCase());
+  if (ix('id') < 0 || ix('albumId') < 0 || ix('title') < 0) return null;
+  const g = (r, k) => ix(k) >= 0 ? String(r[ix(k)] ?? '').trim() : '';
+  return rows.slice(1).map((r, i) => ({
+    id: g(r, 'id') ? String(toNum(g(r, 'id'))) : '', albumId: g(r, 'albumId') ? String(toNum(g(r, 'albumId'))) : '', album: g(r, 'album'),
+    side: g(r, 'side'), no: toNum(g(r, 'no')) > 0 ? String(toNum(g(r, 'no'))) : '', title: g(r, 'title'), length: g(r, 'length'),
+    copied: toDate(g(r, 'copied')) || '', note: g(r, 'note'), _row: i + 2
+  })).filter(t => toNum(t.id) > 0);   // rows with no id are deleted tracks
+}
+const trkList = a => (state.ix.tracks && state.ix.tracks.get(String(toNum(a.id)))) || [];
+const trkStat = a => { const l = trkList(a); return { total: l.length, copied: l.filter(t => t.copied).length }; };
+function trkComplete() {
+  let n = 0;
+  for (const l of state.ix.tracks.values()) if (l.length && l.every(t => t.copied)) n++;
+  return n;
+}
+const trkNo = t => toNum(t.no) > 0 ? toNum(t.no) : 1e9;
+const trkPos = t => (t.side || '') + (toNum(t.no) > 0 ? t.no : '') || '–';
+// Sides A, B, … in order; tracks with no side last. Inside a side, by number then sheet order.
+function trkGroups(list) {
+  const m = new Map();
+  for (const t of list) { const k = t.side || ''; (m.get(k) || m.set(k, []).get(k)).push(t); }
+  const keys = [...m.keys()].sort((x, y) => (x === '') - (y === '') || x.localeCompare(y));
+  return keys.map(k => [k, m.get(k).sort((p, q) => trkNo(p) - trkNo(q) || (p._row || 0) - (q._row || 0) || toNum(p.id) - toNum(q.id))]);
+}
+// "5:12" or "1:02:03" → tidy text, or null when it isn't a length
+function normLen(v) {
+  const m = String(v ?? '').trim().match(/^(?:(\d{1,2}):)?(\d{1,3}):(\d{2})$/);
+  if (!m) return null;
+  const h = m[1] == null ? null : +m[1], mi = +m[2], sec = +m[3];
+  if (sec > 59 || (h != null && mi > 59)) return null;
+  return h == null ? `${mi}:${pad(sec)}` : `${h}:${pad(mi)}:${pad(sec)}`;
+}
+// Pasted text → rows {side, no, title, length}. Handles "A1 Title 5:12", "A1. Title (5:12)", "B3 - Title - 4:26",
+// "1 Title" (no side), plain "Title" (numbered in order) and "Side B" header lines.
+function parseTracklist(text, album) {
+  const existing = album ? trkList(album) : [];
+  const out = [], last = {};
+  const trim = x => x.replace(/[\s\-–—(\[]+$/, '');
+  let head = '';
+  for (let line of String(text || '').split(/\r?\n/)) {
+    line = line.replace(/\s+/g, ' ').trim();
+    if (!line) continue;
+    let m = line.match(/^side\s+([A-Za-z])\s*[:.]?$/i);
+    if (m) { head = m[1].toUpperCase(); continue; }
+    let length = '';
+    m = line.match(/(?:^|[\s(\[\-–—])((?:\d{1,2}:)?\d{1,3}:\d{2})\s*[)\]]?\s*$/);
+    if (m && normLen(m[1]) && trim(line.slice(0, m.index))) { length = normLen(m[1]); line = trim(line.slice(0, m.index)); }
+    let side = head, no = null;
+    if ((m = line.match(/^([A-Za-z])(\d{1,2})(?:\s*[.):\-–—]\s*|\s+)(?=\S)/))) { side = m[1].toUpperCase(); no = +m[2]; line = line.slice(m[0].length); }
+    else if ((m = line.match(/^(\d{1,3})(?:\s*[.):\-–—]\s*|\s+)(?=\S)/))) { no = +m[1]; line = line.slice(m[0].length); }
+    if (no == null) {
+      if (last[side] == null) last[side] = Math.max(0, ...existing.filter(t => (t.side || '') === side).map(t => toNum(t.no)));
+      no = last[side] + 1;
+    }
+    last[side] = no;
+    out.push({ side, no: String(no), title: line.trim(), length });
+  }
+  return out;
+}
+
+/* writes: every track write goes through one queue, finds its row by id first, and sends changed cells only */
+const trkQ = { chain: Promise.resolve(), pending: 0, failed: '' };
+function trkRun(fn) { const p = trkQ.chain.then(fn); trkQ.chain = p.catch(() => {}); return p; }
+function trkCell(k, v) {
+  v = String(v ?? '').trim();
+  if (k === 'no' || k === 'id' || k === 'albumId') return toNum(v) > 0 ? toNum(v) : '';
+  if (k === 'copied') return toDate(v) || '';
+  return v ? "'" + v : '';
+}
+async function trkHeader() { return ((await readRange(`${qt(TAB_TRK)}!A1:I1`))[0] || []).map(h => String(h).trim()); }
+async function findTrackRow(id) {
+  id = toNum(id);
+  const header = await trkHeader(), idCol = trkCol(header, 'id');
+  if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB_TRK} tab has no id column` };
+  const L = colLetter(idCol);
+  const ids = await readRange(`${qt(TAB_TRK)}!${L}1:${L}`);
+  const hits = ids.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(r[0]) === id ? i + 1 : 0).filter(Boolean);
+  if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? `track id ${id} appears ${hits.length} times in ${TAB_TRK}, so nothing was written` : `track id ${id} isn't in ${TAB_TRK} any more, so nothing was written` };
+  return { header, row: hits[0] };
+}
+async function writeTrackFields(id, fields) {
+  const { header, row } = await findTrackRow(id);
+  const cols = {};
+  for (const k of Object.keys(fields)) {
+    const c = trkCol(header, k);
+    if (c < 0) throw { code: 'tool_error', message: `The ${TAB_TRK} tab has no "${k}" column` };
+    cols[k] = c;
+  }
+  for (const [k, c] of Object.entries(cols)) await putCell(TAB_TRK, colLetter(c), row, trkCell(k, fields[k]));
+}
+// Delete = clear that row's nine cells. The row stays (empty) so no other row moves.
+async function clearTrackRow(id) {
+  const { row } = await findTrackRow(id);
+  await state.mcp.callTool(SERVER, 'update_values', { spreadsheetId: sheetId(), range: `${qt(TAB_TRK)}!A${row}:I${row}`, values: [Array(TRK_FIELDS.length).fill('')] }, { cache: false });
+}
+// One append for all rows. New ids = highest existing id (at least 5000) + 1, +2, … read right before appending.
+async function appendTracks(album, rows) {
+  const header = await trkHeader(), idCol = trkCol(header, 'id');
+  if (idCol < 0 || trkCol(header, 'title') < 0) throw { code: 'tool_error', message: `The ${TAB_TRK} tab has no header row with id and title` };
+  const L = colLetter(idCol);
+  const ids = (await readRange(`${qt(TAB_TRK)}!${L}2:${L}`)).map(r => toNum(r[0]));
+  const first = Math.max(5000, ...ids) + 1;
+  // Sheets treats a blank (deleted) row as the end of the table, so append from the row after the last used one.
+  const lastRow = (await readRange(`${qt(TAB_TRK)}!A1:I`)).length;
+  const made = rows.map((r, i) => ({ id: String(first + i), albumId: String(toNum(album.id)), album: album.title, side: r.side, no: r.no ? String(toNum(r.no)) : '', title: r.title, length: r.length, copied: '', note: '' }));
+  const values = made.map(t => header.map(h => { const k = TRK_FIELDS.find(f => f.toLowerCase() === norm(h)); return k ? trkCell(k, t[k]) : ''; }));
+  await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_TRK)}!A${lastRow + 1}:I`, values }, { cache: false });
+  // Re-read the id column and confirm every new id landed exactly once
+  const after = await readRange(`${qt(TAB_TRK)}!${L}1:${L}`);
+  for (const t of made) {
+    const hits = after.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(r[0]) === toNum(t.id) ? i + 1 : 0).filter(Boolean);
+    if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? `the new id ${t.id} appears ${hits.length} times, check the sheet` : `the new id ${t.id} couldn't be found after saving, check the sheet` };
+    t._row = hits[0];
+  }
+  state.tracks.push(...made);
+  return made;
+}
+
+/* the dialog */
+const trkUI = { albumId: '', editing: null, deleting: null, clearing: null, preview: [], oneNoDirty: false };
+const trkAlbum = () => state.ix.byId.get(trkUI.albumId) || null;
+function setTrkMsg(text, kind) { const e = $('trkMsg'); e.hidden = !text; e.textContent = text || ''; e.dataset.kind = kind || ''; }
+function trkGuard() {
+  if (isLive()) return true;
+  setTrkMsg('Changing tracks needs the live connection. ' + connectHint(), 'error');
+  return false;
+}
+const trkErr = err => (err && err.code === 'tool_error' && err.message) || explain(err);
+function openTracks(a) {
+  if (!a || !toNum(a.id)) return;
+  for (const d of ['albumDlg', 'drillDlg']) if ($(d).open) $(d).close();
+  Object.assign(trkUI, { albumId: String(toNum(a.id)), editing: null, deleting: null, clearing: null, preview: [], oneNoDirty: false });
+  $('trkPaste').value = '';
+  for (const id of ['trkOneSide', 'trkOneNo', 'trkOneTitle', 'trkOneLen']) $(id).value = '';
+  setTrkMsg('');
+  renderTrkPreview();
+  if (!$('tracksDlg').open) $('tracksDlg').showModal();
+  renderTracksDlg();
+}
+function renderTracksDlg() {
+  const a = trkAlbum();
+  if (!a) { if ($('tracksDlg').open) $('tracksDlg').close(); return; }
+  $('trkTitle').textContent = a.title;
+  $('trkSub').textContent = [a.artist, a.year].filter(Boolean).join(' · ');
+  const box = $('trkList'); box.textContent = '';
+  if (state.tracksMissing) {
+    $('trkProg').hidden = true; $('trkAdd').hidden = true;
+    box.appendChild(mk('p', 'empty', `The ${TAB_TRK} tab wasn't found, or it has no header row (id, albumId, album, side, no, title, length, copied, note). Tracks can't be shown or saved until it's there. Everything else works as usual.`));
+    return;
+  }
+  $('trkProg').hidden = false; $('trkAdd').hidden = false;
+  const list = trkList(a), st = trkStat(a);
+  $('trkProgText').textContent = st.total ? `${st.copied} of ${st.total} track${st.total === 1 ? '' : 's'} copied` : 'No tracks yet';
+  $('trkBar').style.width = st.total ? st.copied / st.total * 100 + '%' : '0';
+  $('trkAll').hidden = !st.total; $('trkAll').disabled = st.copied === st.total;
+  if (!st.total) box.appendChild(mk('p', 'empty', 'Paste the tracklist below, or add tracks one at a time. Then tap Copied ✓ as you copy each one.'));
+  const groups = trkGroups(list);
+  for (const [side, tracks] of groups) {
+    const sec = mk('section', 'trk-side'); sec.dataset.side = side;
+    const head = mk('div', 'trk-side-head');
+    head.appendChild(mk('div', 'eyebrow', side ? `Side ${side}` : groups.length > 1 ? 'No side' : 'Tracks'));
+    if (side) {
+      const left = tracks.filter(t => !t.copied).length;
+      const b = mkBtn(`Mark side ${side} copied`, 'btn', () => setCopied(tracks, today()), { disabled: !left });
+      b.dataset.act = 'side'; head.appendChild(b);
+    }
+    const ul = mk('ul', 'trk-list');
+    for (const t of tracks) ul.appendChild(trkRow(t));
+    sec.append(head, ul); box.appendChild(sec);
+  }
+  if (!trkUI.oneNoDirty) $('trkOneNo').value = String(nextNo(a, $('trkOneSide').value));
+}
+function nextNo(a, side) {
+  side = String(side || '').trim().toUpperCase();
+  return Math.max(0, ...trkList(a).filter(t => (t.side || '') === side).map(t => toNum(t.no))) + 1;
+}
+function trkRow(t) {
+  const li = mk('li', 'trk-row' + (t.copied ? ' done' : '')); li.dataset.id = t.id;
+  if (trkUI.editing === t.id) {
+    li.appendChild(mk('span', 'pos tnum', trkPos(t)));
+    li.appendChild(trkEditor(t));
+    return li;
+  }
+  const main = mk('div', 'main'); main.append(mk('div', 't', t.title || '(untitled)'), mk('div', 'm tnum', [t.length, t.copied ? 'Copied ' + fmtDate(t.copied) : '', t.note].filter(Boolean).join(' · ')));
+  if (!main.lastChild.textContent) main.lastChild.remove();
+  li.append(mk('span', 'pos tnum', trkPos(t)), main);
+  const acts = mk('div', 'acts');
+  const b = (label, act, cls, o) => { const x = mkBtn(label, cls || 'btn', null, o); x.dataset.act = act; acts.appendChild(x); return x; };
+  if (trkUI.deleting === t.id) {
+    acts.appendChild(mk('span', 'ask', 'Delete this track?'));
+    b('Delete', 'delete-yes', 'btn btn-primary'); b('Keep', 'delete-no');
+  } else if (trkUI.clearing === t.id) {
+    acts.appendChild(mk('span', 'ask', `Clear the copied date (${fmtDate(t.copied)})?`));
+    b('Clear copied date', 'clear-yes', 'btn btn-primary'); b('Keep', 'clear-no');
+  } else {
+    const c = b('Copied ✓', 'copied', 'btn trk-copied', { aria: `${t.copied ? 'Copied' : 'Mark copied'}: ${trkPos(t)} ${t.title}` });
+    c.setAttribute('aria-pressed', String(!!t.copied));
+    b('Edit', 'edit', 'btn', { aria: `Edit ${trkPos(t)} ${t.title}` }); b('Delete', 'delete', 'btn', { aria: `Delete ${trkPos(t)} ${t.title}` });
+  }
+  li.appendChild(acts);
+  return li;
+}
+function trkEditor(t) {
+  const f = mk('div', 'trk-edit');
+  f.innerHTML = `<input type="text" data-f="side" maxlength="3" aria-label="Side" placeholder="Side"><input type="text" data-f="no" inputmode="numeric" aria-label="Number" placeholder="No">
+    <input type="text" data-f="title" aria-label="Title" placeholder="Title"><input type="text" data-f="length" aria-label="Length" placeholder="m:ss">
+    <input type="text" class="e-note" data-f="note" aria-label="Note" placeholder="Note">
+    <div class="e-btns"><button class="btn btn-primary" type="button" data-act="edit-save">Save</button><button class="btn" type="button" data-act="edit-cancel">Cancel</button></div>`;
+  for (const k of ['side', 'no', 'title', 'length', 'note']) f.querySelector(`[data-f="${k}"]`).value = t[k];
+  return f;
+}
+// Check one row's values; returns {row} or {error}
+function checkTrack(r) {
+  const side = String(r.side ?? '').trim().toUpperCase(), no = String(r.no ?? '').trim(), title = String(r.title ?? '').trim(), len = String(r.length ?? '').trim();
+  if (!title) return { error: 'every track needs a title' };
+  if (!/^[A-Z0-9]{0,3}$/.test(side)) return { error: `side “${side}” should be a letter like A or B` };
+  if (no && !/^\d{1,3}$/.test(no)) return { error: `“${no}” isn't a track number` };
+  if (len && !normLen(len)) return { error: `“${len}” isn't a length like 5:12` };
+  return { row: { side, no: no ? String(+no) : '', title, length: len ? normLen(len) : '' } };
+}
+
+// Copied dates: optimistic on screen, one cell write per track, queued so quick taps can't interleave
+function trkStatus() { setStatus('live', trkQ.pending ? `Saving tracks… (${trkQ.pending})` : 'Tracks saved'); }
+function setCopied(list, date) {
+  if (!trkGuard()) return;
+  const todo = list.filter(t => date ? !t.copied : !!t.copied);   // marking skips tracks that already have a date
+  if (!todo.length) return;
+  setTrkMsg('');
+  for (const t of todo) {
+    const prev = t.copied; t.copied = date;
+    trkQ.pending++; trkStatus();
+    trkQ.chain = trkQ.chain.then(() => writeTrackFields(t.id, { copied: date })).catch(err => {
+      t.copied = prev;
+      trkQ.failed = `Couldn't save “${t.title}”: ${trkErr(err)}`;
+      render();
+    }).finally(async () => {
+      trkQ.pending--; trkStatus();
+      if (!trkQ.pending && trkQ.failed) { const m = trkQ.failed; trkQ.failed = ''; await refresh(); setTrkMsg(m, 'error'); }
+    });
+  }
+  trkUI.clearing = null;
+  render();
+}
+// Edit, delete and add wait for their write (after anything already queued); `apply` updates the screen's data once it worked
+async function trkAction(btn, fn, done, apply) {
+  if (!trkGuard() || state.busy) return false;
+  state.busy = true; if (btn) btn.disabled = true;
+  try { await trkRun(fn); apply(); setTrkMsg(done, ''); render(); return true; }
+  catch (err) {
+    setTrkMsg('Not saved: ' + trkErr(err), 'error');
+    if (err && /isn't in/.test(err.message || '')) refresh();
+    return false;
+  } finally { state.busy = false; if (btn) btn.disabled = false; }
+}
+async function saveTrackEdit(t, li, btn) {
+  const get = k => li.querySelector(`[data-f="${k}"]`).value;
+  const c = checkTrack({ side: get('side'), no: get('no'), title: get('title'), length: get('length') });
+  if (c.error) { setTrkMsg('Not saved: ' + c.error + '.', 'error'); return; }
+  const next = { ...c.row, note: get('note').trim() }, changed = {};
+  for (const k of ['side', 'no', 'title', 'length', 'note']) if (String(t[k] ?? '') !== next[k]) changed[k] = next[k];
+  if (!Object.keys(changed).length) { trkUI.editing = null; setTrkMsg(''); render(); return; }
+  await trkAction(btn, () => writeTrackFields(t.id, changed), 'Saved “' + next.title + '”', () => { Object.assign(t, changed); trkUI.editing = null; });
+}
+const deleteTrack = (t, btn) => trkAction(btn, () => clearTrackRow(t.id), 'Deleted “' + t.title + '”', () => { state.tracks = state.tracks.filter(x => x !== t); trkUI.deleting = null; });
+async function addTrackRows(rows, btn, after) {
+  const a = trkAlbum();
+  if (!a) return;
+  await trkAction(btn, () => appendTracks(a, rows), `Added ${rows.length} track${rows.length === 1 ? '' : 's'}`, after);
+}
+
+/* paste → preview → save */
+function renderTrkPreview() {
+  const box = $('trkPreview'), rows = trkUI.preview;
+  box.textContent = '';
+  $('trkSavePaste').hidden = !rows.length;
+  $('trkSavePaste').textContent = `Save ${rows.length} track${rows.length === 1 ? '' : 's'}`;
+  if (!rows.length) return;
+  box.appendChild(mk('div', 'eyebrow', 'Check these, fix anything wrong, then save'));
+  const list = mk('div'); list.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:8px';
+  rows.forEach((r, i) => {
+    const el = mk('div', 'pv-row'); el.dataset.i = i;
+    el.innerHTML = `<input type="text" data-f="side" maxlength="3" aria-label="Side, track ${i + 1}" placeholder="Side"><input type="text" data-f="no" inputmode="numeric" aria-label="Number, track ${i + 1}" placeholder="No">
+      <input type="text" data-f="title" aria-label="Title, track ${i + 1}" placeholder="Title"><input type="text" data-f="length" aria-label="Length, track ${i + 1}" placeholder="m:ss">
+      <button class="btn x" type="button" data-x aria-label="Remove track ${i + 1}">×</button>`;
+    for (const k of ['side', 'no', 'title', 'length']) el.querySelector(`[data-f="${k}"]`).value = r[k];
+    list.appendChild(el);
+  });
+  box.appendChild(list);
+}
+$('trkPaste').addEventListener('input', () => { trkUI.preview = parseTracklist($('trkPaste').value, trkAlbum()); setTrkMsg(''); renderTrkPreview(); });
+$('trkPreview').addEventListener('input', e => {
+  const el = e.target.closest('[data-f]'), row = e.target.closest('.pv-row');
+  if (el && row) trkUI.preview[+row.dataset.i][el.dataset.f] = el.value;
+});
+$('trkPreview').addEventListener('click', e => {
+  const x = e.target.closest('[data-x]'); if (!x) return;
+  trkUI.preview.splice(+x.closest('.pv-row').dataset.i, 1); renderTrkPreview();
+});
+$('trkSavePaste').addEventListener('click', () => {
+  const rows = [];
+  for (const [i, r] of trkUI.preview.entries()) {
+    const c = checkTrack(r);
+    if (c.error) { setTrkMsg(`Not saved. Track ${i + 1}: ${c.error}.`, 'error'); return; }
+    rows.push(c.row);
+  }
+  if (!rows.length) return;
+  addTrackRows(rows, $('trkSavePaste'), () => { trkUI.preview = []; $('trkPaste').value = ''; renderTrkPreview(); });
+});
+/* add one */
+$('trkOneNo').addEventListener('input', () => { trkUI.oneNoDirty = true; });
+$('trkOneSide').addEventListener('input', () => { trkUI.oneNoDirty = false; const a = trkAlbum(); if (a) $('trkOneNo').value = String(nextNo(a, $('trkOneSide').value)); });
+function addOne() {
+  const a = trkAlbum(); if (!a) return;
+  const no = $('trkOneNo').value.trim() || String(nextNo(a, $('trkOneSide').value));
+  const c = checkTrack({ side: $('trkOneSide').value, no, title: $('trkOneTitle').value, length: $('trkOneLen').value });
+  if (c.error) { setTrkMsg('Not saved: ' + c.error + '.', 'error'); return; }
+  addTrackRows([c.row], $('trkOneAdd'), () => { $('trkOneTitle').value = ''; $('trkOneLen').value = ''; trkUI.oneNoDirty = false; });
+}
+$('trkOneAdd').addEventListener('click', addOne);
+for (const id of ['trkOneTitle', 'trkOneLen']) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addOne(); } });
+/* rows, mark all, close */
+$('trkList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'), li = e.target.closest('.trk-row');
+  if (!b || !li) return;
+  const t = state.tracks.find(x => x.id === li.dataset.id); if (!t) return;
+  switch (b.dataset.act) {
+    case 'copied': if (t.copied) { trkUI.clearing = t.id; render(); } else setCopied([t], today()); break;
+    case 'clear-yes': setCopied([t], ''); break;
+    case 'clear-no': trkUI.clearing = null; render(); break;
+    case 'edit': trkUI.editing = t.id; trkUI.deleting = trkUI.clearing = null; render(); break;
+    case 'edit-cancel': trkUI.editing = null; render(); break;
+    case 'edit-save': saveTrackEdit(t, li, b); break;
+    case 'delete': trkUI.deleting = t.id; trkUI.editing = trkUI.clearing = null; render(); break;
+    case 'delete-no': trkUI.deleting = null; render(); break;
+    case 'delete-yes': deleteTrack(t, b); break;
+  }
+});
+$('trkList').addEventListener('keydown', e => {
+  const ed = e.target.closest('.trk-edit'); if (!ed) return;
+  if (e.key === 'Enter') { e.preventDefault(); ed.querySelector('[data-act="edit-save"]').click(); }
+});
+$('trkAll').addEventListener('click', () => { const a = trkAlbum(); if (a) setCopied(trkList(a), today()); });
+$('trkClose').addEventListener('click', () => $('tracksDlg').close());
+$('tracksDlg').addEventListener('click', e => { if (e.target === $('tracksDlg')) $('tracksDlg').close(); });
+$('tracksDlg').addEventListener('close', () => { trkUI.editing = trkUI.deleting = trkUI.clearing = null; });
+
 /* ---------- tabs and rendering ---------- */
 // A tab needs an entry here, a tab button #tab-<name> and a panel #view-<name>.
 const TABS = {
@@ -2277,7 +2726,7 @@ const TABS = {
   tools: { render: renderTools },
   discover: { render: renderDiscover }
 };
-function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); }
+function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); if ($('tracksDlg').open) renderTracksDlg(); }
 function renderAll() { applyTheme(); render(); }
 function showTab(name) {
   if (!TABS[name]) name = 'log';
@@ -2323,6 +2772,7 @@ function libRowClick(e) {
   const tr = e.target.closest('tr');
   const id = tr && (tr.dataset.id || (tr.previousElementSibling && tr.previousElementSibling.dataset.id));
   if (ed) { const a = state.albums.find(x => x.id === id); if (a) openAlbumDialog(a); return; }
+  if (e.target.closest('[data-tracks]')) { openTracks(state.ix.byId.get(String(toNum(id)))); return; }
   if (e.target.closest('[data-log]')) {
     const a = state.albums.find(x => x.id === id);
     if (a && a.id) { state.pick = String(toNum(a.id)); showTab('log'); }
@@ -2337,6 +2787,7 @@ $('libMore').addEventListener('click', () => { state.lib.limit += 100; renderLib
 $('addAlbumBtn').addEventListener('click', () => openAlbumDialog(null));
 $('albumForm').addEventListener('submit', saveAlbumDialog);
 $('dlgClose').addEventListener('click', () => $('albumDlg').close());
+$('dlgTracks').addEventListener('click', () => { if (editing) openTracks(editing); });
 
 /* ---------- Google Sheets direct (GitHub Pages and other hosts outside claude.ai) ----------
    Same calls as the claude.ai connector, sent straight to the Sheets API with a Google sign-in.

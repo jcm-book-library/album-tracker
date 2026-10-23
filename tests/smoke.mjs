@@ -63,6 +63,18 @@ function buildSeed() {
       ['upNextSize', '10'],
       ['albumOfDayMin', '8'],
     ],
+    // Tracks: two albums, some copied, and one fully blank row in the middle like a deleted track
+    '🎸 Tracks': [
+      ['id', 'albumId', 'album', 'side', 'no', 'title', 'length', 'copied', 'note'],
+      ['5001', '1001', 'Test Album 001 LP', 'A', '1', 'Opening Night', '5:12', isoDay(3), ''],
+      ['5002', '1001', 'Test Album 001 LP', 'A', '2', 'Second Wind', '4:01', isoDay(3), 'live take'],
+      ['5003', '1001', 'Test Album 001 LP', 'A', '3', 'Third Rail', '3:45', '', ''],
+      ['', '', '', '', '', '', '', '', ''],
+      ['5004', '1001', 'Test Album 001 LP', 'B', '1', 'Flip Side', '6:20', '', ''],
+      ['5005', '1001', 'Test Album 001 LP', 'B', '2', 'Closer, with a very long title that has to wrap properly on a narrow phone screen without any sideways scroll', '2:58', '', ''],
+      ['5006', '1002', 'Test Album 002 LP', 'A', '1', 'Prelude', '1:30', isoDay(2), ''],
+      ['5007', '1002', 'Test Album 002 LP', 'A', '2', 'Postlude', '2:10', isoDay(1), ''],
+    ],
   };
 }
 
@@ -189,9 +201,10 @@ function installStub(seed) {
       }
       if (tool === 'append_values') {
         const t = target(args.range, tool);
-        let last = -1;
-        t.rows.forEach((r, i) => { if (r.some(c => c !== '')) last = i; });
-        const start = last + 1;
+        // Like Google Sheets: the table starts at the range's first row and ends at the first fully blank row;
+        // new rows go there and overwrite whatever follows (so a blank row mid-table is a trap for A1 appends).
+        let start = t.sr;
+        while (t.rows[start] && t.rows[start].some(c => c !== '')) start++;
         const vals = Array.isArray(args.values) ? args.values : [];
         vals.forEach((row, i) => (Array.isArray(row) ? row : [row]).forEach((v, j) => setCell(t.rows, start + i, t.sc + j, v == null ? '' : String(v))));
         window.__writes.push({ tool, range: args.range, sheet: t.sheet, appendedAtRow: start + 1, values: JSON.parse(JSON.stringify(vals)) });
@@ -388,7 +401,7 @@ async function dashTests(page, vp, seed) {
   // Tiles
   const tiles = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#dashTiles .stat')].map(s => [s.dataset.tile, { num: s.querySelector('.num').textContent, sub: s.querySelector('.sub').textContent }])));
   const heardCount = fxRows().filter(fxHeard).length;
-  record(n, 'Dashboard: renders 8 tiles', Object.keys(tiles).length === 8, Object.keys(tiles).join());
+  record(n, 'Dashboard: renders 9 tiles', Object.keys(tiles).length === 9, Object.keys(tiles).join());
   record(n, 'Dashboard: "Albums heard" equals the count computed from the fixture', tiles.heard && tiles.heard.num === String(heardCount), `${tiles.heard && tiles.heard.num} vs ${heardCount}`);
   const rated = fxRows().filter(r => fxHeard(r) && parseFloat(r[COL.rating]) > 0).map(r => parseFloat(r[COL.rating]));
   const avg = (rated.reduce((a, b) => a + b, 0) / rated.length).toFixed(1);
@@ -526,7 +539,7 @@ async function dashEmptyLogTest(browser, vp, seed, url) {
   }));
   const msg = 'No listens logged yet. Log one from the Log tab and this fills in.';
   record(n, 'Dashboard (empty log): monthly, calendar and top-plays panels show the friendly empty state', t.monthShown && t.heatShown && t.month === msg && t.heat === msg && t.plays.includes(msg), `${t.month} | ${t.heat}`);
-  record(n, 'Dashboard (empty log): library panels still work and nothing throws', t.tiles === 8 && t.playsTile === '0' && !t.chart && t.heard === String(fxRows().filter(fxHeard).length) && problems.length === 0, problems.slice(0, 2).join(' | '));
+  record(n, 'Dashboard (empty log): library panels still work and nothing throws', t.tiles === 9 && t.playsTile === '0' && !t.chart && t.heard === String(fxRows().filter(fxHeard).length) && problems.length === 0, problems.slice(0, 2).join(' | '));
   const o = await page.evaluate(overflow);
   record(n, 'Dashboard (empty log): no sideways scroll', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
   await context.close();
@@ -542,7 +555,7 @@ async function dashNoChartTest(browser, vp, seed, url) {
   await page.locator('#tab-dashboard').click();
   await waitFrame(page);
   const r = await page.evaluate(() => ({ chart: typeof Chart !== 'undefined', boxHidden: document.getElementById('monthBox').hidden, strip: document.querySelectorAll('#monthStrip button:not([disabled])').length, bars: document.querySelectorAll('#ratBars .hbar').length, tiles: document.querySelectorAll('#dashTiles .stat').length }));
-  record(n, 'Dashboard (Chart.js blocked): tiles, bars and month buttons still render', !r.chart && r.boxHidden && r.strip > 0 && r.bars === 10 && r.tiles === 8, JSON.stringify(r));
+  record(n, 'Dashboard (Chart.js blocked): tiles, bars and month buttons still render', !r.chart && r.boxHidden && r.strip > 0 && r.bars === 10 && r.tiles === 9, JSON.stringify(r));
   await page.locator('#monthStrip button:not([disabled])').first().click();
   record(n, 'Dashboard (Chart.js blocked): month button still drills down', await page.locator('#drillDlg').evaluate(d => d.open));
   record(n, 'Dashboard (Chart.js blocked): no uncaught errors', problems.length === 0, problems.slice(0, 2).join(' | '));
@@ -906,6 +919,210 @@ async function discoverTests(browser, vp, seed, url) {
   await f.context.close();
 }
 
+
+// ---------- Tracks ----------
+const TRK_TAB = '🎸 Tracks';
+const trkRowOf = id => window.__sheet['🎸 Tracks'].findIndex((r, i) => i > 0 && r[0] === String(id)) + 1;
+const trkWrites = page => page.evaluate(() => window.__writes.map(w => ({ tool: w.tool, sheet: w.sheet, range: w.range.replace("'🎸 Tracks'!", ''), values: w.values })));
+const trkMsg = page => page.locator('#trkMsg').textContent();
+const trkWaitMsg = (page, re) => page.waitForFunction(src => new RegExp(src).test(document.getElementById('trkMsg').textContent), re.source, { timeout: 8000 });
+const trkWaitSaved = page => page.waitForFunction(() => document.getElementById('statusText').textContent === 'Tracks saved', null, { timeout: 8000 });
+const trkOverflow = page => page.evaluate(() => { const d = document.getElementById('tracksDlg'); return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, dsw: d.scrollWidth, dcw: d.clientWidth }; });
+const trkList = page => page.evaluate(() => [...document.querySelectorAll('#trkList .trk-row')].map(li => ({ id: li.dataset.id, pos: li.querySelector('.pos').textContent, title: li.querySelector('.t') ? li.querySelector('.t').textContent : '' })));
+async function openTracksFromLibrary(page, id) {
+  await page.locator('#tab-library').click();
+  if (!(await page.locator(`#libBody tr.row.open[data-id="${id}"]`).count())) await page.locator(`#libBody tr.row[data-id="${id}"]`).click();
+  await page.locator('#libBody tr.detail [data-tracks]').click();
+  await page.waitForFunction(() => document.getElementById('tracksDlg').open);
+  await page.waitForTimeout(150);
+}
+async function closeTracks(page) { await page.locator('#trkClose').click(); await page.waitForFunction(() => !document.getElementById('tracksDlg').open); }
+
+async function tracksTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'library');
+  const today = await page.evaluate(() => today());
+
+  // Library detail row shows the count, then the Tracks dialog opens
+  await page.locator('#libBody tr.row[data-id="1001"]').click();
+  const detail = await page.locator('#libBody tr.detail').textContent();
+  record(n, 'Tracks: Library detail row shows "2/5 copied"', /2\/5 copied/.test(detail), detail.slice(-80));
+  await openTracksFromLibrary(page, '1001');
+  const head = await page.evaluate(() => ({ title: document.getElementById('trkTitle').textContent, sub: document.getElementById('trkSub').textContent, prog: document.getElementById('trkProgText').textContent, bar: document.getElementById('trkBar').style.width }));
+  record(n, 'Tracks: dialog header shows album, artist and year', head.title === 'Test Album 001 LP' && head.sub.includes('Test Artist 01') && head.sub.includes('1966'), JSON.stringify(head));
+  record(n, 'Tracks: progress reads "2 of 5 tracks copied" with a 40% bar', head.prog === '2 of 5 tracks copied' && head.bar === '40%', `${head.prog} ${head.bar}`);
+  const rows = await trkList(page);
+  record(n, 'Tracks: grouped by side in order (A1 A2 A3, B1 B2) and the blank row is skipped', rows.map(r => r.pos).join() === 'A1,A2,A3,B1,B2' && rows.map(r => r.id).join() === '5001,5002,5003,5004,5005', rows.map(r => r.pos).join());
+  const sides = await page.locator('#trkList .trk-side .eyebrow').allTextContents();
+  record(n, 'Tracks: side headings are "Side A" and "Side B"', sides.join() === 'Side A,Side B', sides.join());
+  const meta = await page.locator('#trkList .trk-row[data-id="5001"]').textContent();
+  const fd = new Date(today + 'T00:00:00'); fd.setDate(fd.getDate() - 3);
+  const want = `${fd.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][fd.getMonth()]} ${String(fd.getFullYear()).slice(2)}`;
+  record(n, 'Tracks: shows length and the copied date as "d Mon yy"', meta.includes('5:12') && meta.includes('Copied ' + want), meta);
+  let o = await trkOverflow(page);
+  record(n, 'Tracks: no sideways scroll (long title wraps)', o.sw <= o.iw && o.dsw <= o.dcw, JSON.stringify(o));
+  await page.screenshot({ path: join(OUT, `${n}-tracks.png`) });
+
+  // Parser
+  const parsed = await page.evaluate(() => parseTracklist([
+    "A1 Israel's Son 5:12", "A2. Rocket (3:48)", "B3 - Tomorrow - 4:26", "1 Song name", "Plain song", "Side C", "Long one 1:02:03", "04) Zero Padded [7:05]"].join('\n'), null));
+  const wantParsed = [
+    ['A', '1', "Israel's Son", '5:12'], ['A', '2', 'Rocket', '3:48'], ['B', '3', 'Tomorrow', '4:26'], ['', '1', 'Song name', ''], ['', '2', 'Plain song', ''],
+    ['C', '1', 'Long one', '1:02:03'], ['C', '4', 'Zero Padded', '7:05']];
+  record(n, 'Tracks: parser handles every line format, header lines and h:mm:ss', JSON.stringify(parsed.map(r => [r.side, r.no, r.title, r.length])) === JSON.stringify(wantParsed), JSON.stringify(parsed.map(r => [r.side, r.no, r.title, r.length])));
+
+  // Copied ✓ writes one cell
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#trkList .trk-row[data-id="5003"] [data-act="copied"]').click();
+  await trkWaitSaved(page);
+  let w = await trkWrites(page);
+  const r3 = await page.evaluate(trkRowOf, 5003);
+  record(n, 'Tracks: Copied ✓ writes exactly one cell, H of that row = today', w.length === 1 && w[0].tool === 'update_values' && w[0].range === `H${r3}` && w[0].values[0][0] === today && w[0].sheet === TRK_TAB, JSON.stringify(w));
+  record(n, 'Tracks: progress moves to "3 of 5"', (await page.locator('#trkProgText').textContent()) === '3 of 5 tracks copied');
+  // Tapping a copied track offers to clear the date
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#trkList .trk-row[data-id="5003"] [data-act="copied"]').click();
+  const ask = await page.locator('#trkList .trk-row[data-id="5003"]').textContent();
+  record(n, 'Tracks: tapping a copied track asks before clearing, and writes nothing yet', /Clear copied date/.test(ask) && (await trkWrites(page)).length === 0, ask);
+  await page.locator('#trkList .trk-row[data-id="5003"] [data-act="clear-yes"]').click();
+  await trkWaitSaved(page);
+  w = await trkWrites(page);
+  record(n, 'Tracks: "Clear copied date" writes one empty H cell', w.length === 1 && w[0].range === `H${r3}` && w[0].values[0][0] === '', JSON.stringify(w));
+
+  // Edit title: only F
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#trkList .trk-row[data-id="5002"] [data-act="edit"]').click();
+  await page.locator('#trkList .trk-row[data-id="5002"] [data-f="title"]').fill("Second Wind (remaster)");
+  await page.locator('#trkList .trk-row[data-id="5002"] [data-act="edit-save"]').click();
+  await trkWaitMsg(page, /^Saved/);
+  w = await trkWrites(page);
+  const r2 = await page.evaluate(trkRowOf, 5002);
+  record(n, 'Tracks: editing a title writes only F of that row', w.length === 1 && w[0].range === `F${r2}` && w[0].values[0][0] === "'Second Wind (remaster)", JSON.stringify(w));
+  const t2 = await page.locator('#trkList .trk-row[data-id="5002"] .t').textContent();
+  record(n, 'Tracks: the edited title shows', t2 === 'Second Wind (remaster)', t2);
+
+  // Mark side B copied: one H per not-yet-copied track on that side
+  await page.evaluate(() => { window.__writes.length = 0; });
+  const r4 = await page.evaluate(trkRowOf, 4 + 5000), r5 = await page.evaluate(trkRowOf, 5005);
+  await page.locator('#trkList .trk-side[data-side="B"] [data-act="side"]').click();
+  await trkWaitSaved(page);
+  w = await trkWrites(page);
+  record(n, 'Tracks: "Mark side B copied" writes one H cell per uncopied B track and nothing on side A', w.length === 2 && w.map(x => x.range).sort().join() === [`H${r4}`, `H${r5}`].sort().join() && w.every(x => x.values[0][0] === today), JSON.stringify(w.map(x => [x.range, x.values[0][0]])));
+  record(n, 'Tracks: that side button is then disabled', await page.locator('#trkList .trk-side[data-side="B"] [data-act="side"]').isDisabled());
+  record(n, 'Tracks: progress is "4 of 5" (side A still has one to do)', (await page.locator('#trkProgText').textContent()) === '4 of 5 tracks copied');
+  // Mark all: only the one left (5003)
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#trkAll').click();
+  await trkWaitSaved(page);
+  w = await trkWrites(page);
+  record(n, 'Tracks: "Mark all copied" writes only the track still to do', w.length === 1 && w[0].range === `H${r3}`, JSON.stringify(w));
+  record(n, 'Tracks: all copied -> "5 of 5", Mark all disabled', (await page.locator('#trkProgText').textContent()) === '5 of 5 tracks copied' && await page.locator('#trkAll').isDisabled());
+
+  // Delete: confirm in the page first, then one update of nine empty strings
+  await page.evaluate(() => { window.__writes.length = 0; window.__rowsBefore = window.__sheet['🎸 Tracks'].length; });
+  const r1 = await page.evaluate(trkRowOf, 5001);
+  await page.locator('#trkList .trk-row[data-id="5001"] [data-act="delete"]').click();
+  const ask2 = await page.locator('#trkList .trk-row[data-id="5001"]').textContent();
+  record(n, 'Tracks: Delete asks in the page first and writes nothing yet', /Delete this track\?/.test(ask2) && (await trkWrites(page)).length === 0, ask2);
+  await page.locator('#trkList .trk-row[data-id="5001"] [data-act="delete-yes"]').click();
+  await trkWaitMsg(page, /^Deleted/);
+  w = await trkWrites(page);
+  record(n, 'Tracks: Delete writes exactly one update to A<row>:I<row> with nine ""', w.length === 1 && w[0].tool === 'update_values' && w[0].range === `A${r1}:I${r1}` && w[0].values.length === 1 && w[0].values[0].length === 9 && w[0].values[0].every(v => v === ''), JSON.stringify(w));
+  const after = await page.evaluate(() => ({ rows: window.__sheet['🎸 Tracks'].length, before: window.__rowsBefore, ids: window.__sheet['🎸 Tracks'].map(r => r[0]).join() }));
+  record(n, 'Tracks: the sheet row is emptied, not removed, and other rows are untouched', after.rows === after.before && after.ids === ',,5002,5003,,5004,5005,5006,5007'.replace(/^,,/, 'id,,'), after.ids);
+  const rows2 = await trkList(page);
+  record(n, 'Tracks: the deleted track disappears from the list', !rows2.some(r => r.id === '5001') && rows2.length === 4, rows2.map(r => r.pos).join());
+  await page.screenshot({ path: join(OUT, `${n}-tracks-after.png`) });
+
+  // Single add: default number is the next on that side; long title wraps
+  await page.locator('#trkOneSide').fill('b');
+  const dflt = await page.locator('#trkOneNo').inputValue();
+  record(n, 'Tracks: single add defaults the number to the next one on that side', dflt === '3', dflt);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#trkOneTitle').fill('A really quite long track title ' + 'wraps '.repeat(14));
+  await page.locator('#trkOneLen').fill('3:07');
+  await page.locator('#trkOneAdd').click();
+  await trkWaitMsg(page, /^Added 1 track/);
+  w = await trkWrites(page);
+  record(n, 'Tracks: single add makes one append of one row with id max+1', w.length === 1 && w[0].tool === 'append_values' && w[0].values.length === 1 && w[0].values[0][0] === 5008 && w[0].values[0][3] === "'B" && w[0].values[0][4] === 3, JSON.stringify(w[0] && w[0].values[0]).slice(0, 120));
+  o = await trkOverflow(page);
+  record(n, 'Tracks: no sideways scroll with a very long title', o.sw <= o.iw && o.dsw <= o.dcw, JSON.stringify(o));
+  await closeTracks(page);
+
+  // Paste on album 1002: preview, fix, one append
+  await openTracksFromLibrary(page, '1002');
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#trkPaste').fill(["A1 Israel's Son 5:12", 'A2. Rocket Man (3:48)', 'B3 - Tomorrow - 4:26', '1 Song name'].join('\n'));
+  const pv = await page.evaluate(() => [...document.querySelectorAll('#trkPreview .pv-row')].map(r => ['side', 'no', 'title', 'length'].map(k => r.querySelector(`[data-f="${k}"]`).value)));
+  record(n, 'Tracks: pasting 4 lines shows a 4-row preview parsed correctly', JSON.stringify(pv) === JSON.stringify([['A', '1', "Israel's Son", '5:12'], ['A', '2', 'Rocket Man', '3:48'], ['B', '3', 'Tomorrow', '4:26'], ['', '1', 'Song name', '']]), JSON.stringify(pv));
+  record(n, 'Tracks: nothing is written until Save', (await trkWrites(page)).length === 0);
+  await page.locator('#trkPreview .pv-row[data-i="2"] [data-f="title"]').fill('Tomorrow Never Knows');
+  o = await trkOverflow(page);
+  record(n, 'Tracks: no sideways scroll with the preview showing', o.sw <= o.iw && o.dsw <= o.dcw, JSON.stringify(o));
+  await page.locator('#trkSavePaste').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(OUT, `${n}-tracks-preview.png`) });
+  const trkBefore = await page.evaluate(t => JSON.stringify(window.__sheet[t]), TRK_TAB);
+  await page.locator('#trkSavePaste').click();
+  await trkWaitMsg(page, /^Added 4 tracks/);
+  // Nothing already in the tab may move or be overwritten: the blank (deleted) row stays blank,
+  // and every row that was there before is unchanged; the new rows go below the last used row.
+  const trkAfter = await page.evaluate(t => window.__sheet[t], TRK_TAB);
+  const before = JSON.parse(trkBefore);
+  const untouched = before.every((r, i) => JSON.stringify((trkAfter[i] || []).map(String)) === JSON.stringify(r.map(String)));
+  record(n, 'Tracks: adding never overwrites or fills a blank (deleted) row', untouched && trkAfter.length >= before.length + 4, `before ${before.length} rows, after ${trkAfter.length}`);
+  w = await trkWrites(page);
+  const appends = w.filter(x => x.tool === 'append_values');
+  const vals = appends[0] && appends[0].values;
+  record(n, 'Tracks: saving makes exactly ONE append_values to 🎸 Tracks with 4 rows', w.length === 1 && appends.length === 1 && appends[0].sheet === TRK_TAB && vals.length === 4, `${w.length} write(s), ${vals && vals.length} row(s)`);
+  record(n, 'Tracks: new ids are consecutive from max+1', vals && vals.map(r => r[0]).join() === '5009,5010,5011,5012', vals && vals.map(r => r[0]).join());
+  record(n, 'Tracks: values are typed (ids and no as numbers; side, title, length as text with a leading \')', vals && JSON.stringify(vals[0]) === JSON.stringify([5009, 1002, "'Test Album 002 LP", "'A", 1, "'Israel's Son", "'5:12", '', '']) && JSON.stringify(vals[2]) === JSON.stringify([5011, 1002, "'Test Album 002 LP", "'B", 3, "'Tomorrow Never Knows", "'4:26", '', '']) && JSON.stringify(vals[3]) === JSON.stringify([5012, 1002, "'Test Album 002 LP", '', 1, "'Song name", '', '', '']), vals && JSON.stringify(vals[3]));
+  const prog2 = await page.locator('#trkProgText').textContent();
+  record(n, 'Tracks: the new tracks appear and progress updates ("2 of 6")', prog2 === '2 of 6 tracks copied', prog2);
+  await closeTracks(page);
+
+  const bad = await page.evaluate(() => ({ forbidden: window.__forbidden, offTab: window.__writes.filter(x => !x.sheet.startsWith('🎸')).length }));
+  record(n, 'Tracks: no write ever touches a tab outside 🎸', bad.forbidden.length === 0 && bad.offTab === 0, JSON.stringify(bad));
+  record(n, 'Tracks: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+
+  // Library chip and Dashboard tile (fresh data)
+  const f = await freshPage(browser, vp, seed, url, 'library');
+  const chip = await f.page.locator('#fColl .chip[data-v="copied"]').textContent();
+  record(n, 'Tracks: Library "Copied" chip counts albums with a copied track', /Copied\s*2$/.test(chip.trim()), chip);
+  await f.page.locator('#fColl .chip[data-v="copied"]').click();
+  const lib = await f.page.evaluate(() => [...document.querySelectorAll('#libBody tr.row')].map(r => r.querySelector('.t').textContent + '|' + (r.querySelector('.trk-tag') || {}).textContent));
+  record(n, 'Tracks: the Copied filter shows only those albums, each with its "x/y copied" tag', JSON.stringify(lib) === JSON.stringify(['Test Album 001 LP|2/5 copied', 'Test Album 002 LP|2/2 copied']), JSON.stringify(lib));
+  const lo = await f.page.evaluate(overflow);
+  record(n, 'Tracks: no sideways scroll in the filtered Library', lo.sw <= lo.iw, JSON.stringify(lo));
+  await f.page.locator('#tab-dashboard').click();
+  await f.page.waitForTimeout(200);
+  const tile = await f.page.evaluate(() => { const t = document.querySelector('#dashTiles [data-tile="copied"]'); return t ? { eb: t.querySelector('.eyebrow').textContent, num: t.querySelector('.num').textContent, sub: t.querySelector('.sub').textContent } : null; });
+  record(n, 'Tracks: Dashboard tile "Copied to MP3" shows 4 tracks and 1 album complete', tile && tile.eb === 'Copied to MP3' && tile.num === '4' && tile.sub === '1 album complete', JSON.stringify(tile));
+  // Album edit dialog and Log row entry points
+  await f.page.locator('#tab-library').click();
+  await f.page.locator('#libBody tr.row[data-id="1001"]').click();
+  await f.page.locator('#libBody tr.detail [data-edit]').click();
+  await f.page.locator('#dlgTracks').click();
+  await f.page.waitForFunction(() => document.getElementById('tracksDlg').open && !document.getElementById('albumDlg').open);
+  record(n, 'Tracks: the album edit dialog has a Tracks button that opens the tracks', (await f.page.locator('#trkTitle').textContent()) === 'Test Album 001 LP');
+  await closeTracks(f.page);
+  record(n, 'Tracks: nothing was written by just looking', (await f.page.evaluate(() => window.__writes.length)) === 0);
+  record(n, 'Tracks: Library and Dashboard cause no console errors', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // Missing tab: a friendly notice, nothing else breaks
+  const noTrk = { ...seed }; delete noTrk[TRK_TAB];
+  const m = await freshPage(browser, vp, noTrk, url, 'library');
+  await openTracksFromLibrary(m.page, '1001');
+  const mt = await m.page.locator('#trkList').textContent();
+  record(n, 'Tracks: with no 🎸 Tracks tab the dialog says so and hides the forms', /Tracks tab wasn't found/.test(mt) && await m.page.locator('#trkAdd').isHidden(), mt.slice(0, 80));
+  await closeTracks(m.page);
+  await m.page.locator('#tab-dashboard').click();
+  const mtile = await m.page.locator('#dashTiles [data-tile="copied"] .num').textContent();
+  record(n, 'Tracks: with no 🎸 Tracks tab the rest of the app still works (Dashboard tile shows 0)', mtile === '0' && (await m.page.locator('#statusText').textContent()).startsWith('Live') && m.problems.length === 0, m.problems.slice(0, 2).join(' | '));
+  await m.context.close();
+}
+
 // ---------- runner ----------
 const results = [];
 const record = (vp, name, ok, detail = '') => {
@@ -1008,6 +1225,7 @@ async function runViewport(browser, vp, seed, wrapperUrl, rawUrl) {
   await toolsTests(browser, vp, seed, wrapperUrl);
   await goalTests(browser, vp, seed, wrapperUrl);
   await discoverTests(browser, vp, seed, wrapperUrl);
+  await tracksTests(browser, vp, seed, wrapperUrl);
 }
 
 async function main() {
