@@ -438,7 +438,10 @@ async function main() {
   mkdirSync(OUT, { recursive: true });
   const tmp = mkdtempSync(join(tmpdir(), 'sg-smoke-'));
   const wrapperPath = join(tmp, 'app-under-test.html');
-  writeFileSync(wrapperPath, wrap(readFileSync(APP, 'utf8')), 'utf8');
+  // Simulate the private artifact build (tools/build-artifact.py) with a fake sheet id.
+  const appSrc = readFileSync(APP, 'utf8');
+  if (!appSrc.includes("const BUILT_SHEET_ID = '';")) { console.error('FAIL  app.html must ship with an empty BUILT_SHEET_ID'); process.exit(1); }
+  writeFileSync(wrapperPath, wrap(appSrc.replace("const BUILT_SHEET_ID = '';", "const BUILT_SHEET_ID = 'TEST_SHEET_ID_0123456789abcdefghijklmnop';")), 'utf8');
 
   const browser = await chromium.launch({
     // Playwright's bundled build is not installed here; fall back to the provided Chromium.

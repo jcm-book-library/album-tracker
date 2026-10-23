@@ -14,6 +14,15 @@ See [ROADMAP.md](ROADMAP.md).
 - `index.html`: built from `app.html` by `tools/build-pages.py` for GitHub Pages
   at `jcm-book-library.github.io/album-tracker/`, using Google sign-in.
 
+## Sheet id (kept out of this public repo)
+
+- `app.html` ships with an empty `BUILT_SHEET_ID`. On GitHub Pages the app asks once for the
+  sheet link and keeps it in that browser only (`sg-config`).
+- The private claude.ai artifact is built with the id filled in, to a file outside the repo:
+  `python3 tools/build-artifact.py "<sheet link>" /path/outside/repo/app.html`, then publish that
+  file to the existing artifact URL. Never commit that output.
+- Tests use made-up albums (`tests/fixture-albums.json`) and a fake sheet id.
+
 ## Sheet rules
 
 - The app only touches the 🎸 tab and tabs whose names start with 🎸.

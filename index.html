@@ -402,8 +402,9 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   <form id="gForm" method="dialog">
     <div class="dlg-head"><h2 id="gTitle">Connect your Google Sheet</h2><button class="btn" type="button" id="gClose">Close</button></div>
     <div style="padding:16px 20px;display:grid;gap:12px">
-      <p class="muted" style="margin:0;font-size:14px">Paste the OAuth Client ID from your Google Cloud project (the same one the book tracker uses). It's saved in this browser only.</p>
-      <div class="field"><label for="gClient">OAuth Client ID</label><input id="gClient" type="text" autocomplete="off" spellcheck="false" placeholder="1234…apps.googleusercontent.com"></div>
+      <p class="muted" style="margin:0;font-size:14px">Paste the link to your Entertainment Tracker sheet. It's saved in this browser only.</p>
+      <div class="field"><label for="gSheet">Sheet link</label><input id="gSheet" type="url" autocomplete="off" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/…"></div>
+      <div class="field" id="gClientWrap"><label for="gClient">OAuth Client ID (the same one the book tracker uses)</label><input id="gClient" type="text" autocomplete="off" spellcheck="false" placeholder="1234…apps.googleusercontent.com"></div>
     </div>
     <div class="dlg-foot"><span class="muted" id="gMsg" style="font-size:13px;align-self:center"></span><button class="btn btn-primary" type="submit">Connect</button></div>
   </form>
@@ -418,7 +419,13 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 </dialog>
 
 <script>
-const SHEET_ID = '1558jWeUc8gCzQuph6wOVyOocvTBhQf22UuCSXza8klc';
+// The sheet id is kept out of this public file. tools/build-artifact.py fills BUILT_SHEET_ID in the private
+// artifact build; anywhere else the id comes from the sheet link pasted into the Connect dialog (this browser only).
+const BUILT_SHEET_ID = '';
+const sheetIdFrom = v => { v = String(v || '').trim(); return (v.match(/\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/) || [])[1] || (/^[A-Za-z0-9_-]{30,}$/.test(v) ? v : ''); };
+function sgCfg() { try { return JSON.parse(lsGet('sg-config') || 'null') || {}; } catch (e) { return {}; } }
+function saveCfg(patch) { lsSet('sg-config', JSON.stringify({ ...sgCfg(), ...patch })); }
+function sheetId() { return BUILT_SHEET_ID || sgCfg().sheetId || ''; }
 const SERVER = 'Google Sheets';
 // This app only ever touches the 🎸 tab and tabs that start with 🎸.
 const TAB = '🎸', TAB_LOG = '🎸 Log', TAB_SET = '🎸 Settings';
@@ -591,11 +598,11 @@ function explain(err) {
   }
 }
 async function readRange(range) {
-  const res = await state.mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range }, { cache: false });
+  const res = await state.mcp.callTool(SERVER, 'get_values', { spreadsheetId: sheetId(), range }, { cache: false });
   const p = res.payload;
   return (p && Array.isArray(p.values)) ? p.values : [];
 }
-const putCell = (tab, col, row, v) => state.mcp.callTool(SERVER, 'update_values', { spreadsheetId: SHEET_ID, range: `${qt(tab)}!${col}${row}`, values: [[v]] }, { cache: false });
+const putCell = (tab, col, row, v) => state.mcp.callTool(SERVER, 'update_values', { spreadsheetId: sheetId(), range: `${qt(tab)}!${col}${row}`, values: [[v]] }, { cache: false });
 const rowFromAppend = res => {
   const p = (res && res.payload) || {};
   const m = String((p.updates && p.updates.updatedRange) || p.updatedRange || '').match(/![A-Z]+(\d+)/);
@@ -607,6 +614,13 @@ const colOf = (header, f) => header.findIndex(h => norm(h) === norm(f.h));
 
 async function refresh() {
   if (!state.mcp) return;
+  if (!sheetId()) {
+    setStatus('error', 'Showing a sample snapshot');
+    notice('Paste your sheet link to load your albums. Press Connect.', 'error');
+    $('refreshBtn').textContent = 'Connect';
+    openSetup();
+    return;
+  }
   setStatus('loading', 'Loading from your sheet…');
   $('refreshBtn').disabled = true;
   try {
@@ -643,6 +657,7 @@ async function refresh() {
       else if (k === 'albumofdaymin' && v) state.settings.albumOfDayMin = v;
     }
     state.live = true; state.editingLog = null;
+    $('refreshBtn').textContent = 'Refresh';
     notice(state.logMissing ? `The ${TAB_LOG} tab wasn't found or has no header row, so listens can't be logged yet.` : '', state.logMissing ? 'error' : '');
     setStatus('live', 'Live from your sheet · ' + new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }));
     renderAll();
@@ -706,7 +721,7 @@ async function addAlbum(fields) {
     if (!f) return '';
     return f.k === 'id' ? id : cellValue(f.k, fields[f.k]);
   });
-  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: SHEET_ID, range: `${qt(TAB)}!A1`, values: [row] }, { cache: false });
+  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB)}!A1`, values: [row] }, { cache: false });
   // Re-read the id column and confirm the new id landed exactly once
   const after = await readRange(`${qt(TAB)}!${L}1:${L}`);
   const hits = after.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(r[0]) === id ? i + 1 : 0).filter(Boolean);
@@ -727,7 +742,7 @@ async function appendLogRow({ album, date, plays, note }) {
   const loggedAt = new Date().toISOString();
   const vals = { date, albumid: toNum(album.id) || '', title: "'" + album.title, artist: album.artist ? "'" + album.artist : '', plays, loggedat: "'" + loggedAt, source: "'app", note: note ? "'" + note : '' };
   const row = header.map(h => vals[h] ?? '');
-  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: SHEET_ID, range: `${qt(TAB_LOG)}!A1`, values: [row] }, { cache: false });
+  const res = await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_LOG)}!A1`, values: [row] }, { cache: false });
   state.log.push({ date, albumId: String(toNum(album.id) || ''), title: album.title, artist: album.artist || '', plays, loggedAt, source: 'app', note: note || '', _row: rowFromAppend(res) });
 }
 
@@ -1444,7 +1459,7 @@ const google_ = {
     try { const b = JSON.parse(lsGet(this.bookCfgKey) || 'null'); if (b && b.clientId) return b.clientId; } catch (e) {}
     return '';
   },
-  saveClientId(id) { lsSet(this.cfgKey, JSON.stringify({ clientId: id })); },
+  saveClientId(id) { saveCfg({ clientId: id }); },
   tok() { try { return JSON.parse(lsGet(this.tokKey) || 'null'); } catch (e) { return null; } },
   valid() { const t = this.tok(); return !!(t && t.exp > Date.now()); },
   async callTool(server, tool, input) {
@@ -1478,7 +1493,7 @@ function loadGis() {
 // Runs from a click, and stays synchronous once Google's script has loaded, so the sign-in popup isn't blocked
 function googleConnect() {
   const id = google_.clientId();
-  if (!id) { $('gClient').value = ''; $('gMsg').textContent = ''; $('gDlg').showModal(); return; }
+  if (!id || !sheetId()) { openSetup(); return; }
   if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().then(googleConnect, err => notice(err.message, 'error')); return; }
   try {
     if (!google_.client) google_.client = google.accounts.oauth2.initTokenClient({
@@ -1502,11 +1517,25 @@ function googleBoot() {
   notice(google_.clientId() ? 'Showing a sample snapshot. Press Connect to sign in to Google and load your sheet.' : 'Showing a sample snapshot. Press Connect to link your Google Sheet. You\'ll need the OAuth Client ID from your Google Cloud project.');
 }
 $('gClose').addEventListener('click', () => $('gDlg').close());
+// Asks for whatever is missing: the sheet link always, the Client ID only when signing in to Google directly
+function openSetup() {
+  $('gSheet').value = BUILT_SHEET_ID ? '' : (sgCfg().sheetId ? 'https://docs.google.com/spreadsheets/d/' + sgCfg().sheetId : '');
+  $('gSheet').closest('.field').hidden = !!BUILT_SHEET_ID;
+  $('gClientWrap').hidden = !state.google;
+  $('gClient').value = state.google ? google_.clientId() : '';
+  $('gMsg').textContent = '';
+  if (!$('gDlg').open) $('gDlg').showModal();
+}
 $('gForm').addEventListener('submit', e => {
-  const v = $('gClient').value.trim();
-  if (!/\.apps\.googleusercontent\.com$/.test(v)) { e.preventDefault(); $('gMsg').textContent = 'That doesn\'t look like a Client ID.'; return; }
-  google_.saveClientId(v); google_.client = null;
-  googleConnect();
+  const sid = BUILT_SHEET_ID || sheetIdFrom($('gSheet').value);
+  if (!sid) { e.preventDefault(); $('gMsg').textContent = 'Paste the sheet\'s full link from your browser\'s address bar.'; return; }
+  if (state.google) {
+    const v = $('gClient').value.trim();
+    if (!/\.apps\.googleusercontent\.com$/.test(v)) { e.preventDefault(); $('gMsg').textContent = 'That doesn\'t look like a Client ID.'; return; }
+    google_.saveClientId(v); google_.client = null;
+  }
+  if (!BUILT_SHEET_ID) saveCfg({ sheetId: sid });
+  if (state.google) googleConnect(); else refresh();
 });
 
 /* ---------- boot ---------- */
