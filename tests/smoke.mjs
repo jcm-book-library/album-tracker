@@ -64,6 +64,7 @@ function installStub(seed) {
   }
   const firstTab = Object.keys(seed)[0];
   window.__writes = [];
+  window.__reads = [];
   window.__forbidden = [];
   window.__errors = [];
   window.__sheet = tabs;
@@ -147,6 +148,7 @@ function installStub(seed) {
         throw new Error(`Unknown server: ${server}`);
       }
       if (tool === 'get_values') {
+        window.__reads.push(args.range);
         const t = target(args.range, tool);
         const last = Math.min(t.er, t.rows.length - 1);
         let values = [];
@@ -347,6 +349,206 @@ async function planTests(page, vp) {
   await page.screenshot({ path: join(OUT, `${n}-plan.png`), fullPage: true });
 }
 
+// ---------- Dashboard tab ----------
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const COL = { title: 0, rating: 1, artist: 2, status: 3, genre: 4, format: 5, year: 7, id: 9 };
+const fxRows = () => FIXTURE.values.slice(1);
+const fxHeard = r => (parseFloat(r[COL.rating]) > 0) || r[COL.status] === 'Listened' || r[COL.status] === 'Owned';
+const waitFrame = page => page.waitForTimeout(150);
+const drillTitles = page => page.evaluate(() => [...document.querySelectorAll('#drillList .t')].map(e => e.textContent));
+async function closeDrill(page) { await page.locator('#drillClose').click(); await page.waitForFunction(() => !document.getElementById('drillDlg').open); }
+const sortedJson = a => JSON.stringify([...a].sort());
+
+async function dashTests(page, vp, seed) {
+  const n = vp.name;
+  await page.locator('#tab-dashboard').click();
+  await waitFrame(page);
+  await page.evaluate(() => { window.__writes.length = 0; });
+
+  // Tiles
+  const tiles = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#dashTiles .stat')].map(s => [s.dataset.tile, { num: s.querySelector('.num').textContent, sub: s.querySelector('.sub').textContent }])));
+  const heardCount = fxRows().filter(fxHeard).length;
+  record(n, 'Dashboard: renders 8 tiles', Object.keys(tiles).length === 8, Object.keys(tiles).join());
+  record(n, 'Dashboard: "Albums heard" equals the count computed from the fixture', tiles.heard && tiles.heard.num === String(heardCount), `${tiles.heard && tiles.heard.num} vs ${heardCount}`);
+  const rated = fxRows().filter(r => fxHeard(r) && parseFloat(r[COL.rating]) > 0).map(r => parseFloat(r[COL.rating]));
+  const avg = (rated.reduce((a, b) => a + b, 0) / rated.length).toFixed(1);
+  record(n, 'Dashboard: average rating matches the fixture (1 decimal)', tiles.avg && tiles.avg.num === avg, `${tiles.avg && tiles.avg.num} vs ${avg}`);
+  const nowYear = String(new Date().getFullYear());
+  const log = seed['🎸 Log'].slice(1).filter(r => r[0].startsWith(nowYear));
+  const playsSum = log.reduce((s, r) => s + Number(r[4]), 0);
+  record(n, 'Dashboard: listens this year sums the seeded plays', tiles.plays && tiles.plays.num === String(playsSum), `${tiles.plays && tiles.plays.num} vs ${playsSum}`);
+  record(n, 'Dashboard: albums logged this year counts distinct albums', tiles.logged && tiles.logged.num === String(new Set(log.map(r => r[1])).size), tiles.logged && tiles.logged.num);
+  const ownedN = fxRows().filter(r => ['Vinyl (Owned)', 'CD', 'Digital'].includes(r[COL.format]) || r[COL.status] === 'Owned').length;
+  record(n, 'Dashboard: owned tile matches the fixture', tiles.owned && tiles.owned.num === String(ownedN), `${tiles.owned && tiles.owned.num} vs ${ownedN}`);
+  const periodChips = await page.locator('#dashPeriods .chip').allTextContents();
+  record(n, 'Dashboard: year picker lists this year and All time', periodChips.includes(nowYear) && periodChips.includes('All time'), periodChips.join());
+  record(n, 'Dashboard: this year is selected by default', await page.locator(`#dashPeriods .chip[data-p="${nowYear}"]`).getAttribute('aria-pressed') === 'true');
+
+  // Ratings bar drill-down (mouse), then keyboard
+  const want9 = fxRows().filter(r => parseFloat(r[COL.rating]) === 9).map(r => r[COL.title]);
+  await page.locator('#ratBars button.hbar[data-label="9"]').click();
+  await waitFrame(page);
+  const t9 = await page.locator('#drillTitle').textContent();
+  const got9 = await drillTitles(page);
+  record(n, 'Dashboard: clicking the "9" ratings bar titles the drill-down "Rated 9 · N albums"', t9 === `Rated 9 · ${want9.length} albums`, t9);
+  record(n, 'Dashboard: ratings drill-down lists exactly the albums rated 9', sortedJson(got9) === sortedJson(want9), `${got9.length} vs ${want9.length}`);
+  const hasChips = await page.evaluate(() => document.querySelectorAll('#drillList li .pill').length > 0 && document.querySelectorAll('#drillList .rating').length > 0);
+  record(n, 'Dashboard: drill-down rows show rating and chips', hasChips);
+  // tapping a row opens the existing album dialog (and nothing is written)
+  await page.locator('#drillList .dr-main').first().click();
+  await page.waitForFunction(() => document.getElementById('albumDlg').open);
+  const dlgTitle = await page.locator('#dlgTitle').textContent();
+  record(n, 'Dashboard: tapping a drill-down album opens the edit dialog', dlgTitle === 'Edit album' && !(await page.evaluate(() => document.getElementById('drillDlg').open)), dlgTitle);
+  await page.locator('#dlgClose').click();
+
+  const want8 = fxRows().filter(r => parseFloat(r[COL.rating]) === 8).length;
+  await page.locator('#ratBars button.hbar[data-label="8"]').focus();
+  await page.keyboard.press('Enter');
+  await waitFrame(page);
+  record(n, 'Dashboard: bars work from the keyboard (Enter on a focused bar)', (await page.locator('#drillTitle').textContent()) === `Rated 8 · ${want8} albums`);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('drillDlg').open);
+  const zero = await page.evaluate(() => { const b = document.querySelector('#ratBars .hbar[data-label="1"]'); return b ? b.tagName : 'none'; });
+  record(n, 'Dashboard: an empty ratings row is not clickable', zero === 'DIV', zero);
+
+  // Other panels drill down to the matching albums
+  const gen = fxRows().filter(r => fxHeard(r) && r[COL.genre] === 'Rock').map(r => r[COL.title]);
+  await page.locator('#genBars button.hbar[data-label="Rock"]').click();
+  record(n, 'Dashboard: genre bar lists heard albums of that genre', sortedJson(await drillTitles(page)) === sortedJson(gen), `${gen.length} expected`);
+  await closeDrill(page);
+  const noGenre = await page.locator('#genBars .hbar[data-label="No genre"]').count();
+  record(n, 'Dashboard: genres include "No genre"', noGenre === 1);
+  const dec = fxRows().filter(r => Math.floor(parseFloat(r[COL.year]) / 10) === 199).map(r => r[COL.title]);
+  await page.locator('#decBars button.hbar[data-label="1990s"]').click();
+  record(n, 'Dashboard: decade bar lists every album from that decade', sortedJson(await drillTitles(page)) === sortedJson(dec), `${dec.length} expected`);
+  await closeDrill(page);
+  const wanted = fxRows().filter(r => r[COL.format] === 'Vinyl (Wanted)').map(r => r[COL.title]);
+  await page.locator('#fmtBars button.hbar[data-label="Vinyl (Wanted)"]').click();
+  record(n, 'Dashboard: format bar lists albums in that format', sortedJson(await drillTitles(page)) === sortedJson(wanted), `${wanted.length} expected`);
+  await closeDrill(page);
+  const labels = await page.locator('#fmtBars .lab').allTextContents();
+  record(n, 'Dashboard: formats panel lists all six rows', labels.join() === 'Vinyl (Owned),Vinyl (Wanted),CD,Digital,Streaming,No format', labels.join());
+  const topName = await page.locator('#artHeard li:first-child .nm').textContent();
+  await page.locator('#artHeard li:first-child button').click();
+  const artTitles = await drillTitles(page);
+  const artWant = fxRows().filter(r => r[COL.artist] === topName).length;
+  record(n, 'Dashboard: top artist opens that artist\'s albums', artTitles.length === artWant && artWant > 0, `${topName}: ${artTitles.length}/${artWant}`);
+  await closeDrill(page);
+  const playRows = await page.locator('#artPlays li button').count();
+  record(n, 'Dashboard: top artists by plays shows the seeded log', playRows > 0 && playRows <= 10, `${playRows} rows`);
+
+  // Monthly chart and strip
+  const byMonth = new Map();
+  for (const r of log) { const m = r[0].slice(0, 7); (byMonth.get(m) || byMonth.set(m, []).get(m)).push(r); }
+  const lastMonth = [...byMonth.keys()].sort().pop();
+  const mRows = byMonth.get(lastMonth), mi = Number(lastMonth.slice(5, 7)) - 1;
+  const mTitles = [...new Set(mRows.map(r => r[2]))];
+  const mTitle = `${MONTH_NAMES[mi]} ${nowYear} · ${mTitles.length} album${mTitles.length === 1 ? '' : 's'}`;
+  await page.locator(`#monthStrip button[data-m="${mi}"]`).click();
+  record(n, 'Dashboard: month button opens that month\'s albums', (await page.locator('#drillTitle').textContent()) === mTitle && sortedJson(await drillTitles(page)) === sortedJson(mTitles), mTitle);
+  const mPlays = mRows.reduce((s, r) => s + Number(r[4]), 0);
+  const firstMeta = await page.locator('#drillList .m').first().textContent();
+  record(n, 'Dashboard: month drill-down shows play counts', /\d+ plays?/.test(firstMeta) && (await page.locator('#drillSub').textContent()).includes(`${mPlays} play`), firstMeta);
+  await closeDrill(page);
+  if (HAVE_CHART) {
+    const hasChart = await page.evaluate(() => !!(window.Chart && Chart.getChart('monthChart')));
+    record(n, 'Dashboard: monthly Chart.js bar chart is drawn', hasChart);
+    await page.locator('#monthChart').scrollIntoViewIfNeeded();
+    const pos = await page.evaluate(i => { const c = Chart.getChart('monthChart'), r = c.canvas.getBoundingClientRect(), p = c.getDatasetMeta(0).data[i].getProps(['x', 'y', 'base'], true); return { x: r.left + p.x, y: r.top + (p.y + p.base) / 2 }; }, mi);
+    await page.mouse.click(pos.x, pos.y);
+    await waitFrame(page);
+    record(n, 'Dashboard: clicking a monthly bar lists that month\'s entries', await page.locator('#drillDlg').evaluate(d => d.open) && (await page.locator('#drillTitle').textContent()) === mTitle && sortedJson(await drillTitles(page)) === sortedJson(mTitles), await page.locator('#drillTitle').textContent());
+    await closeDrill(page);
+  } else console.log('  info  Chart.js not in node_modules: skipped canvas bar click');
+
+  // Calendar heatmap: tap today
+  const todayIso = await page.evaluate(() => today());
+  const dRows = seed['🎸 Log'].slice(1).filter(r => r[0] === todayIso);
+  if (todayIso.startsWith(nowYear) && dRows.length) {
+    await page.locator(`#heat [data-d="${todayIso}"]`).click();
+    const dT = [...new Set(dRows.map(r => r[2]))];
+    record(n, 'Dashboard: tapping a heatmap day lists that day\'s albums', sortedJson(await drillTitles(page)) === sortedJson(dT) && /· \d+ albums?$/.test(await page.locator('#drillTitle').textContent()), await page.locator('#drillTitle').textContent());
+    await closeDrill(page);
+  }
+  const heatScroll = await page.evaluate(() => { const h = document.getElementById('heatScroll'); return { sw: h.scrollWidth, cw: h.clientWidth }; });
+  if (vp.width < 600) record(n, 'Dashboard: heatmap scrolls inside its own container on a phone', heatScroll.sw > heatScroll.cw, `${heatScroll.sw} vs ${heatScroll.cw}`);
+
+  // Year picker: All time and a year with no entries
+  await page.locator('#dashPeriods .chip[data-p="all"]').click();
+  const allPlays = await page.locator('#dashTiles [data-tile="plays"] .num').textContent();
+  record(n, 'Dashboard: All time sums every logged play', allPlays === String(seed['🎸 Log'].slice(1).reduce((s, r) => s + Number(r[4]), 0)), allPlays);
+  await page.locator(`#dashPeriods .chip[data-p="${nowYear}"]`).click();
+
+  // No writes, no sideways scroll, screenshot
+  const w = await page.evaluate(() => window.__writes.length);
+  record(n, 'Dashboard: never writes to the sheet (window.__writes unchanged)', w === 0, `${w} write(s)`);
+  const o = await page.evaluate(overflow);
+  record(n, 'Dashboard: no sideways scroll', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  await page.screenshot({ path: join(OUT, `${n}-dashboard.png`), fullPage: true });
+}
+
+// Same page, but the stub's 🎸 Log has only its header
+async function dashEmptyLogTest(browser, vp, seed, url) {
+  const n = vp.name;
+  const empty = { ...seed, '🎸 Log': [seed['🎸 Log'][0]] };
+  const { context, page, problems } = await openContext(browser, vp, empty);
+  await page.goto(url);
+  await page.waitForLoadState('load');
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  await page.locator('#tab-dashboard').click();
+  await waitFrame(page);
+  const t = await page.evaluate(() => ({
+    month: document.getElementById('monthEmpty').textContent, monthShown: !document.getElementById('monthEmpty').hidden,
+    heat: document.getElementById('heatEmpty').textContent, heatShown: !document.getElementById('heatEmpty').hidden,
+    plays: document.getElementById('artPlays').textContent, tiles: document.querySelectorAll('#dashTiles .stat').length,
+    playsTile: document.querySelector('#dashTiles [data-tile="plays"] .num').textContent,
+    chart: !!(window.Chart && Chart.getChart('monthChart')), heard: document.querySelector('#dashTiles [data-tile="heard"] .num').textContent
+  }));
+  const msg = 'No listens logged yet. Log one from the Log tab and this fills in.';
+  record(n, 'Dashboard (empty log): monthly, calendar and top-plays panels show the friendly empty state', t.monthShown && t.heatShown && t.month === msg && t.heat === msg && t.plays.includes(msg), `${t.month} | ${t.heat}`);
+  record(n, 'Dashboard (empty log): library panels still work and nothing throws', t.tiles === 8 && t.playsTile === '0' && !t.chart && t.heard === String(fxRows().filter(fxHeard).length) && problems.length === 0, problems.slice(0, 2).join(' | '));
+  const o = await page.evaluate(overflow);
+  record(n, 'Dashboard (empty log): no sideways scroll', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  await context.close();
+}
+
+// Chart.js refused: everything except the canvas still works
+async function dashNoChartTest(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await openContext(browser, vp, seed, { blockChart: true });
+  await page.goto(url);
+  await page.waitForLoadState('load');
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  await page.locator('#tab-dashboard').click();
+  await waitFrame(page);
+  const r = await page.evaluate(() => ({ chart: typeof Chart !== 'undefined', boxHidden: document.getElementById('monthBox').hidden, strip: document.querySelectorAll('#monthStrip button:not([disabled])').length, bars: document.querySelectorAll('#ratBars .hbar').length, tiles: document.querySelectorAll('#dashTiles .stat').length }));
+  record(n, 'Dashboard (Chart.js blocked): tiles, bars and month buttons still render', !r.chart && r.boxHidden && r.strip > 0 && r.bars === 10 && r.tiles === 8, JSON.stringify(r));
+  await page.locator('#monthStrip button:not([disabled])').first().click();
+  record(n, 'Dashboard (Chart.js blocked): month button still drills down', await page.locator('#drillDlg').evaluate(d => d.open));
+  record(n, 'Dashboard (Chart.js blocked): no uncaught errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// The page as committed (no sheet id, empty localStorage) must ask for the sheet link and read nothing until it has one
+async function connectTest(browser, vp, seed, url) {
+  const n = vp.name, SID = 'TEST_SHEET_ID_0123456789abcdefghijklmnop';
+  const { context, page, problems } = await openContext(browser, vp, seed);
+  await page.goto(url);
+  await page.waitForLoadState('load');
+  await page.waitForFunction(() => document.getElementById('gDlg').open, null, { timeout: 8000 }).catch(() => {});
+  const s = await page.evaluate(() => ({ open: document.getElementById('gDlg').open, title: document.getElementById('gTitle').textContent, label: document.querySelector('label[for="gSheet"]').textContent, visible: document.getElementById('gSheet').getBoundingClientRect().height > 0, reads: window.__reads.length }));
+  record(n, 'Connect: without a built sheet id the "Connect your Google Sheet" dialog opens asking for the link', s.open && /Connect your Google Sheet/.test(s.title) && /Sheet link/.test(s.label) && s.visible, JSON.stringify(s));
+  record(n, 'Connect: no get_values call is made before a sheet is chosen', s.reads === 0, `${s.reads} read(s)`);
+  await page.locator('#gSheet').fill(`https://docs.google.com/spreadsheets/d/${SID}/edit`);
+  await page.locator('#gForm button[type="submit"]').click();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  const after = await page.evaluate(() => ({ albums: window.__sg.state.albums.length, cfg: JSON.parse(localStorage.getItem('sg-config') || '{}'), open: document.getElementById('gDlg').open, reads: window.__reads.length }));
+  record(n, 'Connect: submitting a sheet link loads the albums', after.albums === fxRows().length && after.reads > 0 && !after.open, `${after.albums} albums, ${after.reads} reads`);
+  record(n, 'Connect: the sheet id is saved to localStorage "sg-config"', after.cfg.sheetId === SID, JSON.stringify(after.cfg));
+  record(n, 'Connect: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
 // ---------- runner ----------
 const results = [];
 const record = (vp, name, ok, detail = '') => {
@@ -354,14 +556,20 @@ const record = (vp, name, ok, detail = '') => {
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` (${detail})` : ''}`);
 };
 
-async function runViewport(browser, vp, seed, wrapperUrl) {
-  console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
+// Chart.js is fetched from cdnjs by the real page. The test has no network, so that one URL is served from
+// node_modules/chart.js when it is installed (blockChart: true refuses it, to prove the page works without it).
+const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+const CHART_LOCAL = join(here, 'node_modules', 'chart.js', 'dist', 'chart.umd.js');
+const HAVE_CHART = existsSync(CHART_LOCAL);
+
+async function openContext(browser, vp, seed, { blockChart = false } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
   let externalBlocked = 0;
   await context.route('**/*', route => {
     const u = route.request().url();
     if (u.startsWith('file:') || u.startsWith('data:') || u.startsWith('blob:')) return route.continue();
-    externalBlocked++;               // no network in the test: CDN scripts and fonts are refused
+    if (u === CHART_URL && HAVE_CHART && !blockChart) return route.fulfill({ path: CHART_LOCAL, contentType: 'application/javascript' });
+    externalBlocked++;               // no network in the test: other CDN scripts and fonts are refused
     return route.abort();
   });
   await context.addInitScript(installStub, seed);
@@ -376,6 +584,13 @@ async function runViewport(browser, vp, seed, wrapperUrl) {
     if (externalBlocked > 0 && /^Failed to load resource/.test(text)) return;
     problems.push(`console: ${text}`);
   });
+  return { context, page, problems, blocked: () => externalBlocked };
+}
+
+async function runViewport(browser, vp, seed, wrapperUrl, rawUrl) {
+  console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
+  const { context, page, problems, blocked } = await openContext(browser, vp, seed);
+  const externalBlocked = blocked();
 
   await page.goto(wrapperUrl);
   await page.waitForLoadState('load');
@@ -384,7 +599,7 @@ async function runViewport(browser, vp, seed, wrapperUrl) {
 
   const load = await page.evaluate(overflow);
   record(vp.name, 'page loads without console errors or uncaught exceptions', problems.length === 0,
-    problems.length ? problems.slice(0, 3).join(' | ') : `${externalBlocked} external request(s) refused`);
+    problems.length ? problems.slice(0, 3).join(' | ') : `${blocked()} external request(s) refused${HAVE_CHART ? ', Chart.js served locally' : ', no local Chart.js'}`);
   record(vp.name, 'no sideways scroll on load', load.sw <= load.iw, `scrollWidth ${load.sw} vs innerWidth ${load.iw}`);
 
   const bar = await page.evaluate(DISCOVER);
@@ -416,6 +631,7 @@ async function runViewport(browser, vp, seed, wrapperUrl) {
     record(vp.name, 'no sideways scroll after visiting all tabs', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
   }
 
+  await dashTests(page, vp, seed);
   await planTests(page, vp);
 
   const forbidden = await page.evaluate(() => window.__forbidden);
@@ -428,6 +644,10 @@ async function runViewport(browser, vp, seed, wrapperUrl) {
   const writes = await page.evaluate(() => window.__writes);
   console.log(`  info  ${writes.length} sheet write call(s) recorded during the run`);
   await context.close();
+
+  await dashEmptyLogTest(browser, vp, seed, wrapperUrl);
+  await dashNoChartTest(browser, vp, seed, wrapperUrl);
+  await connectTest(browser, vp, seed, rawUrl);
 }
 
 async function main() {
@@ -443,6 +663,10 @@ async function main() {
   if (!appSrc.includes("const BUILT_SHEET_ID = '';")) { console.error('FAIL  app.html must ship with an empty BUILT_SHEET_ID'); process.exit(1); }
   writeFileSync(wrapperPath, wrap(appSrc.replace("const BUILT_SHEET_ID = '';", "const BUILT_SHEET_ID = 'TEST_SHEET_ID_0123456789abcdefghijklmnop';")), 'utf8');
 
+  // The app exactly as committed (empty BUILT_SHEET_ID), for the "Connect your Google Sheet" test
+  const rawPath = join(tmp, 'app-raw.html');
+  writeFileSync(rawPath, wrap(appSrc), 'utf8');
+
   const browser = await chromium.launch({
     // Playwright's bundled build is not installed here; fall back to the provided Chromium.
     executablePath: process.env.CHROMIUM_PATH || (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined),
@@ -451,7 +675,7 @@ async function main() {
   try {
     const seed = buildSeed();
     for (const vp of VIEWPORTS) {
-      await runViewport(browser, vp, seed, pathToFileURL(wrapperPath).href);
+      await runViewport(browser, vp, seed, pathToFileURL(wrapperPath).href, pathToFileURL(rawPath).href);
     }
   } finally {
     await browser.close();

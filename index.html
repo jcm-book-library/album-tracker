@@ -207,6 +207,62 @@ table.lib{width:100%;border-collapse:collapse;font-size:14px}
 .hbar .fill{display:block;height:100%;background:var(--accent);border-radius:4px}
 .hbar .val{font-variant-numeric:tabular-nums;color:var(--muted);min-width:3.5em;text-align:right}
 
+/* dashboard */
+.periods{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.dash-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.dash-tiles .stat .num{font-size:clamp(24px,3vw,32px)}
+.dash-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.dash-2 .full{grid-column:1/-1}
+.chart-box{position:relative;height:220px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.mstrip{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;margin-top:10px}
+.mstrip button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:3px 0;font-size:11px;font-weight:600;line-height:1.3;min-width:0}
+.mstrip button b{display:block;color:var(--fg);font-family:var(--display);font-size:13px;font-variant-numeric:tabular-nums}
+.mstrip button:disabled{opacity:.45;cursor:default}
+.mstrip button:not(:disabled):hover{border-color:var(--accent)}
+.heat-scroll{overflow-x:auto;padding-bottom:6px}
+.heat{display:grid;grid-template-rows:14px repeat(7,12px);grid-auto-flow:column;grid-auto-columns:12px;gap:3px;width:max-content}
+.heat .c{border-radius:2px;background:var(--raise)}
+.heat .c[data-d]{cursor:pointer}
+.heat .c[data-d]:hover,.heat .c[data-d]:focus-visible{outline:2px solid var(--fg);outline-offset:1px}
+.heat .c[data-future]{background:transparent;outline:1px dashed var(--line);outline-offset:-1px}
+.heat .m{font-size:10px;color:var(--muted);white-space:nowrap;grid-row:1}
+button.hbar{width:100%;background:none;border:0;color:inherit;font:inherit;font-size:13px;text-align:left;padding:3px 6px;margin:0;border-radius:6px}
+button.hbar:hover,button.hbar:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+button.hbar:hover .fill{filter:brightness(1.15)}
+div.hbar{padding:3px 6px}
+.hbar .track{display:flex}
+.hbar .fill.rest{background:color-mix(in srgb,var(--accent) 32%,var(--raise))}
+.hbars .zero{opacity:.55}
+.mini-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.mini-list button{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:5px 6px;border-radius:6px}
+.mini-list button:hover,.mini-list button:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.mini-list button:focus-visible{outline:2px solid var(--accent)}
+.mini-list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-list .r{color:var(--muted);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sub-head{margin:16px 0 6px}
+.sub-head:first-of-type{margin-top:0}
+.drill-list{list-style:none;margin:0;padding:8px 12px 16px;display:flex;flex-direction:column}
+.drill-list > li{border-top:1px solid var(--line);padding:4px 0}
+.drill-list > li:first-child{border-top:0}
+.drill-list .dr-main{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:8px 8px 4px;border-radius:8px}
+.drill-list .dr-main:hover,.drill-list .dr-main:focus-visible{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.drill-list .dr-main:focus-visible{outline:2px solid var(--accent)}
+.drill-list .dr-main[disabled]{cursor:default}
+.drill-list .t{font-weight:600;overflow-wrap:anywhere}
+.drill-list .m{font-size:13px;color:var(--muted);grid-column:1;overflow-wrap:anywhere}
+.drill-list .r{grid-row:1/3;grid-column:2;align-self:center;text-align:right;font-size:13px;color:var(--muted);white-space:nowrap}
+.drill-list .dr-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 8px 6px;min-width:0}
+.drill-list .dr-chips:empty{display:none}
+@media (max-width:860px){
+  .dash-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dash-2{grid-template-columns:minmax(0,1fr)}
+  .mstrip{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+@media (min-width:861px) and (max-width:1100px){.dash-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
 /* edit dialog */
 dialog{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:16px;padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 40px)}
 dialog::backdrop{background:rgba(8,6,14,.65)}
@@ -266,6 +322,7 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     <button class="tab" role="tab" id="tab-log" aria-selected="true" aria-controls="view-log" type="button">Log</button>
     <button class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="view-plan" type="button">Plan</button>
     <button class="tab" role="tab" id="tab-library" aria-selected="false" aria-controls="view-library" type="button">Library</button>
+    <button class="tab" role="tab" id="tab-dashboard" aria-selected="false" aria-controls="view-dashboard" type="button">Dashboard</button>
   </nav>
 
   <!-- ===== Log ===== -->
@@ -396,6 +453,38 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     </div>
     <div class="lib-foot"><span id="libCount"></span><button class="btn" id="libMore" type="button" hidden>Show 100 more</button></div>
   </div>
+
+  <!-- ===== Dashboard ===== -->
+  <div id="view-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden>
+    <div class="periods" id="dashPeriods" role="group" aria-label="Year"></div>
+    <section class="dash-tiles" id="dashTiles" aria-label="Totals"></section>
+    <div class="dash-2">
+      <section class="panel" aria-labelledby="monthH">
+        <div class="panel-head"><h2 id="monthH">Listens per month</h2><span class="muted small" id="monthNote"></span></div>
+        <p class="empty" id="monthEmpty" hidden></p>
+        <div id="monthBody">
+          <div class="chart-box" id="monthBox"><canvas id="monthChart" role="img" aria-label="Plays per month. Use the month buttons below to see each month's albums."></canvas></div>
+          <div class="mstrip" id="monthStrip" role="group" aria-label="Open a month"></div>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="ratH"><div class="panel-head"><h2 id="ratH">Ratings</h2><span class="muted small" id="ratNote"></span></div><ul class="hbars" id="ratBars"></ul></section>
+      <section class="panel full" aria-labelledby="heatH">
+        <div class="panel-head"><h2 id="heatH">Listening calendar</h2><div class="legend"><span id="heatNote">Each day in its month's colour, brighter for more plays</span></div></div>
+        <p class="empty" id="heatEmpty" hidden></p>
+        <div class="heat-scroll" id="heatScroll"><div class="heat" id="heat" aria-label="Plays each day"></div></div>
+      </section>
+      <section class="panel" aria-labelledby="genH"><div class="panel-head"><h2 id="genH">Genres</h2><span class="muted small">Albums heard · average rating</span></div><ul class="hbars" id="genBars"></ul></section>
+      <section class="panel" aria-labelledby="decH"><div class="panel-head"><h2 id="decH">Decades</h2><div class="legend"><span><i class="sw" style="background:var(--accent)"></i>Heard</span><span><i class="sw" style="background:color-mix(in srgb,var(--accent) 32%,var(--raise))"></i>Not yet heard</span></div></div><ul class="hbars" id="decBars"></ul><p class="muted small" id="decNote" style="margin:10px 0 0"></p></section>
+      <section class="panel" aria-labelledby="fmtH"><div class="panel-head"><h2 id="fmtH">Formats &amp; ownership</h2><span class="muted small">All albums by format</span></div><ul class="hbars" id="fmtBars"></ul></section>
+      <section class="panel" aria-labelledby="artH">
+        <div class="panel-head"><h2 id="artH">Top artists</h2></div>
+        <div class="eyebrow sub-head">Most albums heard · average rating</div>
+        <ul class="mini-list" id="artHeard"></ul>
+        <div class="eyebrow sub-head">Most plays</div>
+        <ul class="mini-list" id="artPlays"></ul>
+      </section>
+    </div>
+  </div>
 </div>
 
 <dialog id="gDlg" aria-labelledby="gTitle" style="width:min(520px,calc(100vw - 32px))">
@@ -410,6 +499,11 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   </form>
 </dialog>
 
+<dialog id="drillDlg" aria-labelledby="drillTitle">
+  <div class="dlg-head"><div><h2 id="drillTitle">Albums</h2><div class="muted" id="drillSub" style="font-size:13px"></div></div><button class="btn" type="button" id="drillClose">Close</button></div>
+  <ul class="drill-list" id="drillList"></ul>
+</dialog>
+
 <dialog id="albumDlg" aria-labelledby="dlgTitle">
   <form id="albumForm" method="dialog">
     <div class="dlg-head"><h2 id="dlgTitle">Edit album</h2><button class="btn" type="button" id="dlgClose">Close</button></div>
@@ -418,6 +512,7 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   </form>
 </dialog>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // The sheet id is kept out of this public file. tools/build-artifact.py fills BUILT_SHEET_ID in the private
 // artifact build; anywhere else the id comes from the sheet link pasted into the Connect dialog (this browser only).
@@ -544,7 +639,7 @@ const SNAP_ALBUMS = [
   { id: '1009', title: 'Untrue', artist: 'Burial', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '2007', plan: 'Someday', planned: '2025-01-01' }
 ];
 // Dates are relative to today so the sample always looks recent: [days ago, album id, plays]
-const SNAP_LOG = [[0, '1001', 1], [1, '1005', 1], [2, '1002', 2], [3, '1003', 1], [5, '1003', 1], [6, '1001', 1], [9, '1005', 1]];
+const SNAP_LOG = [[0, '1001', 1], [1, '1005', 1], [2, '1002', 2], [3, '1003', 1], [5, '1003', 1], [6, '1001', 1], [9, '1005', 1], [33, '1002', 1], [47, '1005', 2], [62, '1001', 1], [90, '1008', 1]];
 function snapshotState() {
   const t = today();
   const albums = SNAP_ALBUMS.map((a, i) => ({ ...Object.fromEntries(FIELDS.map(f => [f.k, ''])), ...a, added: t, _row: i + 2 }));
@@ -1382,12 +1477,262 @@ function renderPlan() {
 $('blFilter').addEventListener('input', e => { planUI.filter = e.target.value; planUI.limit = 50; renderPlan(); });
 $('blMore').addEventListener('click', () => { planUI.limit += 50; renderPlan(); });
 
+/* ---------- Dashboard tab ---------- */
+// Library panels are all-time; log panels follow the year picker. Charts are only drawn while this tab is visible.
+const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dash = { period: String(new Date().getFullYear()) };
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const plural = (n, w) => `${fmt(n)} ${w}${n === 1 ? '' : 's'}`;
+const rOf = a => toNum(a.rating);
+const avgOf = list => { const r = list.map(rOf).filter(x => x > 0); return r.length ? r.reduce((s, x) => s + x, 0) / r.length : 0; };
+const dashYear = () => dash.period === 'all' ? today().slice(0, 4) : dash.period;
+const inPeriod = e => dash.period === 'all' || e.date.startsWith(dash.period);
+const entryKey = e => e.albumId || 'x:' + norm(e.title);
+const EMPTY_LOG = 'No listens logged yet. Log one from the Log tab and this fills in.';
+let monthChart = null;
+
+/* drill-down: one shared dialog for every bar, row and day */
+function rowsFromAlbums(list) {
+  return [...list].sort((a, b) => rOf(b) - rOf(a) || norm(a.title).localeCompare(norm(b.title))).map(a => ({ a, title: a.title, artist: a.artist }));
+}
+function rowsFromLog(entries) {
+  const m = new Map();
+  for (const e of entries) {
+    const k = entryKey(e);
+    let r = m.get(k); if (!r) { const a = albumOf(e); r = { a, title: a ? a.title : e.title, artist: a ? a.artist : e.artist, plays: 0, notes: [] }; m.set(k, r); }
+    r.plays += e.plays; if (e.note) r.notes.push(e.note);
+  }
+  return [...m.values()].sort((x, y) => y.plays - x.plays || norm(x.title).localeCompare(norm(y.title)));
+}
+function openDrill(label, rows, o = {}) {
+  $('drillTitle').textContent = `${label} · ${plural(rows.length, 'album')}`;
+  $('drillSub').textContent = o.sub || 'Tap an album to open it';
+  const ul = $('drillList'); ul.textContent = '';
+  if (!rows.length) ul.innerHTML = '<li class="empty" style="padding:12px 8px">Nothing here yet.</li>';
+  for (const r of rows) {
+    const a = r.a, li = document.createElement('li');
+    li.innerHTML = '<button type="button" class="dr-main"><span class="t"></span><span class="m"></span><span class="r"></span></button><div class="dr-chips"></div>';
+    const main = li.querySelector('.dr-main');
+    li.querySelector('.t').textContent = r.title;
+    li.querySelector('.m').textContent = [r.artist, a && a.year, r.plays ? plural(r.plays, 'play') : '', ...(r.notes || [])].filter(Boolean).join(' · ');
+    li.querySelector('.r').innerHTML = a && rOf(a) ? `<span class="rating tnum">${esc(a.rating)}<small>/10</small></span>` : '';
+    const chips = li.querySelector('.dr-chips');
+    if (a) {
+      chips.insertAdjacentHTML('beforeend', pill('status', a.status) + pill('genre', a.genre) + pill('format', a.format));
+      if (a.buy) chips.appendChild(buyEl(a.buy));
+      main.addEventListener('click', () => { $('drillDlg').close(); openAlbumDialog(a); });
+    } else { main.disabled = true; main.title = 'This album isn\'t in the library any more'; }
+    ul.appendChild(li);
+  }
+  $('drillDlg').showModal();
+}
+const drillAlbums = (label, list) => openDrill(label, rowsFromAlbums(list));
+function drillLog(label, entries) {
+  const plays = entries.reduce((s, e) => s + e.plays, 0), days = new Set(entries.map(e => e.date)).size;
+  openDrill(label, rowsFromLog(entries), { sub: `${plural(plays, 'play')} on ${plural(days, 'day')} · tap an album to open it` });
+}
+
+/* horizontal bars: each row is a button that opens the drill-down */
+function hbars(el, items, max, fmtVal) {
+  el.textContent = '';
+  if (!items.length) { el.innerHTML = '<li class="empty">Nothing here yet.</li>'; return; }
+  for (const it of items) {
+    const li = document.createElement('li');
+    const click = it.albums && it.albums.length;
+    li.innerHTML = `<${click ? 'button type="button"' : 'div'} class="hbar${it.value || it.rest ? '' : ' zero'}"><span class="lab"></span><span class="track"></span><span class="val"></span></${click ? 'button' : 'div'}>`;
+    const row = li.firstChild, w = v => max ? (v > 0 ? Math.max(2, v / max * 100) : 0) : 0;
+    row.querySelector('.track').innerHTML = `<i class="fill" style="width:${w(it.value)}%"></i>` + (it.rest != null ? `<i class="fill rest" style="width:${w(it.rest)}%"></i>` : '');
+    row.querySelector('.lab').textContent = it.label;
+    row.querySelector('.lab').title = it.label;
+    row.querySelector('.val').textContent = fmtVal ? fmtVal(it) : fmt(it.value);
+    row.dataset.label = it.label;
+    if (click) {
+      row.setAttribute('aria-label', `${it.label}: ${fmtVal ? fmtVal(it) : it.value}. Show ${plural(it.albums.length, 'album')}`);
+      row.addEventListener('click', () => drillAlbums(it.drillTitle || it.label, it.albums));
+    }
+    el.appendChild(li);
+  }
+}
+function artistList(el, items, valText) {
+  el.textContent = '';
+  if (!items.length) { el.innerHTML = '<li class="empty">Nothing here yet.</li>'; return; }
+  for (const it of items) {
+    const li = document.createElement('li');
+    li.innerHTML = '<button type="button"><span class="nm"></span><span class="r"></span></button>';
+    li.querySelector('.nm').textContent = it.name; li.querySelector('.nm').title = it.name;
+    li.querySelector('.r').textContent = valText(it);
+    li.firstChild.setAttribute('aria-label', `${it.name}: ${valText(it)}. Show their albums`);
+    li.firstChild.addEventListener('click', () => it.open());
+    el.appendChild(li);
+  }
+}
+
+function renderDashboard() {
+  const albums = state.albums, thisYear = today().slice(0, 4);
+  const years = [...new Set([thisYear, ...state.log.map(e => e.date.slice(0, 4))])].sort().reverse();
+  if (dash.period !== 'all' && !years.includes(dash.period)) dash.period = thisYear;
+  $('dashPeriods').innerHTML = [...years, 'all'].map(y => `<button class="chip" type="button" data-p="${y}" aria-pressed="${dash.period === y}">${y === 'all' ? 'All time' : y}</button>`).join('');
+  const label = dash.period === 'all' ? 'all time' : dash.period;
+  const heardAlbums = albums.filter(heard), rated = heardAlbums.filter(a => rOf(a) > 0);
+  const ents = state.log.filter(inPeriod), plays = ents.reduce((s, e) => s + e.plays, 0);
+  const logged = new Set(ents.map(entryKey)), days = new Set(ents.map(e => e.date));
+  const ownedL = albums.filter(owned), vinyl = albums.filter(a => a.format === 'Vinyl (Owned)');
+  const wish = albums.filter(a => wishList(a) || wantVinyl(a)), bl = albums.filter(backlog);
+  const artistsHeard = new Set(heardAlbums.map(a => artistKey(a.artist)).filter(Boolean));
+  const avg = avgOf(heardAlbums);
+  const tile = (key, eb, num, sub) => `<div class="stat" data-tile="${key}"><span class="eyebrow">${eb}</span><span class="num tnum">${num}</span><span class="sub">${sub}</span></div>`;
+  $('dashTiles').innerHTML =
+    tile('heard', 'Albums heard', fmt(heardAlbums.length), `of ${fmt(albums.length)} in the library`) +
+    tile('plays', dash.period === 'all' ? 'Listens, all time' : `Listens in ${label}`, fmt(plays), days.size ? `on ${plural(days.size, 'day')}` : 'plays logged') +
+    tile('logged', dash.period === 'all' ? 'Albums logged' : `Albums logged in ${label}`, fmt(logged.size), 'different albums') +
+    tile('avg', 'Average rating', avg ? avg.toFixed(1) : '–', plural(rated.length, 'rated album')) +
+    tile('owned', 'Owned', fmt(ownedL.length), `${fmt(vinyl.length)} on vinyl`) +
+    tile('wish', 'Vinyl wish list', fmt(wish.length), 'still to buy') +
+    tile('backlog', 'Listening backlog', fmt(bl.length), 'still to hear') +
+    tile('artists', 'Artists heard', fmt(artistsHeard.size), 'different artists');
+
+  renderMonthly(dashYear());
+  renderHeat(dashYear());
+
+  // Ratings, 10 down to 1
+  const rc = new Map();
+  for (const a of albums) { const r = rOf(a); if (r > 0) { const b = Math.min(10, Math.max(1, Math.round(r))); (rc.get(b) || rc.set(b, []).get(b)).push(a); } }
+  const rItems = []; for (let n = 10; n >= 1; n--) rItems.push({ label: String(n), value: (rc.get(n) || []).length, albums: rc.get(n) || [], drillTitle: `Rated ${n}` });
+  $('ratNote').textContent = `${plural(rated.length, 'album')} rated`;
+  hbars($('ratBars'), rItems, Math.max(1, ...rItems.map(x => x.value)));
+
+  // Genres: albums heard, average rating
+  const gm = new Map();
+  for (const a of heardAlbums) { const g = a.genre || 'No genre'; (gm.get(g) || gm.set(g, []).get(g)).push(a); }
+  const gItems = [...gm].map(([g, list]) => ({ label: g, value: list.length, avg: avgOf(list), albums: list }))
+    .sort((x, y) => (x.label === 'No genre') - (y.label === 'No genre') || y.value - x.value || x.label.localeCompare(y.label));
+  hbars($('genBars'), gItems, Math.max(1, ...gItems.map(x => x.value)), it => `${it.value}${it.avg ? ' · ' + it.avg.toFixed(1) : ''}`);
+
+  // Decades, heard vs not yet heard
+  const dm = new Map(); let noYear = 0;
+  for (const a of albums) { const y = toNum(a.year); if (y < 1000) { noYear++; continue; } const d = Math.floor(y / 10) * 10; (dm.get(d) || dm.set(d, []).get(d)).push(a); }
+  const dItems = [];
+  if (dm.size) for (let d = Math.min(...dm.keys()); d <= Math.max(...dm.keys()); d += 10) {
+    const list = dm.get(d) || [], h = list.filter(heard).length;
+    dItems.push({ label: d + 's', value: h, rest: list.length - h, total: list.length, albums: list });
+  }
+  hbars($('decBars'), dItems, Math.max(1, ...dItems.map(x => x.total)), it => `${it.value} of ${it.total}`);
+  $('decNote').textContent = noYear ? `${plural(noYear, 'album')} without a year left out.` : '';
+
+  // Formats & ownership
+  const fm = new Map();
+  for (const a of albums) { const f = FORMATS.includes(a.format) ? a.format : ''; (fm.get(f) || fm.set(f, []).get(f)).push(a); }
+  const fItems = [...FORMATS, ''].map(f => ({ label: f || 'No format', value: (fm.get(f) || []).length, albums: fm.get(f) || [] }));
+  hbars($('fmtBars'), fItems, Math.max(1, ...fItems.map(x => x.value)));
+
+  // Top artists
+  const am = new Map();
+  for (const a of albums) {
+    const k = artistKey(a.artist); if (!k) continue;
+    const x = am.get(k) || { name: a.artist, list: [], heard: [] }; x.list.push(a); if (heard(a)) x.heard.push(a); am.set(k, x);
+  }
+  const openArtist = k => { const x = am.get(k); if (x) drillAlbums(`${x.name} · everything in your library`, x.list); };
+  const topHeard = [...am].filter(([, x]) => x.heard.length).map(([k, x]) => ({ k, name: x.name, n: x.heard.length, avg: avgOf(x.heard) }))
+    .sort((p, q) => q.n - p.n || q.avg - p.avg || p.name.localeCompare(q.name)).slice(0, 10);
+  artistList($('artHeard'), topHeard.map(x => ({ ...x, open: () => openArtist(x.k) })), x => `${plural(x.n, 'album')}${x.avg ? ' · ' + x.avg.toFixed(1) : ''}`);
+  const pm = new Map();
+  for (const e of ents) {
+    const a = albumOf(e), name = (a && a.artist) || e.artist, k = artistKey(name); if (!k) continue;
+    const x = pm.get(k) || { name, plays: 0, entries: [] }; x.plays += e.plays; x.entries.push(e); pm.set(k, x);
+  }
+  const topPlays = [...pm].map(([k, x]) => ({ k, ...x })).sort((p, q) => q.plays - p.plays || p.name.localeCompare(q.name)).slice(0, 10);
+  if (!topPlays.length) $('artPlays').innerHTML = `<li class="empty">${state.log.length ? `No listens logged in ${label} yet.` : EMPTY_LOG}</li>`;
+  else artistList($('artPlays'), topPlays.map(x => ({ ...x, open: () => (am.has(x.k) ? openArtist(x.k) : drillLog(`${x.name} · ${label}`, x.entries)) })), x => plural(x.plays, 'play'));
+}
+
+function renderMonthly(y) {
+  const t = today(), curM = y === t.slice(0, 4) ? +t.slice(5, 7) : 12;
+  const tally = yr => {
+    const tot = new Array(12).fill(0), al = Array.from({ length: 12 }, () => new Set());
+    for (const e of state.log) if (e.date.startsWith(yr)) { const m = +e.date.slice(5, 7) - 1; tot[m] += e.plays; al[m].add(entryKey(e)); }
+    return { tot: tot.slice(0, curM), al: al.slice(0, curM).map(s => s.size) };
+  };
+  const cur = tally(y), prev = tally(String(+y - 1)), hasPrev = prev.tot.some(v => v > 0), has = cur.tot.some(v => v > 0);
+  $('monthEmpty').hidden = has; $('monthBody').hidden = !has;
+  $('monthEmpty').textContent = state.log.length ? `No listens logged in ${y} yet. Log one from the Log tab and this fills in.` : EMPTY_LOG;
+  const best = cur.tot.indexOf(Math.max(...cur.tot));
+  $('monthNote').textContent = !has ? '' : `Best: ${MONTHS[best]} with ${plural(cur.tot[best], 'play')}${hasPrev ? ` · pale bars are ${+y - 1}` : ''}`;
+  $('monthStrip').innerHTML = cur.tot.map((v, i) => `<button type="button" data-m="${i}" ${v ? '' : 'disabled'} aria-label="${FULL_MONTHS[i]} ${y}: ${plural(v, 'play')}">${MONTHS[i]}<b>${v}</b></button>`).join('');
+  if (monthChart) { monthChart.destroy(); monthChart = null; }
+  $('monthBox').hidden = typeof Chart === 'undefined';
+  if (!has || typeof Chart === 'undefined') return;
+  Chart.defaults.font.family = cssVar('--body'); Chart.defaults.color = cssVar('--muted'); Chart.defaults.borderColor = cssVar('--line');
+  const ghost = mix(cssVar('--raise'), cssVar('--muted'), .4);
+  const datasets = [{ label: y, data: cur.tot, grouped: false, order: 1, barPercentage: hasPrev ? .55 : .8, categoryPercentage: 1,
+    backgroundColor: cur.tot.map((_, i) => i === curM - 1 && y === t.slice(0, 4) ? MC[i] + '8c' : MC[i]), borderRadius: 4, maxBarThickness: 44 }];
+  if (hasPrev) datasets.push({ label: String(+y - 1), data: prev.tot, grouped: false, order: 2, barPercentage: .95, categoryPercentage: 1, backgroundColor: ghost + '99', borderRadius: 4, maxBarThickness: 64 });
+  monthChart = new Chart($('monthChart'), {
+    type: 'bar', data: { labels: MONTHS.slice(0, curM), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      onClick: (e, _els, chart) => { const els = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, true); if (els.length && cur.tot[els[0].index]) drillMonth(y, els[0].index); },
+      onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: c => c.datasetIndex ? `${c.dataset.label}: ${plural(c.raw, 'play')}` : `${plural(c.raw, 'play')} · ${plural(cur.al[c.dataIndex], 'album')} · click to see them`
+      } } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: cssVar('--line') }, ticks: { maxTicksLimit: 5, precision: 0 } } }
+    }
+  });
+}
+function drillMonth(y, m) {
+  drillLog(`${FULL_MONTHS[m]} ${y}`, state.log.filter(e => e.date.startsWith(`${y}-${pad(m + 1)}`)));
+}
+function drillDay(d) {
+  const label = fromIso(d).toLocaleDateString('en-AU', { weekday: 'short' }) + ' ' + fmtDate(d);
+  drillLog(label, state.log.filter(e => e.date === d));
+}
+
+function renderHeat(y) {
+  const box = $('heat'); box.textContent = '';
+  const totals = new Map();
+  for (const e of state.log) if (e.date.startsWith(y)) totals.set(e.date, (totals.get(e.date) || 0) + e.plays);
+  const has = totals.size > 0;
+  $('heatEmpty').hidden = has; $('heatScroll').hidden = !has;
+  $('heatNote').hidden = !has;
+  $('heatEmpty').textContent = state.log.length ? `No listens logged in ${y} yet. Log one from the Log tab and this fills in.` : EMPTY_LOG;
+  if (!has) return;
+  const t = today(), jan1 = `${y}-01-01`, dec31 = `${y}-12-31`;
+  const lead = (fromIso(jan1).getDay() + 6) % 7; // Monday-first rows
+  const strength = p => p <= 0 ? 0 : p < 2 ? .4 : p < 3 ? .6 : p < 5 ? .8 : 1;
+  let lastMonth = -1;
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < lead; i++) { const c = document.createElement('i'); c.style.visibility = 'hidden'; c.style.gridRow = String(i + 2); c.style.gridColumn = '1'; frag.appendChild(c); }
+  for (let d = jan1, i = lead; d <= dec31; d = addDays(d, 1), i++) {
+    const col = Math.floor(i / 7), m = +d.slice(5, 7) - 1;
+    if (m !== lastMonth) { const s = document.createElement('span'); s.className = 'm'; s.style.gridColumn = String(col + 1); s.textContent = MONTHS[m]; frag.appendChild(s); lastMonth = m; }
+    const c = document.createElement('i');
+    c.className = 'c'; c.style.gridRow = String((i % 7) + 2); c.style.gridColumn = String(col + 1);
+    if (d > t) c.setAttribute('data-future', '');
+    else {
+      const p = totals.get(d) || 0, txt = `${fromIso(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}: ${plural(p, 'play')}`;
+      c.style.background = mix(BASE.raise, dayColour(d), strength(p)); c.title = txt;
+      if (p) { c.dataset.d = d; c.tabIndex = 0; c.setAttribute('role', 'button'); c.setAttribute('aria-label', txt + '. Show the albums'); }
+    }
+    frag.appendChild(c);
+  }
+  box.appendChild(frag);
+}
+
+$('dashPeriods').addEventListener('click', e => { const c = e.target.closest('.chip[data-p]'); if (!c) return; dash.period = c.dataset.p; renderDashboard(); });
+$('monthStrip').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (b) drillMonth(dashYear(), +b.dataset.m); });
+$('heat').addEventListener('click', e => { const c = e.target.closest('[data-d]'); if (c) drillDay(c.dataset.d); });
+$('heat').addEventListener('keydown', e => { const c = e.target.closest('[data-d]'); if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); drillDay(c.dataset.d); } });
+$('drillClose').addEventListener('click', () => $('drillDlg').close());
+$('drillDlg').addEventListener('click', e => { if (e.target === $('drillDlg')) $('drillDlg').close(); });
+
 /* ---------- tabs and rendering ---------- */
-// Later stages (Plan, Dashboard, Tools, Discover) add an entry here plus a matching tab button and #view-<name> panel.
+// Later stages (Tools, Discover) add an entry here plus a matching tab button and #view-<name> panel.
 const TABS = {
   log: { render: renderLogTab },
   plan: { render: renderPlan },
-  library: { render: renderLibrary }
+  library: { render: renderLibrary },
+  dashboard: { render: renderDashboard }
 };
 function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); }
 function renderAll() { applyTheme(); render(); }
