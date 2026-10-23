@@ -53,3 +53,13 @@ See [ROADMAP.md](ROADMAP.md).
   copied from the Notes hyperlinks (24 albums), stored as plain text so the app can read it.
   Notes keeps its text and links as before.
 - Checked by script afterwards: A–O identical to the backup, all 24 links match their Notes hyperlink.
+
+### 2026-10-24 (Tracks)
+
+- New tab `🎸 Tracks`, one row per track:
+  `id | albumId | album | side | no | title | length | copied | note`.
+  - `id`: permanent number from 5001, highest + 1; duplicates highlighted red.
+  - `albumId` links to the album's `id` in 🎸. `copied` is the date the track was copied to MP3 (blank = not yet).
+  - Deleting a track in the app clears that row's cells (found by id first). The row itself
+    stays, empty, so no other row moves; the app skips empty rows.
+- 🎸 itself is unchanged.
