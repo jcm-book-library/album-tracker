@@ -21,8 +21,12 @@ const VIEWPORTS = [
 ];
 
 // ---------- seed data for the stub sheet ----------
+// One "now" for the whole run. Seed data is dated from it, and every test page's clock starts at it,
+// so a run that crosses midnight can't see two different "todays".
+const RUN_START = process.env.RUN_START ? new Date(process.env.RUN_START) : new Date();
+
 function isoDay(offsetDays) {
-  const d = new Date();
+  const d = new Date(RUN_START);
   d.setDate(d.getDate() - offsetDays);
   const p = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -43,7 +47,7 @@ function buildSeed() {
   });
   // Stage 4 sample log rows: the same month-day in two earlier years (On this day), and a first listen
   // that has gone quiet (played once 20 days ago, never rated) for the Nudges.
-  const now = new Date(), p2 = n => String(n).padStart(2, '0'), md = `${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, Y = now.getFullYear();
+  const now = new Date(RUN_START), p2 = n => String(n).padStart(2, '0'), md = `${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, Y = now.getFullYear();
   [[32, 1, 1], [33, 2, 2]].forEach(([ri, back, pl]) => {
     const r = albums[ri], date = `${Y - back}-${md}`;
     log.push([date, r[9], r[0], r[2], String(pl), `${date}T20:00:00`, 'seed', '']);
@@ -406,7 +410,7 @@ async function dashTests(page, vp, seed) {
   const rated = fxRows().filter(r => fxHeard(r) && parseFloat(r[COL.rating]) > 0).map(r => parseFloat(r[COL.rating]));
   const avg = (rated.reduce((a, b) => a + b, 0) / rated.length).toFixed(1);
   record(n, 'Dashboard: average rating matches the fixture (1 decimal)', tiles.avg && tiles.avg.num === avg, `${tiles.avg && tiles.avg.num} vs ${avg}`);
-  const nowYear = String(new Date().getFullYear());
+  const nowYear = String(new Date(RUN_START).getFullYear());
   const log = seed['🎸 Log'].slice(1).filter(r => r[0].startsWith(nowYear));
   const playsSum = log.reduce((s, r) => s + Number(r[4]), 0);
   record(n, 'Dashboard: listens this year sums the seeded plays', tiles.plays && tiles.plays.num === String(playsSum), `${tiles.plays && tiles.plays.num} vs ${playsSum}`);
@@ -608,6 +612,70 @@ async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion }
   return ctx;
 }
 
+// ---------- Layout (symmetry) ----------
+async function layoutTests(browser, vp, seed, url) {
+  const n = vp.name, laptop = vp.width >= 1000;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'log');
+  await page.evaluate(() => { window.__writes.length = 0; });
+  for (const t of ['log', 'plan', 'library', 'dashboard', 'tools', 'discover']) {
+    await page.locator(`#tab-${t}`).click();
+    await page.waitForTimeout(250);
+    const o = await page.evaluate(overflow);
+    record(n, `Layout: no sideways scroll on ${t}`, o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  }
+  if (laptop) {
+    await page.locator('#tab-log').click();
+    await page.waitForTimeout(200);
+    const g = await page.evaluate(() => {
+      const r = id => document.querySelector(id).getBoundingClientRect();
+      const [a, b, c, d] = ['.p-log', '.p-rot', '.p-recent', '.p-first'].map(r);
+      return { wTop: [a.width, b.width], wBot: [c.width, d.width], h1: [a.height, b.height], h2: [c.height, d.height], leftDiff: Math.abs(a.left - c.left), rightDiff: Math.abs(b.left - d.left) };
+    });
+    record(n, 'Layout: Log has two equal columns', Math.abs(g.wTop[0] - g.wTop[1]) <= 2 && Math.abs(g.wBot[0] - g.wBot[1]) <= 2 && Math.abs(g.wTop[0] - g.wBot[0]) <= 2, JSON.stringify(g));
+    record(n, 'Layout: Log row 1 panels have equal heights', Math.abs(g.h1[0] - g.h1[1]) <= 2, g.h1.join(' vs '));
+    record(n, 'Layout: Log row 2 panels have equal heights', Math.abs(g.h2[0] - g.h2[1]) <= 2, g.h2.join(' vs '));
+    // Plan and Tools pairs
+    const pairs = async (tab, sels) => {
+      await page.locator(`#tab-${tab}`).click(); await page.waitForTimeout(200);
+      return page.evaluate(sels => sels.map(([x, y]) => { const a = document.querySelector(x).getBoundingClientRect(), b = document.querySelector(y).getBoundingClientRect(); return Math.abs(a.height - b.height) <= 2 && Math.abs(a.top - b.top) <= 2; }), sels);
+    };
+    const pp = await pairs('plan', [['.p-up', '.p-soon'], ['.p-deck', '.p-wish']]);
+    record(n, 'Layout: Plan panel pairs share a row and a height', pp.every(Boolean), pp.join());
+    const tp = await pairs('tools', [['#dipH', '#ownH'], ['#nudH', '#goalH']].map(([x, y]) => [x + ' ', y + ' ']).map(([x, y]) => [`section:has(${x.trim()})`, `section:has(${y.trim()})`]));
+    record(n, 'Layout: Tools panel pairs share a row and a height', tp.every(Boolean), tp.join());
+    // Dashboard tiles: every row full, or the last tile spans the row
+    await page.locator('#tab-dashboard').click(); await page.waitForTimeout(250);
+    const tiles = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('#dashTiles .stat')], box = document.getElementById('dashTiles').getBoundingClientRect();
+      const rows = new Map();
+      for (const e of els) { const r = e.getBoundingClientRect(); const k = Math.round(r.top); (rows.get(k) || rows.set(k, []).get(k)).push(r); }
+      return [...rows.values()].map(rs => ({ count: rs.length, covers: Math.abs(rs[0].left - box.left) <= 2 && Math.abs(rs[rs.length - 1].right - box.right) <= 2 }));
+    });
+    const full = tiles.every(r => r.covers && r.count === tiles[0].count);
+    record(n, 'Layout: Dashboard tiles fill complete rows (no orphan)', tiles.length > 1 && (full || tiles.every(r => r.covers)), JSON.stringify(tiles));
+    const dp = await page.evaluate(() => [...document.querySelectorAll('#view-dashboard .dash-2 > .panel:not(.full)')].reduce((acc, p, i, all) => { if (i % 2 === 0 && all[i + 1]) { const a = p.getBoundingClientRect(), b = all[i + 1].getBoundingClientRect(); acc.push(Math.abs(a.height - b.height) <= 2); } return acc; }, []));
+    record(n, 'Layout: Dashboard panel pairs have equal heights', dp.length > 0 && dp.every(Boolean), dp.join());
+  } else {
+    await page.locator('#tab-dashboard').click(); await page.waitForTimeout(250);
+    const last = await page.evaluate(() => { const els = [...document.querySelectorAll('#dashTiles .stat')], b = document.getElementById('dashTiles').getBoundingClientRect(), r = els[els.length - 1].getBoundingClientRect(); return { n: els.length, spans: r.width >= b.width - 2 }; });
+    record(n, 'Layout: phone Dashboard ninth tile spans both columns', last.n % 2 === 0 || last.spans, JSON.stringify(last));
+  }
+  // Show all expands Recent entries in place
+  await page.locator('#tab-log').click(); await page.waitForTimeout(150);
+  const before = await page.locator('#recentList > li:not(.empty)').count();
+  const total = await page.evaluate(() => state.log.length);
+  record(n, 'Layout: Recent entries starts capped at 6', before === 6 && total > 6, `${before} shown of ${total}`);
+  await page.locator('#recMore').click();
+  const after = await page.locator('#recentList > li:not(.empty)').count();
+  record(n, 'Layout: Show all expands Recent entries to every entry', after === Math.min(15, total), `${after} shown of ${total}`);
+  await page.locator('#recMore').click();
+  record(n, 'Layout: Show fewer collapses Recent entries again', (await page.locator('#recentList > li:not(.empty)').count()) === 6);
+  const writes = await page.evaluate(() => window.__writes.length);
+  record(n, 'Layout: browsing the tabs and Show all cause no sheet writes', writes === 0, `${writes} writes`);
+  record(n, 'Layout: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
 async function toolsTests(browser, vp, seed, url) {
   const n = vp.name;
   const { context, page, problems } = await freshPage(browser, vp, seed, url, 'tools');
@@ -710,7 +778,7 @@ async function toolsTests(browser, vp, seed, url) {
 
   // Goal planner (read-only parts)
   const goalTxt = await page.locator('#goalOut').textContent();
-  const Y = String(new Date().getFullYear());
+  const Y = String(new Date(RUN_START).getFullYear());
   const keys = new Set(seed['🎸 Log'].slice(1).filter(r => r[0].startsWith(Y)).map(r => r[1]));
   keys.add(quietId); keys.add(fxByTitle(S4.stale)[COL.id]); keys.add(fxByTitle(dipTitle)[COL.id]);   // logged during this test
   record(n, 'Goal planner: shows albums heard this year of the goal', new RegExp(`^${keys.size}\\s*of 52 albums`).test(goalTxt) && /albums a week/.test(goalTxt) && /current pace/.test(goalTxt), goalTxt.slice(0, 140));
@@ -876,7 +944,7 @@ async function discoverTests(browser, vp, seed, url) {
   record(n, 'On this day: nearest year first', od[0].startsWith('1 year ago'), od[0]);
 
   // Anniversaries
-  const Y = new Date().getFullYear();
+  const Y = new Date(RUN_START).getFullYear();
   const an = await page.evaluate(() => [...document.querySelectorAll('#annivBox .mile-head')].map(h => ({ m: h.dataset.milestone, text: h.textContent, items: h.nextElementSibling.querySelectorAll('li').length })));
   const wantAn = [10, 20, 25, 30, 40, 50, 60].map(m => ({ m: String(m), n: fxRows().filter(r => parseFloat(r[COL.year]) === Y - m).length })).filter(x => x.n);
   record(n, 'Anniversaries: one group per milestone that has albums, in order, with the right counts', JSON.stringify(an.map(a => [a.m, Math.min(a.items, 99)])) === JSON.stringify(wantAn.map(a => [a.m, Math.min(a.n, 6)])) && an.every((a, i) => a.text.includes(`released ${Y - Number(a.m)}`) && a.text.includes(`${wantAn[i].n} album`)), JSON.stringify(an));
@@ -893,7 +961,7 @@ async function discoverTests(browser, vp, seed, url) {
   await context.close();
 
   // Next day: a different album, and "Yesterday's" now names today's pick
-  const t0 = new Date();
+  const t0 = new Date(RUN_START);
   const next = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1, 12, 0, 0);
   const d2 = await freshPage(browser, vp, seed, url, 'discover', { clockTo: next });
   const pick2 = await d2.page.locator('#aotdBox h3').textContent();
@@ -1160,7 +1228,7 @@ async function lookTests(browser, vp, seed, url) {
   const page = l.page;
   const dp = () => page.evaluate(() => document.documentElement.dataset.p);
   record(n, 'Look: the panel is at the bottom of Tools with "This month (auto)" selected', await page.evaluate(() => {
-    const secs = [...document.querySelectorAll('#view-tools > section')]; const last = secs[secs.length - 1];
+    const secs = [...document.querySelectorAll('#view-tools section.panel')]; const last = secs[secs.length - 1];
     return last.querySelector('h2').textContent === 'Look' && document.getElementById('lookPressing').selectedOptions[0].textContent === 'This month (auto)';
   }));
   await page.selectOption('#lookPressing', 'crimson');
@@ -1229,6 +1297,7 @@ const HAVE_CHART = existsSync(CHART_LOCAL);
 
 async function openContext(browser, vp, seed, { blockChart = false, reducedMotion } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}) });
+  await context.clock.install({ time: RUN_START });
   let externalBlocked = 0;
   await context.route('**/*', route => {
     const u = route.request().url();
@@ -1318,6 +1387,7 @@ async function runViewport(browser, vp, seed, wrapperUrl, rawUrl) {
   await discoverTests(browser, vp, seed, wrapperUrl);
   await tracksTests(browser, vp, seed, wrapperUrl);
   await lookTests(browser, vp, seed, wrapperUrl);
+  await layoutTests(browser, vp, seed, wrapperUrl);
 }
 
 async function main() {
