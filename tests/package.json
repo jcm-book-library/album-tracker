@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "chart.js": "^4.4.1",
     "playwright": "^1.64.1"
   }
 }

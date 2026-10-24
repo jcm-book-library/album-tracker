@@ -1,0 +1,328 @@
+<title>Music Collection Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@500;700&family=Fraunces:wght@600;800&family=Lexend:wght@400;500;600&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one centred column; two equal columns on a laptop, panels paired so each row shares a height.
+   Look: dark ground with a marbled coloured record peeking in from the right edge, solid panels on top.
+   Colour: six pressings, each used for two months. Type: three pairings to compare. */
+:root {
+  color-scheme: dark;
+  --bg: #0e0f16; --panel: #171824; --panel-2: #1f2130; --line: rgba(255,255,255,.10);
+  --fg: #f3f1fb; --muted: #aaa7c0; --ink: #0b0f18;
+  --c: #4f9cf0; --deep: #1f5aa6; --vein: #050f1d;
+  --display: 'Fraunces', Georgia, serif; --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --r: 18px; --d: max(90vw, 70vh);
+}
+[data-p="canary"]    { --c: #f4cf2d; --deep: #c99a0c; --vein: #2b1f00; --ink: #1a1400; }
+[data-p="tangerine"] { --c: #ff8a2a; --deep: #c4560a; --vein: #3b1400; --ink: #1f0e00; }
+[data-p="crimson"]   { --c: #ff4357; --deep: #b01227; --vein: #2a0007; --ink: #1c0004; }
+[data-p="magenta"]   { --c: #e056dc; --deep: #8a1f96; --vein: #1f0626; --ink: #170019; }
+[data-p="midnight"]  { --c: #5aa3f5; --deep: #1f5aa6; --vein: #050f1d; --ink: #07101c; }
+[data-p="emerald"]   { --c: #3bd1a0; --deep: #0e7a5a; --vein: #021a12; --ink: #031610; }
+[data-f="label"] { --display: 'Bricolage Grotesque', system-ui, sans-serif; --body: 'Lexend', system-ui, sans-serif; }
+[data-f="wide"]  { --display: 'Unbounded', system-ui, sans-serif; --body: 'Atkinson Hyperlegible', system-ui, sans-serif; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--body);
+  padding-block: 16px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, p { margin: 0; text-wrap: balance; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+
+/* ---- the ground: a marbled record cropped by the screen edge ---- */
+.ground { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg); }
+.disc { position: absolute; width: var(--d); height: var(--d); right: calc(var(--d) * -.58); top: calc(var(--d) * -.14); border-radius: 50%; overflow: hidden; }
+.disc > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.grooves { background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,.34) 0 1px, transparent 1px 4px),
+  repeating-radial-gradient(circle at 50% 50%, transparent 0 78px, rgba(0,0,0,.45) 78px 83px); }
+.sheen { background: conic-gradient(from 205deg at 50% 50%, transparent 0 16%, rgba(255,255,255,.20) 22%, transparent 30%, transparent 58%, rgba(255,255,255,.12) 64%, transparent 72%); }
+.ground::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,15,22,.05), rgba(14,15,22,.30) 55%, rgba(14,15,22,.70)); }
+[data-bg="plain"] .disc { display: none; }
+
+.page { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+
+/* ---- preview controls (not part of the app) ---- */
+.lab { border: 1px dashed var(--line); border-radius: var(--r); padding: 14px 16px; background: rgba(14,15,22,.82); display: grid; gap: 12px; }
+.lab-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.lab-row > b { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: 92px; }
+.chip { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 6px 13px; font-size: 14px; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--c); color: var(--ink); border-color: transparent; }
+.sw { display: inline-flex; align-items: center; gap: 8px; }
+.sw i { width: 14px; height: 14px; border-radius: 50%; background: var(--sc); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+
+/* ---- the app mock ---- */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.mark { width: 60px; height: 60px; flex: none; filter: drop-shadow(0 4px 14px rgba(0,0,0,.5)); }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--c); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 6vw, 40px); line-height: 1.05; letter-spacing: -.01em; }
+.status { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #4ad08a; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 8px 15px; font-weight: 600; }
+.btn.pri { background: var(--c); color: var(--ink); border-color: transparent; }
+
+.tabs { display: flex; gap: 4px; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; overflow-x: auto; width: max-content; max-width: 100%; scrollbar-width: none; }
+.tab { border: 0; background: transparent; border-radius: 999px; padding: 8px 18px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--c); color: var(--ink); }
+
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; min-width: 0; }
+.tile { padding: 16px 18px; }
+.tile small { display: block; font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.tile strong { display: block; font-family: var(--display); font-size: 34px; line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--muted); font-size: 14px; }
+.tile.hot { background: linear-gradient(160deg, color-mix(in srgb, var(--c) 22%, var(--panel)), var(--panel)); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
+.bar { height: 7px; border-radius: 4px; background: var(--panel-2); margin-top: 10px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 81%; background: var(--c); }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.panel h2 { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.2; }
+.ph { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.muted { color: var(--muted); font-size: 14px; }
+.field { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 13px; font: inherit; }
+.stack { display: grid; gap: 12px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.rows li:first-child { border-top: 0; padding-top: 0; }
+.rows b { display: block; font-weight: 700; }
+.rows .m { color: var(--muted); font-size: 14px; }
+.mini { width: 40px; height: 40px; }
+.tag { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel-2); color: var(--muted); white-space: nowrap; }
+
+/* ---- design sections ---- */
+.sect > h2 { font-family: var(--display); font-weight: 800; font-size: 26px; margin-bottom: 4px; }
+.sect > p { color: var(--muted); margin-bottom: 14px; max-width: 70ch; }
+.cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; text-align: center; display: grid; justify-items: center; gap: 6px; }
+.card[aria-pressed="true"] { border-color: var(--c); box-shadow: 0 0 0 1px var(--c); }
+.card svg { width: 72px; height: 72px; }
+.card b { font-family: var(--display); }
+.card span { color: var(--muted); font-size: 13px; }
+.fonts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fcard { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 8px; }
+.fcard[aria-pressed="true"] { border-color: var(--c); box-shadow: 0 0 0 1px var(--c); }
+.fcard .big { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.fcard .num { font-size: 40px; font-weight: 700; line-height: 1; }
+.fcard .tn { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--c); font-weight: 700; font-family: var(--body); }
+.icons { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-end; }
+.ic { display: grid; gap: 6px; justify-items: center; color: var(--muted); font-size: 13px; }
+.ic .rnd { border-radius: 50%; background: #14151f; display: grid; place-items: center; box-shadow: 0 0 0 1px var(--line); }
+.ic .rnd svg { width: 84%; height: 84%; }
+.ic .sq { border-radius: 22%; background: #14151f; display: grid; place-items: center; box-shadow: 0 0 0 1px var(--line); }
+.ic .sq svg { width: 84%; height: 84%; }
+
+@media (max-width: 860px) {
+  .grid2, .fonts { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lab-row > b { min-width: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mark.spin { animation: spin 1.4s cubic-bezier(.3,.7,.3,1) 1; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true">
+  <defs>
+    <clipPath id="clipDisc"><circle cx="50" cy="50" r="48"/></clipPath>
+    <symbol id="rec" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" style="fill:var(--deep)"/>
+      <g clip-path="url(#clipDisc)" fill="none">
+        <path d="M-5 52 C25 38 45 68 75 52 S100 44 108 50" style="stroke:var(--c)" stroke-width="7" opacity=".38"/>
+        <path d="M-5 32 C18 18 32 48 54 40 S88 22 106 36" style="stroke:var(--vein)" stroke-width="2.6" opacity=".8"/>
+        <path d="M-5 74 C22 86 40 58 66 68 S94 80 106 64" style="stroke:var(--vein)" stroke-width="2.2" opacity=".8"/>
+        <path d="M24 -5 C34 20 14 38 34 58 S46 90 38 106" style="stroke:var(--vein)" stroke-width="1.8" opacity=".7"/>
+        <path d="M72 -5 C60 22 84 40 72 60 S88 88 78 106" style="stroke:var(--vein)" stroke-width="1.5" opacity=".7"/>
+        <circle cx="50" cy="50" r="42" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+        <circle cx="50" cy="50" r="37" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+        <circle cx="50" cy="50" r="32" stroke="#000" stroke-opacity=".34" stroke-width=".8"/>
+        <circle cx="50" cy="50" r="27" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+        <path d="M50 50 L96 22 A48 48 0 0 1 99 38 Z" fill="#fff" fill-opacity=".16" stroke="none"/>
+        <path d="M50 50 L4 78 A48 48 0 0 1 1 62 Z" fill="#fff" fill-opacity=".10" stroke="none"/>
+      </g>
+      <circle cx="50" cy="50" r="15.5" fill="#12131c"/>
+      <circle cx="50" cy="50" r="15.5" fill="none" style="stroke:var(--c)" stroke-width="1.4"/>
+      <circle cx="50" cy="50" r="2.3" fill="#0e0f16"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="ground" aria-hidden="true">
+  <div class="disc">
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="nv" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0018" numOctaves="2" seed="3" result="warp"/>
+          <feTurbulence type="turbulence" baseFrequency="0.0035 0.011" numOctaves="3" seed="9" result="v"/>
+          <feDisplacementMap in="v" in2="warp" scale="260" xChannelSelector="R" yChannelSelector="G"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -11 0 0 0 1.7"/>
+        </filter>
+        <filter id="ns" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0018" numOctaves="2" seed="3" result="warp"/>
+          <feTurbulence type="fractalNoise" baseFrequency="0.0025 0.0075" numOctaves="3" seed="4" result="v"/>
+          <feDisplacementMap in="v" in2="warp" scale="200" xChannelSelector="G" yChannelSelector="R"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  7 0 0 0 -3.1"/>
+        </filter>
+        <mask id="mv"><rect width="1000" height="1000" filter="url(#nv)"/></mask>
+        <mask id="ms"><rect width="1000" height="1000" filter="url(#ns)"/></mask>
+      </defs>
+      <rect width="1000" height="1000" style="fill:var(--deep)"/>
+      <rect width="1000" height="1000" style="fill:var(--c)" mask="url(#ms)" opacity=".95"/>
+      <rect width="1000" height="1000" style="fill:var(--vein)" mask="url(#mv)" opacity=".85"/>
+    </svg>
+    <div class="grooves"></div>
+    <div class="sheen"></div>
+  </div>
+</div>
+
+<main class="page">
+  <section class="lab" aria-label="Preview controls">
+    <div class="lab-row"><b>Pressing</b><span id="pressings" class="lab-row"></span></div>
+    <div class="lab-row"><b>Type</b><span id="typebtns" class="lab-row"></span></div>
+    <div class="lab-row"><b>Background</b>
+      <button class="chip" type="button" data-bg="marble" aria-pressed="true">Marble record</button>
+      <button class="chip" type="button" data-bg="plain" aria-pressed="false">Plain dark</button>
+    </div>
+    <p class="muted">Example data only. Everything below the dashed box is the proposed look for the Log tab; the rest of the app would follow it.</p>
+  </section>
+
+  <header class="top">
+    <div class="brand">
+      <svg class="mark" id="headMark" viewBox="0 0 100 100" role="img" aria-label="Record"><use href="#rec"/></svg>
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1>Music Collection</h1>
+      </div>
+    </div>
+    <div class="status"><span>Live from your sheet</span><button class="btn" type="button" id="spinBtn">Refresh</button></div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" aria-selected="true">Log</button>
+    <button class="tab" role="tab" aria-selected="false">Plan</button>
+    <button class="tab" role="tab" aria-selected="false">Library</button>
+    <button class="tab" role="tab" aria-selected="false">Dashboard</button>
+    <button class="tab" role="tab" aria-selected="false">Tools</button>
+    <button class="tab" role="tab" aria-selected="false">Discover</button>
+  </nav>
+
+  <section class="tiles" aria-label="Summary">
+    <div class="panel tile"><small>Heard in 2026</small><strong>42</strong><span>of 52 album goal</span><div class="bar"><i></i></div></div>
+    <div class="panel tile"><small>Listens in Oct</small><strong>18</strong><span>9 albums</span></div>
+    <div class="panel tile hot"><small>Listening streak</small><strong>6</strong><span>days, including today</span></div>
+    <div class="panel tile"><small>Owned on vinyl</small><strong>15</strong><span>29 on the wish list</span></div>
+  </section>
+
+  <section class="grid2" aria-label="Log">
+    <div class="panel stack">
+      <div class="ph"><h2>Log a listen</h2></div>
+      <input class="field" type="text" placeholder="Search title or artist" aria-label="Search title or artist">
+      <div class="pills"><button class="chip" type="button" aria-pressed="true">Today</button><button class="chip" type="button" aria-pressed="false">Yesterday</button><button class="chip" type="button" aria-pressed="false">Pick a date</button></div>
+      <div class="pills"><button class="btn pri" type="button">Save listen</button><span class="muted">1 play · no note</span></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>On rotation</h2><span class="muted">Played in the last 14 days</span></div>
+      <ul class="rows">
+        <li><svg class="mini" viewBox="0 0 100 100"><use href="#rec"/></svg><div><b>Neon Harbour</b><span class="m">The Static Choir · 3 plays · last today</span></div><button class="btn pri" type="button">Played today</button></li>
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#ff4357;--deep:#b01227;--vein:#2a0007"><use href="#rec"/></svg><div><b>Paper Satellites</b><span class="m">Lowtide · 1 play · last fri</span></div><button class="btn pri" type="button">Played today</button></li>
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#f4cf2d;--deep:#c99a0c;--vein:#2b1f00"><use href="#rec"/></svg><div><b>Velvet Engines</b><span class="m">Aurora Ten · 2 plays · last tue</span></div><button class="btn pri" type="button">Played today</button></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Recent entries</h2><span class="muted">Tap Edit to fix a date, plays or note</span></div>
+      <ul class="rows">
+        <li><svg class="mini" viewBox="0 0 100 100"><use href="#rec"/></svg><div><b>Neon Harbour</b><span class="m">Today · 3 plays · side B on repeat</span></div><button class="btn" type="button">Edit</button></li>
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#ff4357;--deep:#b01227;--vein:#2a0007"><use href="#rec"/></svg><div><b>Paper Satellites</b><span class="m">Fri · 1 play</span></div><button class="btn" type="button">Edit</button></li>
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#e056dc;--deep:#8a1f96;--vein:#1f0626"><use href="#rec"/></svg><div><b>Glass Orchard</b><span class="m">11 Oct 26 · 1 play · first spin</span></div><button class="btn" type="button">Edit</button></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>First listens</h2><span class="muted">Up next albums you've played but not rated</span></div>
+      <ul class="rows">
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#e056dc;--deep:#8a1f96;--vein:#1f0626"><use href="#rec"/></svg><div><b>Glass Orchard</b><span class="m">Mina Vale · 2 spins, not rated yet</span></div><button class="btn pri" type="button">Rate</button></li>
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#3bd1a0;--deep:#0e7a5a;--vein:#021a12"><use href="#rec"/></svg><div><b>Night Shift Radio</b><span class="m">The Hollow Kites · 1 spin, not rated yet</span></div><button class="btn pri" type="button">Rate</button></li>
+        <li><svg class="mini" viewBox="0 0 100 100" style="--c:#ff8a2a;--deep:#c4560a;--vein:#3b1400"><use href="#rec"/></svg><div><b>Copper Skies</b><span class="m">Juno &amp; the Tide · 1 spin, not rated yet</span></div><button class="btn pri" type="button">Rate</button></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sect" aria-labelledby="pH">
+    <h2 id="pH">Six pressings</h2>
+    <p>Each colour lasts two months and changes on the 1st. There is no gradual drift during the month. Tap one to preview it.</p>
+    <div class="cards" id="pcards"></div>
+  </section>
+
+  <section class="sect" aria-labelledby="iH">
+    <h2 id="iH">The record symbol</h2>
+    <p>One disc for the header, the browser tab and the installed icon. It is drawn to sit inside a circle, so Firefox's round crop does not clip it. The installed icon cannot change colour by month, so it keeps one fixed pressing.</p>
+    <div class="icons">
+      <div class="ic"><div class="rnd" style="width:128px;height:128px"><svg viewBox="0 0 100 100"><use href="#rec"/></svg></div>Round, 128</div>
+      <div class="ic"><div class="rnd" style="width:64px;height:64px"><svg viewBox="0 0 100 100"><use href="#rec"/></svg></div>Round, 64</div>
+      <div class="ic"><div class="sq" style="width:64px;height:64px"><svg viewBox="0 0 100 100"><use href="#rec"/></svg></div>Square, 64</div>
+      <div class="ic"><div class="rnd" style="width:32px;height:32px"><svg viewBox="0 0 100 100"><use href="#rec"/></svg></div>Tab, 32</div>
+      <div class="ic"><div class="rnd" style="width:16px;height:16px"><svg viewBox="0 0 100 100"><use href="#rec"/></svg></div>Tab, 16</div>
+    </div>
+  </section>
+
+  <section class="sect" aria-labelledby="tH">
+    <h2 id="tH">Three type pairings</h2>
+    <p>Headings and big numbers use the display face. Everything you read at length uses the body face, and both stay easy to read. Tap one to apply it to the whole page.</p>
+    <div class="fonts" id="fcards"></div>
+  </section>
+</main>
+
+<script>
+const P = [
+  { k: 'emerald',   n: 'Emerald',       m: 'Jan–Feb', c: '#3bd1a0', months: [0, 1] },
+  { k: 'canary',    n: 'Canary',        m: 'Mar–Apr', c: '#f4cf2d', months: [2, 3] },
+  { k: 'midnight',  n: 'Midnight blue', m: 'May–Jun', c: '#5aa3f5', months: [4, 5] },
+  { k: 'tangerine', n: 'Tangerine',     m: 'Jul–Aug', c: '#ff8a2a', months: [6, 7] },
+  { k: 'magenta',   n: 'Magenta',       m: 'Sep–Oct', c: '#e056dc', months: [8, 9] },
+  { k: 'crimson',   n: 'Crimson',       m: 'Nov–Dec', c: '#ff4357', months: [10, 11] }
+];
+const F = [
+  { k: 'sleeve', n: 'Sleeve', d: 'Fraunces', b: 'Atkinson Hyperlegible', df: "'Fraunces', Georgia, serif", bf: "'Atkinson Hyperlegible', system-ui, sans-serif", note: 'A soft, warm serif like an old record sleeve.' },
+  { k: 'label',  n: 'Label',  d: 'Bricolage Grotesque', b: 'Lexend', df: "'Bricolage Grotesque', system-ui, sans-serif", bf: "'Lexend', system-ui, sans-serif", note: 'Characterful sans with a very open, easy body face.' },
+  { k: 'wide',   n: 'Wide',   d: 'Unbounded', b: 'Atkinson Hyperlegible', df: "'Unbounded', system-ui, sans-serif", bf: "'Atkinson Hyperlegible', system-ui, sans-serif", note: 'Wide and round, like a record label logo. Best kept for short headings.' }
+];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const root = document.documentElement;
+const now = new Date();
+const state = { p: (P.find(x => x.months.includes(now.getMonth())) || P[4]).k, f: 'label', bg: 'marble' };
+const $ = id => document.getElementById(id);
+
+function apply() {
+  root.dataset.p = state.p; root.dataset.f = state.f; root.dataset.bg = state.bg;
+  const p = P.find(x => x.k === state.p);
+  $('eyebrow').textContent = now.getDate() + ' ' + MONTHS[now.getMonth()] + ' · ' + p.n + ' pressing';
+  document.querySelectorAll('[data-pk]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pk === state.p));
+  document.querySelectorAll('[data-fk]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fk === state.f));
+  document.querySelectorAll('[data-bg]').forEach(b => { if (b.tagName === 'BUTTON') b.setAttribute('aria-pressed', b.dataset.bg === state.bg); });
+}
+$('pressings').innerHTML = P.map(p => `<button class="chip sw" type="button" data-pk="${p.k}" style="--sc:${p.c}"><i></i>${p.n}</button>`).join('');
+$('typebtns').innerHTML = F.map(f => `<button class="chip" type="button" data-fk="${f.k}">${f.n}</button>`).join('');
+$('pcards').innerHTML = P.map(p => `<button class="card" type="button" data-pk="${p.k}" data-p="${p.k}"><svg viewBox="0 0 100 100"><use href="#rec"/></svg><b>${p.n}</b><span>${p.m}</span></button>`).join('');
+$('fcards').innerHTML = F.map(f => `<button class="fcard" type="button" data-fk="${f.k}" style="--display:${f.df};--body:${f.bf};font-family:${f.bf}">
+  <span class="tn">${f.n}</span><span class="big" style="font-family:${f.df}">Music Collection</span>
+  <span class="num" style="font-family:${f.df}">42</span>
+  <span>${f.note}</span><span class="muted">Headings: ${f.d}. Body: ${f.b}.</span></button>`).join('');
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.pk) state.p = b.dataset.pk;
+  else if (b.dataset.fk) state.f = b.dataset.fk;
+  else if (b.dataset.bg) state.bg = b.dataset.bg;
+  else return;
+  apply();
+});
+$('spinBtn').addEventListener('click', () => { const m = $('headMark'); m.classList.remove('spin'); void m.getBoundingClientRect(); m.classList.add('spin'); });
+// tabs are decorative here
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t))));
+apply();
+</script>

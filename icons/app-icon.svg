@@ -1,5 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" ry="96" fill="#202230"/>
-  <circle cx="256" cy="256" r="196" fill="none" stroke="#3fa4b8" stroke-width="6"/>
-  <text x="256" y="256" text-anchor="middle" dominant-baseline="central" font-family="'Atkinson Hyperlegible', Arial, sans-serif" font-weight="700" font-size="200" fill="#eef0fa">S&amp;G</text>
+  <defs><clipPath id="clipDisc"><circle cx="50" cy="50" r="48"/></clipPath></defs>
+  <rect width="512" height="512" fill="#14151f"/>
+  <g transform="translate(51.19999999999999 51.19999999999999) scale(4.096)">
+    <circle cx="50" cy="50" r="48" fill="#8a1f96"/>
+    <g clip-path="url(#clipDisc)" fill="none">
+      <path d="M-5 52 C25 38 45 68 75 52 S100 44 108 50" stroke="#e056dc" stroke-width="7" opacity=".38"/>
+      <path d="M-5 32 C18 18 32 48 54 40 S88 22 106 36" stroke="#1f0626" stroke-width="2.6" opacity=".8"/>
+      <path d="M-5 74 C22 86 40 58 66 68 S94 80 106 64" stroke="#1f0626" stroke-width="2.2" opacity=".8"/>
+      <path d="M24 -5 C34 20 14 38 34 58 S46 90 38 106" stroke="#1f0626" stroke-width="1.8" opacity=".7"/>
+      <path d="M72 -5 C60 22 84 40 72 60 S88 88 78 106" stroke="#1f0626" stroke-width="1.5" opacity=".7"/>
+      <circle cx="50" cy="50" r="42" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+      <circle cx="50" cy="50" r="37" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+      <circle cx="50" cy="50" r="32" stroke="#000" stroke-opacity=".34" stroke-width=".8"/>
+      <circle cx="50" cy="50" r="27" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+      <path d="M50 50 L96 22 A48 48 0 0 1 99 38 Z" fill="#fff" fill-opacity=".16" stroke="none"/>
+      <path d="M50 50 L4 78 A48 48 0 0 1 1 62 Z" fill="#fff" fill-opacity=".10" stroke="none"/>
+    </g>
+    <circle cx="50" cy="50" r="15.5" fill="#12131c"/>
+    <circle cx="50" cy="50" r="15.5" fill="none" stroke="#e056dc" stroke-width="1.4"/>
+    <circle cx="50" cy="50" r="2.3" fill="#0e0f16"/>
+  </g>
 </svg>

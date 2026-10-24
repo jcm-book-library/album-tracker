@@ -1,18 +1,27 @@
-# Sleeves & Grooves
+# Music Collection
 
-Album tracker, a sister app to the book tracker "Jackets & Manuscripts"
+Album tracker (named Sleeves & Grooves until 24 Oct 2026; the repo keeps the name `album-tracker`), a sister app to the book tracker "Jackets & Manuscripts"
 (`jcm-book-library/my-book-library`). It is a friendlier front end for the
 🎸 tab of the "Entertainment Tracker" Google Sheet, which stays the source of truth.
 
-Status: Stage 1 (Log, Library) live. Artifact: https://claude.ai/artifact/7WTduYo8DU1jx1Hjx25vd3
+Status: Log, Plan, Library, Dashboard, Tools, Discover and Tracks built. Private artifact: https://claude.ai/artifact/7WTduYo8DU1jx1Hjx25vd3
 See [ROADMAP.md](ROADMAP.md).
 
-## Hosting (planned)
+## Hosting
 
 - `app.html`: single self-contained page, published as a private claude.ai
   artifact (Sheets through the artifact `mcp` capability).
 - `index.html`: built from `app.html` by `tools/build-pages.py` for GitHub Pages
   at `jcm-book-library.github.io/album-tracker/`, using Google sign-in.
+
+## Sheet id (kept out of this public repo)
+
+- `app.html` ships with an empty `BUILT_SHEET_ID`. On GitHub Pages the app asks once for the
+  sheet link and keeps it in that browser only (`sg-config`).
+- The private claude.ai artifact is built with the id filled in, to a file outside the repo:
+  `python3 tools/build-artifact.py "<sheet link>" /path/outside/repo/app.html`, then publish that
+  file to the existing artifact URL. Never commit that output.
+- Tests use made-up albums (`tests/fixture-albums.json`) and a fake sheet id.
 
 ## Sheet rules
 
@@ -44,3 +53,23 @@ See [ROADMAP.md](ROADMAP.md).
   copied from the Notes hyperlinks (24 albums), stored as plain text so the app can read it.
   Notes keeps its text and links as before.
 - Checked by script afterwards: A–O identical to the backup, all 24 links match their Notes hyperlink.
+
+### 2026-10-24 (Tracks)
+
+- New tab `🎸 Tracks`, one row per track:
+  `id | albumId | album | side | no | title | length | copied | note`.
+  - `id`: permanent number from 5001, highest + 1; duplicates highlighted red.
+  - `albumId` links to the album's `id` in 🎸. `copied` is the date the track was copied to MP3 (blank = not yet).
+  - Deleting a track in the app clears that row's cells (found by id first). The row itself
+    stays, empty, so no other row moves; the app skips empty rows.
+  - New tracks (and albums) are appended below the last used row, so a cleared row is never refilled or overwritten.
+- 🎸 itself is unchanged.
+
+## Look
+
+- Dark, with a marbled coloured record behind solid panels. Approved preview: `design/music-collection-preview.html`.
+- Six pressings, two months each, changing on the 1st (no daily drift):
+  Jan–Feb Emerald, Mar–Apr Canary, May–Jun Midnight blue, Jul–Aug Tangerine, Sep–Oct Magenta, Nov–Dec Crimson.
+  The Tools tab's Look panel can override the pressing or switch to a plain dark background (this browser only).
+- Type: Bricolage Grotesque for headings and big numbers, Lexend for body text.
+- Installed icon: the record in the Magenta pressing, drawn inside a circle so round crops don't clip it.

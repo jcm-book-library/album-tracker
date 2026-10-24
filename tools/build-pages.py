@@ -16,11 +16,11 @@ HEAD = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#202230">
+<meta name="theme-color" content="#0e0f16">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sleeves">
-<title>Sleeves &amp; Grooves</title>
+<meta name="apple-mobile-web-app-title" content="Music">
+<title>Music Collection</title>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -28,17 +28,17 @@ HEAD = """<!doctype html>
 """
 
 MANIFEST = {
-    "name": "Sleeves & Grooves",
-    "short_name": "Sleeves",
-    "description": "Album tracker",
+    "name": "Music Collection",
+    "short_name": "Music",
+    "description": "Music collection and listening log",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",
-    "background_color": "#202230",
-    "theme_color": "#202230",
+    "background_color": "#0e0f16",
+    "theme_color": "#0e0f16",
     "icons": [
-        {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-        {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+        {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+        {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
     ],
 }
 
