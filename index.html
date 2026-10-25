@@ -387,7 +387,7 @@ div.hbar{padding:3px 6px}
 .s-board.compact .s-row{--s:clamp(52px,13cqw,100px)}
 .s-standing{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));align-items:end}
 .s-cell{display:flex;justify-content:center;align-items:flex-end}
-.s-stack{--sw:12px;--pitch:9.5px;--ang:12deg;--w0:calc(var(--s) * .6);--R:calc(var(--s) * .5);--stw:calc((var(--k) - 1) * var(--pitch) + var(--sw));position:relative;z-index:3;flex:none;width:var(--stw);height:var(--s);margin-left:calc(var(--s) * .24);outline:none}
+.s-stack{--sw:12px;--pitch:9.5px;--ang:12deg;--w0:calc(var(--s) * .6);--R:calc(var(--s) * .5);--stw:calc((var(--k) - 1) * var(--pitch) + var(--sw));position:relative;z-index:3;flex:none;width:var(--stw);height:var(--s);margin-left:calc(var(--s) * .1);margin-right:calc(var(--s) * .18);outline:none}
 .s-stack.more{margin-right:var(--morew,44px)}
 .s-more{position:absolute;left:calc(100% + 8px);bottom:6px;min-width:34px;padding:2px 8px;border-radius:999px;background:rgba(14,15,22,.92);border:1px solid rgba(255,255,255,.22);color:var(--muted);font-size:12px;font-weight:700;line-height:1.5;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
 .s-grid{--s:clamp(52px,12.2cqw,132px);position:relative;z-index:2;display:grid;grid-template-columns:repeat(var(--gc),minmax(0,1fr));row-gap:78px;align-items:end}
@@ -427,7 +427,7 @@ div.hbar{padding:3px 6px}
 .s-cell.last .s-it:hover .s-cap,.s-cell.last .s-it:focus-within .s-cap{transform:none}
 
 /* the packed stack: narrow slices of the remaining sleeves, leaning like records filed in a crate */
-.s-it.slice{position:absolute;bottom:0;left:var(--x);--x:calc(var(--i) * var(--pitch));width:var(--sw);height:var(--s);z-index:calc(var(--i) + 1);transform-origin:50% 100%;transform:translateX(0) rotate(-10deg);transition:transform .12s ease-out,width .12s ease-out}
+.s-it.slice{position:absolute;bottom:0;left:var(--x);--x:calc(var(--i) * var(--pitch));width:var(--sw);height:var(--s);z-index:calc(var(--i) + 1);transform-origin:50% 100%;transform:translateX(0) rotate(10deg);transition:transform .12s ease-out,width .12s ease-out}
 .s-it.slice::before{display:none}
 .s-it.slice:hover,.s-it.slice:focus-within{z-index:calc(var(--i) + 1)}
 .s-it.slice .s-lift{height:100%;transition:transform .12s ease-out}
@@ -437,7 +437,7 @@ div.hbar{padding:3px 6px}
 .s-it.slice.sel .s-art{outline-offset:0}
 .s-it.slice .s-chip,.s-it.slice .s-pick,.s-it.slice .s-cap,.s-it.slice .s-cd{display:none}
 .s-it.slice .s-chip{font-size:9px;padding:2px 6px}
-.s-stack.fan{z-index:60;--ang:15deg;--hw:1.3;--ac:calc((var(--ci) - var(--f0) - (var(--m) - 1) / 2) * var(--ang));--px:min(calc(var(--ci) * var(--pitch) + var(--sw) / 2 - var(--s) * .087 - (var(--hw) - 1) * var(--w0) / 2 - (var(--R) + var(--s) / 2) * sin(var(--ac))),calc(var(--stw) - var(--s) * .6))}
+.s-stack.fan{z-index:60;--ang:15deg;--hw:1.3;--ac:calc((var(--ci) - var(--f0) - (var(--m) - 1) / 2) * var(--ang));--px:min(calc(var(--ci) * var(--pitch) + var(--sw) / 2 + var(--s) * .087 - (var(--hw) - 1) * var(--w0) / 2 - (var(--R) + var(--s) / 2) * sin(var(--ac))),calc(var(--stw) - var(--s) * .6))}
 .s-stack.fan .s-it.slice.fanned{--a:calc((var(--j) - (var(--m) - 1) / 2) * var(--ang));width:var(--w0);z-index:calc(40 + var(--j));transform-origin:calc(var(--w0) / 2) calc(100% + var(--R));transform:translateX(calc(var(--px) - var(--w0) / 2 - var(--x))) rotate(var(--a))}
 .s-stack.fan:not(.touch) .s-it.slice.fanned:not(.cur){pointer-events:none}
 .s-stack.fan .s-it.slice.fanned .s-art{border-radius:4px;box-shadow:0 0 0 1px rgba(255,255,255,.14) inset,-4px 4px 9px -3px var(--shadow)}
@@ -2083,9 +2083,9 @@ document.addEventListener('pointermove', e => {
   if (!st || e.target.closest('.s-chip, .s-pick, .s-chev, .s-more')) return;   // on a card's own controls: hold still
   const sl = e.target.closest('.slice:not(.fanned)'); let idx;
   if (sl) idx = +sl.dataset.i;
-  else {   // over the raised card or the gap the fan left: work out which packed slice is under the pointer (the slices lean 10deg)
+  else {   // over the raised card or the gap the fan left: work out which packed slice is under the pointer (the slices lean 10deg to the right)
     const r = st.getBoundingClientRect(), cs = getComputedStyle(st), pitch = parseFloat(cs.getPropertyValue('--pitch')), sw = parseFloat(cs.getPropertyValue('--sw'));
-    idx = Math.round((e.clientX - r.left - sw / 2 + (r.bottom - e.clientY) * 0.1736) / pitch);
+    idx = Math.round((e.clientX - r.left - sw / 2 - (r.bottom - e.clientY) * 0.1736) / pitch);
     idx = Math.max(0, Math.min(st.querySelectorAll('.slice').length - 1, idx));
   }
   const f = shelfUI.fan; if (f && f.key === stackKey(st) && f.idx === idx && f.src === 'ptr') return;
