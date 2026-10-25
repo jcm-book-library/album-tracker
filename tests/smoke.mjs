@@ -4,6 +4,7 @@
 //
 // Usage:  npm test            (from tests/)
 // Env:    APP_HTML=/path/to/page.html   test a different page (used for harness checks)
+//         SMOKE_ONLY=name1,name2        run only these suites (home, collection, relabel, pick, menu, dnd, log, tools, ...)
 //         CHROMIUM_PATH=/path/to/chromium   override the browser binary
 import { chromium } from 'playwright';
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
@@ -33,8 +34,35 @@ function isoDay(offsetDays) {
 }
 
 const S4 = { onDay: [], quiet: '', stale: '', release: 'Test Album 060 LP' };
-function buildSeed() {
-  const albums = FIXTURE.values;                 // [header, ...rows]; id is column J (index 9)
+// Sheet columns of 🎸: D Status, F Format, Q Favourite, R Labelled (only in the second seed variant)
+const COLS = { rating: 1, status: 3, format: 5, release: 6, year: 7, id: 9, fav: 16, labelled: 17 };
+const S5 = { fav: [], nope: [], soon: [] };   // what buildSeed added for the shelves, by title
+function buildSeed({ labelled = false } = {}) {
+  const albums = FIXTURE.values.map(r => [...r]);   // a copy: FIXTURE itself stays the fixed reference. [header, ...rows]; id is column J (index 9)
+  // New columns after the fixture's A:O. P (Buy link) is added inside the page, so it is left blank here.
+  albums[0].push('', 'Favourite');
+  if (labelled) albums[0].push('Labelled');
+  for (const r of albums.slice(1)) while (r.length < albums[0].length) r.push('');
+  {
+    const rows = albums.slice(1), title = t => rows.find(r => r[0] === t);
+    // Didn't like: four Listened albums with middling ratings (not rows other tests rely on)
+    S5.nope = ['Test Album 092 LP', 'Test Album 087 LP', 'Test Album 095 LP', 'Test Album 102 LP'];
+    S5.nope.forEach(t => { title(t)[COLS.status] = "Didn't like"; });
+    // Coming Soon: the fixture's one (year only) plus two more, so the Upcoming shelf has dated and undated albums.
+    // They come from the end of the unrated Listen list so the first ones (Plan sample data) are untouched.
+    const listen = rows.filter(r => r[COLS.status] === 'Listen' && !r[COLS.rating]);
+    const [a, b, c] = listen.slice(-3);
+    a[COLS.status] = 'Coming Soon'; a[COLS.release] = isoDay(-12);
+    b[COLS.status] = 'Coming Soon'; b[COLS.release] = isoDay(-40);
+    c[COLS.status] = 'Coming Soon'; c[COLS.year] = '2027';
+    S5.soon = [a[0], b[0], c[0], title('Test Album 123 LP')[0]];
+    // Favourites: four dates on albums with four different labels (Heard, Owned, Vinyl wish list, To hear)
+    const wish = rows.find(r => r[COLS.status] === 'Purchase' && r[COLS.format] === 'Vinyl (Wanted)');
+    const hear = listen[listen.length - 8];
+    const favs = [[title('Test Album 125 LP'), isoDay(30)], [title('Test Album 044 LP'), isoDay(5)], [wish, isoDay(60)], [hear, isoDay(12)]];
+    favs.forEach(([r, d]) => { r[COLS.fav] = d; });
+    S5.fav = favs.map(([r, d]) => ({ title: r[0], date: d }));
+  }
   const picks = [1, 4, 8, 14, 20];               // fixture rows used for the Log sample
   const offsets = [9, 7, 5, 2, 0];               // days ago: spread over the last 10 days
   const plays = ['1', '1', '2', '1', '3'];
@@ -383,7 +411,7 @@ async function planTests(page, vp) {
   record(n, 'Plan: no sideways scroll after interactions', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
   const wAll = await page.evaluate(() => window.__writes.concat([]).every(w => w.sheet.startsWith('🎸')));
   record(n, 'Plan: every write stays on a 🎸 tab', wAll);
-  await page.screenshot({ path: join(OUT, `${n}-plan.png`), fullPage: true });
+  await page.screenshot({ path: join(OUT, `${n}-plan-after.png`), fullPage: true });
 }
 
 // ---------- Dashboard tab ----------
@@ -521,14 +549,14 @@ async function dashTests(page, vp, seed) {
   record(n, 'Dashboard: never writes to the sheet (window.__writes unchanged)', w === 0, `${w} write(s)`);
   const o = await page.evaluate(overflow);
   record(n, 'Dashboard: no sideways scroll', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
-  await page.screenshot({ path: join(OUT, `${n}-dashboard.png`), fullPage: true });
+  await page.screenshot({ path: join(OUT, `${n}-dashboard-log.png`), fullPage: true });
 }
 
 // Same page, but the stub's 🎸 Log has only its header
 async function dashEmptyLogTest(browser, vp, seed, url) {
   const n = vp.name;
   const empty = { ...seed, '🎸 Log': [seed['🎸 Log'][0]] };
-  const { context, page, problems } = await openContext(browser, vp, empty);
+  const { context, page, problems } = await openContext(browser, vp, empty, { showLog: true });
   await page.goto(url);
   await page.waitForLoadState('load');
   await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
@@ -552,7 +580,7 @@ async function dashEmptyLogTest(browser, vp, seed, url) {
 // Chart.js refused: everything except the canvas still works
 async function dashNoChartTest(browser, vp, seed, url) {
   const n = vp.name;
-  const { context, page, problems } = await openContext(browser, vp, seed, { blockChart: true });
+  const { context, page, problems } = await openContext(browser, vp, seed, { blockChart: true, showLog: true });
   await page.goto(url);
   await page.waitForLoadState('load');
   await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
@@ -598,11 +626,12 @@ const MOOD_RULES = {
   'Old favourite': r => parseFloat(r[COL.rating]) >= 9,
   'Anything': () => true,
 };
-const SIX = ['Log', 'Plan', 'Library', 'Dashboard', 'Tools', 'Discover'];
+const FIVE = ['Home', 'Collection', 'Plan', 'Dashboard', 'Tools'];
+const SIX = ['Home', 'Collection', 'Log', 'Plan', 'Dashboard', 'Tools'];   // with the listening log switched on
 
 // A fresh page on the live stub, already on the given tab
-async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion } = {}) {
-  const ctx = await openContext(browser, vp, seed, { reducedMotion });
+async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion, showLog } = {}) {
+  const ctx = await openContext(browser, vp, seed, { reducedMotion, showLog });
   if (clockTo) await ctx.context.clock.setFixedTime(clockTo);
   await ctx.page.goto(url);
   await ctx.page.waitForLoadState('load');
@@ -615,9 +644,9 @@ async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion }
 // ---------- Layout (symmetry) ----------
 async function layoutTests(browser, vp, seed, url) {
   const n = vp.name, laptop = vp.width >= 1000;
-  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'log');
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'log', { showLog: true });
   await page.evaluate(() => { window.__writes.length = 0; });
-  for (const t of ['log', 'plan', 'library', 'dashboard', 'tools', 'discover']) {
+  for (const t of ['home', 'collection', 'log', 'plan', 'dashboard', 'tools']) {
     await page.locator(`#tab-${t}`).click();
     await page.waitForTimeout(250);
     const o = await page.evaluate(overflow);
@@ -678,15 +707,14 @@ async function layoutTests(browser, vp, seed, url) {
 
 async function toolsTests(browser, vp, seed, url) {
   const n = vp.name;
-  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'tools');
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'tools', { showLog: true });
 
-  // Six pills, in order, all reachable; the bar scrolls inside itself rather than the page
-  const labels = await page.locator('nav.tabs .tab').allTextContents();
-  record(n, 'Tabs: six pills in order Log, Plan, Library, Dashboard, Tools, Discover', labels.join() === SIX.join(), labels.join());
-  await page.locator('#tab-discover').click();
-  const reach = await page.evaluate(() => { const nav = document.querySelector('nav.tabs').getBoundingClientRect(), b = document.getElementById('tab-discover').getBoundingClientRect(); return { inside: b.left >= nav.left - 1 && b.right <= nav.right + 1, sw: document.documentElement.scrollWidth, iw: innerWidth }; });
-  record(n, 'Tabs: the last pill is brought into view and the page does not scroll sideways', reach.inside && reach.sw <= reach.iw, JSON.stringify(reach));
+  // Six pills with the log on, in order, all reachable; the bar scrolls inside itself rather than the page
+  const labels = await page.locator('nav.tabs .tab:visible').allTextContents();
+  record(n, 'Tabs: with the log on, six pills in order Home, Collection, Log, Plan, Dashboard, Tools', labels.join() === SIX.join(), labels.join());
   await page.locator('#tab-tools').click();
+  const reach = await page.evaluate(() => { const nav = document.querySelector('nav.tabs').getBoundingClientRect(), b = document.getElementById('tab-tools').getBoundingClientRect(); return { inside: b.left >= nav.left - 1 && b.right <= nav.right + 1, sw: document.documentElement.scrollWidth, iw: innerWidth }; });
+  record(n, 'Tabs: the last pill is brought into view and the page does not scroll sideways', reach.inside && reach.sw <= reach.iw, JSON.stringify(reach));
   await page.waitForTimeout(150);
   let o = await page.evaluate(overflow);
   record(n, 'Tools: renders with no sideways scroll', o.sw <= o.iw && (await page.locator('#view-tools').isVisible()), `scrollWidth ${o.sw} vs ${o.iw}`);
@@ -710,8 +738,9 @@ async function toolsTests(browser, vp, seed, url) {
     record(n, `Lucky dip: "${mood}" always returns an album that fits (${count.trim()})`, ok, titles.join(' | '));
     record(n, `Lucky dip: "${mood}" Another gives a different album each time`, differs, titles.join(' | '));
   }
-  const card = await page.evaluate(() => { const c = document.getElementById('dipCard'); return { h3: !!c.querySelector('h3'), meta: c.querySelector('.m').textContent, btns: [...c.querySelectorAll('button')].map(b => b.textContent) }; });
-  record(n, 'Lucky dip: card shows artist/year and has Another, Log a listen today and Up next', card.h3 && /Test Artist/.test(card.meta) && /^Another,Log a listen today,(On )?Up next$/.test(card.btns.join()), JSON.stringify(card));
+  const card = await page.evaluate(() => { const c = document.getElementById('dipCard'); return { h3: c.querySelector('h3') && c.querySelector('h3').textContent, meta: c.querySelector('.m').textContent, btns: [...c.querySelectorAll('button')].map(b => b.textContent) }; });
+  const cardRow = fxByTitle(card.h3) || [];   // some fixture albums have no artist or year, so the card must show exactly what its row has
+  record(n, 'Lucky dip: card shows artist/year and has Another, Log a listen today and Up next', !!card.h3 && (!cardRow[COL.artist] || card.meta.includes(cardRow[COL.artist])) && (!cardRow[COL.year] || card.meta.includes(cardRow[COL.year])) && /^Another,Log a listen today,(On )?Up next$/.test(card.btns.join()), JSON.stringify(card));
   // Log a listen today from the dip: one append to 🎸 Log, dated today
   await page.locator('#dipMoods .chip[data-m="Something new"]').click();
   // keep the sample nudge albums out of this step (the dip is random)
@@ -852,7 +881,7 @@ async function toolsTests(browser, vp, seed, url) {
 // Goal planner writes: on its own page so the write log is exact
 async function goalTests(browser, vp, seed, url) {
   const n = vp.name;
-  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'tools');
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'tools', { showLog: true });
   const goalRow = await page.evaluate(() => window.__sheet['🎸 Settings'].findIndex(r => r[0] === 'yearGoalAlbums') + 1);
   await page.evaluate(() => { window.__writes.length = 0; });
   await page.locator('#goalOut button', { hasText: 'Change goal' }).click();
@@ -883,7 +912,7 @@ async function goalTests(browser, vp, seed, url) {
 
   // A Settings tab without the key: one appended row [ 'yearGoalAlbums, 40 ] and nothing else
   const noKey = { ...seed, '🎸 Settings': seed['🎸 Settings'].filter(r => r[0] !== 'yearGoalAlbums') };
-  const b = await freshPage(browser, vp, noKey, url, 'tools');
+  const b = await freshPage(browser, vp, noKey, url, 'tools', { showLog: true });
   await b.page.evaluate(() => { window.__writes.length = 0; });
   await b.page.locator('#goalOut button', { hasText: 'Change goal' }).click();
   await b.page.locator('#goalIn').fill('40');
@@ -895,7 +924,7 @@ async function goalTests(browser, vp, seed, url) {
 
   // Duplicate key: refuse, write nothing
   const dup = { ...seed, '🎸 Settings': [...seed['🎸 Settings'], ['yearGoalAlbums', '99']] };
-  const c = await freshPage(browser, vp, dup, url, 'tools');
+  const c = await freshPage(browser, vp, dup, url, 'tools', { showLog: true });
   await c.page.evaluate(() => { window.__writes.length = 0; });
   await c.page.locator('#goalOut button', { hasText: 'Change goal' }).click();
   await c.page.locator('#goalIn').fill('70');
@@ -905,11 +934,11 @@ async function goalTests(browser, vp, seed, url) {
   await c.context.close();
 }
 
-async function discoverTests(browser, vp, seed, url) {
+async function homeTests(browser, vp, seed, url) {
   const n = vp.name;
-  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'discover');
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'home', { showLog: true });
   let o = await page.evaluate(overflow);
-  record(n, 'Discover: renders with no sideways scroll', o.sw <= o.iw && (await page.locator('#view-discover').isVisible()), `scrollWidth ${o.sw} vs ${o.iw}`);
+  record(n, 'Home: renders with no sideways scroll', o.sw <= o.iw && (await page.locator('#view-home').isVisible()), `scrollWidth ${o.sw} vs ${o.iw}`);
   const pool = fxRows().filter(r => fxHeard(r) && parseFloat(r[COL.rating]) >= 8).map(r => r[COL.title]);
   const pick1 = await page.locator('#aotdBox h3').textContent();
   record(n, 'Album of the day: comes from the rated-8-or-more pool', pool.includes(pick1), `${pick1} (pool ${pool.length})`);
@@ -923,7 +952,7 @@ async function discoverTests(browser, vp, seed, url) {
   for (let i = 0; i < 2; i++) {
     await page.reload();
     await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
-    await page.locator('#tab-discover').click();
+    await page.locator('#tab-home').click();
     seen.push(await page.locator('#aotdBox h3').textContent());
   }
   record(n, 'Album of the day: the same album after two reloads on the same day', new Set(seen).size === 1, seen.join(' | '));
@@ -948,22 +977,28 @@ async function discoverTests(browser, vp, seed, url) {
   const an = await page.evaluate(() => [...document.querySelectorAll('#annivBox .mile-head')].map(h => ({ m: h.dataset.milestone, text: h.textContent, items: h.nextElementSibling.querySelectorAll('li').length })));
   const wantAn = [10, 20, 25, 30, 40, 50, 60].map(m => ({ m: String(m), n: fxRows().filter(r => parseFloat(r[COL.year]) === Y - m).length })).filter(x => x.n);
   record(n, 'Anniversaries: one group per milestone that has albums, in order, with the right counts', JSON.stringify(an.map(a => [a.m, Math.min(a.items, 99)])) === JSON.stringify(wantAn.map(a => [a.m, Math.min(a.n, 6)])) && an.every((a, i) => a.text.includes(`released ${Y - Number(a.m)}`) && a.text.includes(`${wantAn[i].n} album`)), JSON.stringify(an));
-  // Coming soon
-  const soon = await page.locator('#soonList2 li').allTextContents();
-  const wantSoon = fxRows().filter(r => r[COL.status] === 'Coming Soon');
-  record(n, 'Coming soon: lists Coming Soon albums with their year', soon.length === wantSoon.length && wantSoon.every(r => soon.some(t => t.includes(r[COL.title]) && t.includes(r[COL.year]))), soon.join(' | '));
+  // Upcoming: the Coming Soon albums, soonest first, each with a countdown (real future date) or its year
+  const upcoming = await page.evaluate(() => [...document.querySelectorAll('#upcomingList > li:not(.empty)')].map(li => li.textContent));
+  const todayIso0 = await page.evaluate(() => today());
+  const wantSoon = fxSeedRows(seed).filter(r => labelFor(r) === 'upcoming')
+    // Order: real future dates first (soonest first), then year-only for this year or later, then years already past, then nothing
+    .map(r => ({ r, key: r[COLS.release] >= todayIso0 ? `0 ${r[COLS.release]}` : !r[COLS.year] ? '3' : Number(r[COLS.year]) >= Number(todayIso0.slice(0, 4)) ? `1 ${r[COLS.year]}` : `2 ${r[COLS.year]}` }))
+    .sort((x, y) => x.key.localeCompare(y.key) || x.r[0].localeCompare(y.r[0]));
+  const wantText = ({ r }) => r[COLS.release] >= todayIso0 ? `in ${Math.round((new Date(r[COLS.release] + 'T00:00:00') - new Date(todayIso0 + 'T00:00:00')) / 864e5)} days` : r[COLS.year];
+  record(n, 'Upcoming: lists the Coming Soon albums soonest first, each with a countdown or its year', wantSoon.length === 4 && upcoming.length === wantSoon.length && wantSoon.every((x, i) => upcoming[i].includes(x.r[0]) && upcoming[i].endsWith(wantText(x))), upcoming.join(' | '));
+  record(n, 'Upcoming: a release date 12 days away reads "in 12 days"', upcoming.some(t => t.includes(S5.soon[0]) && t.endsWith('in 12 days')), upcoming.join(' | '));
   // Empty states
   const empty = { ...seed, '🎸 Log': [seed['🎸 Log'][0]] };
   o = await page.evaluate(overflow);
-  record(n, 'Discover: no sideways scroll after interactions', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
-  record(n, 'Discover: no console errors or uncaught exceptions', problems.length === 0, problems.slice(0, 2).join(' | '));
-  await page.screenshot({ path: join(OUT, `${n}-discover.png`), fullPage: true });
+  record(n, 'Home: no sideways scroll after interactions', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  record(n, 'Home: no console errors or uncaught exceptions', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await page.screenshot({ path: join(OUT, `${n}-home-log.png`), fullPage: true });
   await context.close();
 
   // Next day: a different album, and "Yesterday's" now names today's pick
   const t0 = new Date(RUN_START);
   const next = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1, 12, 0, 0);
-  const d2 = await freshPage(browser, vp, seed, url, 'discover', { clockTo: next });
+  const d2 = await freshPage(browser, vp, seed, url, 'home', { clockTo: next });
   const pick2 = await d2.page.locator('#aotdBox h3').textContent();
   const yest2 = await d2.page.locator('#aotdBox .yest').textContent();
   record(n, 'Album of the day: tomorrow gives a different album from the pool', pool.includes(pick2) && pick2 !== pick1 && pool.length >= 2, `${pick1} -> ${pick2}`);
@@ -972,18 +1007,18 @@ async function discoverTests(browser, vp, seed, url) {
 
   // No albums rated high enough: friendly empty state, no errors
   const lowSeed = { ...seed, '🎸': seed['🎸'].map((r, i) => (i === 0 ? r : [...r.slice(0, 1), r[1] && parseFloat(r[1]) >= 8 ? '5' : r[1], ...r.slice(2)])) };
-  const e = await freshPage(browser, vp, lowSeed, url, 'discover');
+  const e = await freshPage(browser, vp, lowSeed, url, 'home');
   const et = await e.page.locator('#aotdBox').textContent();
   record(n, 'Album of the day: with nothing rated 8+ it explains what to do', /No albums rated 8 or higher yet/.test(et) && e.problems.length === 0, et.slice(0, 100));
   await e.context.close();
   // Empty log: On this day empty state and Year in review empty state
-  const f = await freshPage(browser, vp, empty, url, 'discover');
+  const f = await freshPage(browser, vp, empty, url, 'home', { showLog: true });
   const ft = await f.page.locator('#onDayList').textContent();
   record(n, 'On this day: with no log and no release dates matching it says so', /Nothing on this date/.test(ft) || /was released/.test(ft), ft.slice(0, 120));
   await f.page.locator('#tab-tools').click();
   const yt = await f.page.locator('#yirBox').textContent();
   record(n, 'Year in review: an empty log gives a friendly empty state', /No listens logged yet/.test(yt), yt.slice(0, 100));
-  record(n, 'Tools and Discover: nothing throws with an empty log', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  record(n, 'Tools and Home: nothing throws with an empty log', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
   await f.context.close();
 }
 
@@ -997,8 +1032,9 @@ const trkWaitMsg = (page, re) => page.waitForFunction(src => new RegExp(src).tes
 const trkWaitSaved = page => page.waitForFunction(() => document.getElementById('statusText').textContent === 'Tracks saved', null, { timeout: 8000 });
 const trkOverflow = page => page.evaluate(() => { const d = document.getElementById('tracksDlg'); return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, dsw: d.scrollWidth, dcw: d.clientWidth }; });
 const trkList = page => page.evaluate(() => [...document.querySelectorAll('#trkList .trk-row')].map(li => ({ id: li.dataset.id, pos: li.querySelector('.pos').textContent, title: li.querySelector('.t') ? li.querySelector('.t').textContent : '' })));
+const toTable = async page => { await page.locator('#tab-collection').click(); await page.locator('#colView button[data-v="table"]').click(); };
 async function openTracksFromLibrary(page, id) {
-  await page.locator('#tab-library').click();
+  await toTable(page);
   if (!(await page.locator(`#libBody tr.row.open[data-id="${id}"]`).count())) await page.locator(`#libBody tr.row[data-id="${id}"]`).click();
   await page.locator('#libBody tr.detail [data-tracks]').click();
   await page.waitForFunction(() => document.getElementById('tracksDlg').open);
@@ -1008,7 +1044,8 @@ async function closeTracks(page) { await page.locator('#trkClose').click(); awai
 
 async function tracksTests(browser, vp, seed, url) {
   const n = vp.name;
-  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'library');
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+  await toTable(page);
   const today = await page.evaluate(() => today());
 
   // Library detail row shows the count, then the Tracks dialog opens
@@ -1154,7 +1191,8 @@ async function tracksTests(browser, vp, seed, url) {
   await context.close();
 
   // Library chip and Dashboard tile (fresh data)
-  const f = await freshPage(browser, vp, seed, url, 'library');
+  const f = await freshPage(browser, vp, seed, url, 'collection');
+  await toTable(f.page);
   const chip = await f.page.locator('#fColl .chip[data-v="copied"]').textContent();
   record(n, 'Tracks: Library "Copied" chip counts albums with a copied track', /Copied\s*2$/.test(chip.trim()), chip);
   await f.page.locator('#fColl .chip[data-v="copied"]').click();
@@ -1167,7 +1205,7 @@ async function tracksTests(browser, vp, seed, url) {
   const tile = await f.page.evaluate(() => { const t = document.querySelector('#dashTiles [data-tile="copied"]'); return t ? { eb: t.querySelector('.eyebrow').textContent, num: t.querySelector('.num').textContent, sub: t.querySelector('.sub').textContent } : null; });
   record(n, 'Tracks: Dashboard tile "Copied to MP3" shows 4 tracks and 1 album complete', tile && tile.eb === 'Copied to MP3' && tile.num === '4' && tile.sub === '1 album complete', JSON.stringify(tile));
   // Album edit dialog and Log row entry points
-  await f.page.locator('#tab-library').click();
+  await toTable(f.page);
   await f.page.locator('#libBody tr.row[data-id="1001"]').click();
   await f.page.locator('#libBody tr.detail [data-edit]').click();
   await f.page.locator('#dlgTracks').click();
@@ -1180,7 +1218,7 @@ async function tracksTests(browser, vp, seed, url) {
 
   // Missing tab: a friendly notice, nothing else breaks
   const noTrk = { ...seed }; delete noTrk[TRK_TAB];
-  const m = await freshPage(browser, vp, noTrk, url, 'library');
+  const m = await freshPage(browser, vp, noTrk, url, 'collection');
   await openTracksFromLibrary(m.page, '1001');
   const mt = await m.page.locator('#trkList').textContent();
   record(n, 'Tracks: with no 🎸 Tracks tab the dialog says so and hides the forms', /Tracks tab wasn't found/.test(mt) && await m.page.locator('#trkAdd').isHidden(), mt.slice(0, 80));
@@ -1196,27 +1234,35 @@ const PRESS_HEX = { emerald: '#3bd1a0', canary: '#f4cf2d', midnight: '#5aa3f5', 
 const hexToRgb = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
 const MARK_ANIMS = () => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.id === 'headMark').length;
 
+// What the page should show on the run's day (the page clock starts at RUN_START, like the seed data)
+const PRESS_BY_MONTH = ['emerald', 'emerald', 'canary', 'canary', 'midnight', 'midnight', 'tangerine', 'tangerine', 'magenta', 'magenta', 'crimson', 'crimson'];
+const PRESS_NAME = { emerald: 'Emerald', canary: 'Canary', midnight: 'Midnight blue', tangerine: 'Tangerine', magenta: 'Magenta', crimson: 'Crimson' };
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 async function lookTests(browser, vp, seed, url) {
   const n = vp.name;
+  const AUTO = PRESS_BY_MONTH[RUN_START.getMonth()], ALT = AUTO === 'crimson' ? 'canary' : 'crimson';
+  const EYEBROW = `${WEEKDAYS[RUN_START.getDay()]} ${RUN_START.getDate()} ${MON3[RUN_START.getMonth()]} ${String(RUN_START.getFullYear()).slice(2)}`;
   // Name
-  let f = await freshPage(browser, vp, seed, url, 'log', { clockTo: '2026-10-24T10:00:00' });
+  let f = await freshPage(browser, vp, seed, url, 'home', {});
   const title = await f.page.title();
   const h1 = await f.page.locator('h1').textContent();
   const visible = await f.page.evaluate(() => document.body.innerText);
   record(n, 'Name: the title and header say "Music Collection"', title === 'Music Collection' && h1.trim() === 'Music Collection', `${title} | ${h1}`);
   record(n, 'Name: the old name appears nowhere in the visible text', !/sleeves|grooves/i.test(visible));
   const eyebrow = (await f.page.locator('#todayLabel').textContent()).trim();
-  record(n, 'Pressing: the header eyebrow reads "Saturday 24 Oct 26 · Magenta pressing" (no season)', eyebrow === 'Saturday 24 Oct 26 · Magenta pressing', eyebrow);
+  record(n, `Pressing: the header eyebrow reads "${EYEBROW} · ${PRESS_NAME[AUTO]} pressing" (no season)`, eyebrow === `${EYEBROW} · ${PRESS_NAME[AUTO]} pressing`, eyebrow);
   record(n, 'Pressing: the header has the record mark and the marble ground sits behind the page', await f.page.evaluate(() => !!document.querySelector('header svg#headMark use') && getComputedStyle(document.querySelector('.ground')).position === 'fixed' && getComputedStyle(document.querySelector('.wrap')).zIndex === '1'));
   record(n, 'Pressing: the page is dark only', await f.page.evaluate(() => getComputedStyle(document.documentElement).colorScheme === 'dark'));
   // Active tab pill follows the pressing
   const pill = await f.page.evaluate(() => getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor);
-  record(n, 'Pressing: the active tab pill is the pressing colour (magenta)', pill === hexToRgb(PRESS_HEX.magenta), pill);
+  record(n, `Pressing: the active tab pill is the pressing colour (${AUTO})`, pill === hexToRgb(PRESS_HEX[AUTO]), pill);
   await f.context.close();
 
   // Pressing by month, with no drift inside a pressing
   for (const [d, want] of [['2026-01-02', 'emerald'], ['2026-03-05', 'canary'], ['2026-10-01', 'magenta'], ['2026-10-31', 'magenta'], ['2026-12-15', 'crimson']]) {
-    const m = await freshPage(browser, vp, seed, url, 'log', { clockTo: `${d}T12:00:00` });
+    const m = await freshPage(browser, vp, seed, url, 'home', { clockTo: `${d}T12:00:00` });
     const got = await m.page.evaluate(() => document.documentElement.dataset.p);
     const tab = await m.page.evaluate(() => getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor);
     record(n, `Pressing: ${d} is ${want}`, got === want && tab === hexToRgb(PRESS_HEX[want]), `${got}, tab ${tab}`);
@@ -1224,19 +1270,19 @@ async function lookTests(browser, vp, seed, url) {
   }
 
   // Look panel
-  const l = await freshPage(browser, vp, seed, url, 'tools', { clockTo: '2026-10-24T12:00:00' });
+  const l = await freshPage(browser, vp, seed, url, 'tools', { showLog: true });
   const page = l.page;
   const dp = () => page.evaluate(() => document.documentElement.dataset.p);
   record(n, 'Look: the panel is at the bottom of Tools with "This month (auto)" selected', await page.evaluate(() => {
     const secs = [...document.querySelectorAll('#view-tools section.panel')]; const last = secs[secs.length - 1];
     return last.querySelector('h2').textContent === 'Look' && document.getElementById('lookPressing').selectedOptions[0].textContent === 'This month (auto)';
   }));
-  await page.selectOption('#lookPressing', 'crimson');
-  record(n, 'Look: choosing Crimson sets data-p crimson', (await dp()) === 'crimson');
-  record(n, 'Look: the header eyebrow follows the chosen pressing', /Crimson pressing$/.test((await page.locator('#todayLabel').textContent()).trim()));
-  record(n, 'Look: the choice is stored in sg-pressing', (await page.evaluate(() => localStorage.getItem('sg-pressing'))) === 'crimson');
+  await page.selectOption('#lookPressing', ALT);
+  record(n, `Look: choosing ${PRESS_NAME[ALT]} sets data-p ${ALT}`, (await dp()) === ALT);
+  record(n, 'Look: the header eyebrow follows the chosen pressing', (await page.locator('#todayLabel').textContent()).trim().endsWith(`${PRESS_NAME[ALT]} pressing`));
+  record(n, 'Look: the choice is stored in sg-pressing', (await page.evaluate(() => localStorage.getItem('sg-pressing'))) === ALT);
   await page.reload(); await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
-  record(n, 'Look: Crimson persists after reload', (await dp()) === 'crimson' && (await page.locator('#lookPressing').inputValue()) === 'crimson');
+  record(n, `Look: ${PRESS_NAME[ALT]} persists after reload`, (await dp()) === ALT && (await page.locator('#lookPressing').inputValue()) === ALT);
   // Charts, heatmap and the pill read the pressing
   await page.locator('#tab-dashboard').click(); await page.waitForTimeout(250);
   const dashCol = await page.evaluate(() => {
@@ -1245,11 +1291,11 @@ async function lookTests(browser, vp, seed, url) {
     return { bar: ch ? ch.data.datasets[0].backgroundColor[0] : null, heat: cell ? getComputedStyle(cell).backgroundColor : null,
       pill: getComputedStyle(document.querySelector('.tab[aria-selected="true"]')).backgroundColor };
   });
-  record(n, 'Look: Dashboard bars and the pill use the pressing colour', dashCol.pill === hexToRgb(PRESS_HEX.crimson) && (!HAVE_CHART || (dashCol.bar || '').startsWith(PRESS_HEX.crimson)), JSON.stringify(dashCol));
+  record(n, 'Look: Dashboard bars and the pill use the pressing colour', dashCol.pill === hexToRgb(PRESS_HEX[ALT]) && (!HAVE_CHART || (dashCol.bar || '').startsWith(PRESS_HEX[ALT])), JSON.stringify(dashCol));
   record(n, 'Look: the Dashboard heatmap cells are tinted from the pressing', !!dashCol.heat && /^rgb/.test(dashCol.heat), dashCol.heat);
   await page.locator('#tab-tools').click();
   await page.selectOption('#lookPressing', 'auto');
-  record(n, 'Look: "This month (auto)" returns to the month\'s pressing (magenta)', (await dp()) === 'magenta' && (await page.evaluate(() => localStorage.getItem('sg-pressing'))) === null);
+  record(n, `Look: "This month (auto)" returns to the month's pressing (${AUTO})`, (await dp()) === AUTO && (await page.evaluate(() => localStorage.getItem('sg-pressing'))) === null);
   // Plain dark
   const discShown = () => page.evaluate(() => getComputedStyle(document.querySelector('.disc')).display !== 'none');
   record(n, 'Look: the marble record is shown by default', await discShown());
@@ -1260,26 +1306,655 @@ async function lookTests(browser, vp, seed, url) {
   await page.selectOption('#lookBg', 'marble');
   record(n, 'Look: Marble record brings the disc back', await discShown());
   // Every tab, crimson + plain: no sideways scroll
-  await page.selectOption('#lookPressing', 'crimson'); await page.selectOption('#lookBg', 'plain');
+  await page.selectOption('#lookPressing', ALT); await page.selectOption('#lookBg', 'plain');
   const bad = [];
-  for (const t of ['log', 'plan', 'library', 'dashboard', 'tools', 'discover']) {
+  for (const t of ['home', 'collection', 'plan', 'dashboard', 'tools']) {
     await page.locator(`#tab-${t}`).click(); await page.waitForTimeout(150);
     const o = await page.evaluate(overflow); if (o.sw > o.iw) bad.push(`${t} ${o.sw}>${o.iw}`);
   }
-  record(n, 'Look: no sideways scroll on any tab with Crimson and Plain dark', bad.length === 0, bad.join(', '));
+  record(n, `Look: no sideways scroll on any tab with ${PRESS_NAME[ALT]} and Plain dark`, bad.length === 0, bad.join(', '));
   record(n, 'Look: changing the look writes nothing to the sheet', (await page.evaluate(() => window.__writes.length)) === 0);
   record(n, 'Look: no console errors', l.problems.length === 0, l.problems.slice(0, 2).join(' | '));
   await l.context.close();
 
   // Header mark spins once after Refresh (not with reduced motion)
   for (const reduce of [false, true]) {
-    const r = await freshPage(browser, vp, seed, url, 'log', reduce ? { reducedMotion: 'reduce' } : {});
+    const r = await freshPage(browser, vp, seed, url, 'home', reduce ? { reducedMotion: 'reduce' } : {});
     await r.page.locator('#refreshBtn').click();
     await r.page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live') && !document.getElementById('refreshBtn').disabled);
     const anims = await r.page.evaluate(MARK_ANIMS);
     record(n, reduce ? 'Motion: with reduced motion the header mark has no running animation after Refresh' : 'Motion: the header mark spins after Refresh', reduce ? anims === 0 : anims === 1, `${anims} animation(s)`);
     await r.context.close();
   }
+}
+
+// ---------- Music Collection: shelves, labels, favourites, Home ----------
+const fxSeedRows = seed => seed['🎸'].slice(1);
+// The label rules, written out here separately from the app. The first rule that matches wins; nothing left over means To hear.
+const LABEL_RULES = [
+  ['nope', r => r[COLS.status] === "Didn't like"],
+  ['owned', r => r[COLS.status] === 'Owned' || r[COLS.format] === 'Vinyl (Owned)'],
+  ['wish', r => r[COLS.status] === 'Purchase' || r[COLS.format] === 'Vinyl (Wanted)'],
+  ['upcoming', r => r[COLS.status] === 'Coming Soon'],
+  ['hear', r => r[COLS.status] === 'Listen'],
+  ['heard', r => r[COLS.status] === 'Listened' || Number(r[COLS.rating]) > 0],
+];
+const labelFor = r => (LABEL_RULES.find(([, ok]) => ok(r)) || ['hear'])[0];
+const LABEL_NAME = { owned: 'Owned', wish: 'Vinyl wish list', upcoming: 'Upcoming', hear: 'To hear', heard: 'Heard', nope: "Didn't like" };
+const SHELF_ORDER = ['fav', 'owned', 'wish', 'upcoming', 'hear', 'heard', 'nope'];
+const SHELF_HEAD = { fav: 'Favourites', ...LABEL_NAME };
+const LOCK_MSG = 'Still owned on vinyl. Change Format in the album details first.';
+function expectedShelves(seed) {
+  const rows = fxSeedRows(seed), out = Object.fromEntries(SHELF_ORDER.map(k => [k, []]));
+  for (const r of rows) out[labelFor(r)].push(r[COLS.id]);
+  out.fav = rows.filter(r => r[COLS.fav]).sort((a, b) => b[COLS.fav].localeCompare(a[COLS.fav])).map(r => r[COLS.id]);   // newest first
+  return out;
+}
+const isPW = r => r[COLS.status] === 'Purchase' && r[COLS.format] === 'Vinyl (Wanted)';
+
+const gw = page => page.evaluate(() => window.__writes.map(w => ({ tool: w.tool, sheet: w.sheet, range: w.range, v: w.values && w.values[0] ? w.values[0][0] : undefined, n: w.values ? w.values.length * (w.values[0] || []).length : 0 })));
+const cw = page => page.evaluate(() => { window.__writes.length = 0; });
+const waitWrites = (page, k) => page.waitForFunction(c => window.__writes.length >= c, k, { timeout: 8000 });
+const settle = page => page.waitForTimeout(250);
+const shelfSel = k => `#shelves .shelf[data-key="${k}"]`;
+async function expandShelf(page, key) {
+  const b = page.locator(`${shelfSel(key)} [data-sa="all"]`);
+  if (await b.count() && (await b.getAttribute('aria-expanded')) === 'false') await b.click();
+}
+const shelfIds = (page, key) => page.evaluate(k => [...document.querySelectorAll(`#shelves .shelf[data-key="${k}"] .s-it`)].map(e => e.dataset.id), key);
+const shelfCounts = page => page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#shelves .shelf')].map(s => [s.dataset.key, +s.querySelector('.sh-count').textContent])));
+const cellOf = (page, id) => page.evaluate(i => { const r = window.__sheet['🎸'].find((x, k) => k > 0 && x[9] === i); return JSON.stringify(r); }, id);
+const allOnTab = page => page.evaluate(() => window.__forbidden.length === 0 && window.__writes.every(w => w.sheet.startsWith('🎸')));
+async function openChip(page, id, shelf) {
+  await expandShelf(page, shelf);
+  const chip = page.locator(`${shelfSel(shelf)} .s-it[data-id="${id}"] .s-chip`);
+  await chip.scrollIntoViewIfNeeded();
+  await chip.click();
+  await page.locator('.s-menu').waitFor();
+}
+async function relabelViaMenu(page, id, shelf, to) {
+  await openChip(page, id, shelf);
+  await page.locator(`.s-menu button[data-k="${to}"]`).click();
+}
+const toasts = page => page.locator('#toasts .toast').allTextContents();
+
+// ----- Collection: shelves, search, detail strip, Table view
+async function collectionTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+  await cw(page);
+  const want = expectedShelves(seed);
+
+  const heads = await page.locator('#shelves .shelf h2').allTextContents();
+  record(n, 'Collection: shelves run Favourites, Owned, Vinyl wish list, Upcoming, To hear, Heard, Didn\'t like', heads.map(h => h.trim()).join('|') === SHELF_ORDER.map(k => SHELF_HEAD[k]).join('|'), heads.join('|'));
+  const tb = await page.evaluate(() => ({ seg: [...document.querySelectorAll('#colView button')].map(b => b.textContent + ':' + b.getAttribute('aria-pressed')), add: !!document.getElementById('addAlbumBtn'), search: !!document.getElementById('libSearch') }));
+  record(n, 'Collection: toolbar has a Shelves | Table switch (Shelves on), a search box and Add album', tb.seg.join() === 'Shelves:true,Table:false' && tb.add && tb.search, JSON.stringify(tb));
+
+  // membership: counts, then the sleeves on each shelf after Show all
+  const counts = await shelfCounts(page);
+  record(n, 'Collection: all 7 shelf counts match the labels worked out from the sheet', SHELF_ORDER.every(k => counts[k] === want[k].length) && want.nope.length === 4 && want.fav.length === 4, JSON.stringify(counts));
+  for (const k of SHELF_ORDER) {
+    await expandShelf(page, k);
+    const ids = await shelfIds(page, k);
+    record(n, `Collection: the ${SHELF_HEAD[k]} shelf holds exactly the right albums (${ids.length})`, sortedJson(ids) === sortedJson(want[k]), `${ids.length} vs ${want[k].length}`);
+  }
+  const favIds = await shelfIds(page, 'fav');
+  record(n, 'Collection: Favourites are ordered newest first', favIds.join() === want.fav.join(), `${favIds.join()} vs ${want.fav.join()}`);
+  const favLabels = new Set(want.fav.map(id => labelFor(fxSeedRows(seed).find(r => r[COLS.id] === id))));
+  let alsoOnLabel = true;
+  for (const id of want.fav) { const lab = labelFor(fxSeedRows(seed).find(r => r[COLS.id] === id)); if (!(await shelfIds(page, lab)).includes(id)) alsoOnLabel = false; }
+  record(n, 'Collection: a favourite sits on its label shelf AND on Favourites (four different labels)', alsoOnLabel && favLabels.size === 4, [...favLabels].join());
+  const dragAttr = await page.evaluate(() => [...document.querySelectorAll('#shelves .s-it')].every(e => e.getAttribute('draggable') === 'true'));
+  record(n, 'Collection: sleeves can be dragged (pointer: fine)', dragAttr);
+  const cds = await page.evaluate(() => [...document.querySelectorAll('#shelves .shelf[data-key="upcoming"] .s-it')].map(e => e.querySelector('.s-cd') ? e.querySelector('.s-cd').textContent : ''));
+  const sfx = vp.width < 560 ? ['in 12d', 'in 40d'] : ['in 12 days', 'in 40 days'];   // the chip is shortened on a phone
+  record(n, 'Collection: Upcoming sleeves carry the countdown chip (in 12 days, in 40 days, or the year)', cds.includes(sfx[0]) && cds.includes(sfx[1]) && cds.includes('2027') && cds.every(Boolean), cds.join());
+  const nStand = await page.evaluate(() => document.querySelectorAll('#shelves .shelf[data-key="heard"] .s-grid .s-it').length);
+  record(n, 'Collection: "Show all" opens a wrapping grid in place, "Show fewer" closes it', nStand === want.heard.length && (await page.locator(`${shelfSel('heard')} [data-sa="all"]`).textContent()) === 'Show fewer', String(nStand));
+  await page.locator(`${shelfSel('heard')} [data-sa="all"]`).click();
+  record(n, 'Collection: after Show fewer the shelf is standing sleeves plus a leaning fan', (await page.locator(`${shelfSel('heard')} .s-grid`).count()) === 0 && (await page.locator(`${shelfSel('heard')} .s-lean .s-it`).count()) > 0 && (await page.locator(`${shelfSel('heard')} .s-standing .s-it`).count()) === (vp.width < 560 ? 3 : 5));
+  record(n, 'Collection: Show all / Show fewer write nothing', (await gw(page)).length === 0);
+
+  // detail strip
+  const buyAlbum = await page.evaluate(() => { const a = state.albums.find(x => x.buy && /^https:/.test(x.buy) && labelOf(x) === 'wish' && toNum(x.id)); return a ? { id: String(toNum(a.id)), title: a.title } : null; });
+  await expandShelf(page, 'wish');
+  await page.locator(`${shelfSel('wish')} .s-it[data-id="${buyAlbum.id}"] .s-art`).click();
+  const d = await page.evaluate(() => { const e = document.querySelector('#shelves .s-detail'); return e ? { h3: e.querySelector('h3').textContent, btns: [...e.querySelectorAll('button')].map(b => b.textContent.trim()).filter(Boolean), buy: e.querySelector('a.s-buy') ? { t: e.querySelector('a.s-buy').textContent, href: e.querySelector('a.s-buy').href, target: e.querySelector('a.s-buy').target, rel: e.querySelector('a.s-buy').rel } : null, pressed: e.querySelector('.s-pickbtn').getAttribute('aria-pressed') } : null; });
+  record(n, 'Collection: tapping a sleeve opens the detail strip with label chip, Favourite, Tracks, Edit and a Buy pill', !!d && d.h3 === buyAlbum.title && /^Vinyl wish list/.test(d.btns[0]) && d.btns.includes('Favourite') && d.btns.includes('Tracks') && d.btns.includes('Edit') && !!d.buy && /^Buy · /.test(d.buy.t) && d.buy.target === '_blank' && /noopener/.test(d.buy.rel), JSON.stringify(d));
+  await page.locator('#shelves .s-detail [data-sa="tracks"]').click();
+  await page.waitForFunction(() => document.getElementById('tracksDlg').open);
+  record(n, 'Collection: the detail strip\'s Tracks button opens the tracks dialog for that album', (await page.locator('#trkTitle').textContent()) === buyAlbum.title);
+  await page.locator('#trkClose').click(); await page.waitForFunction(() => !document.getElementById('tracksDlg').open);
+  await page.locator('#shelves .s-detail [data-sa="edit"]').click();
+  await page.waitForFunction(() => document.getElementById('albumDlg').open);
+  record(n, 'Collection: the detail strip\'s Edit button opens the album dialog', (await page.locator('#dlgTitle').textContent()) === 'Edit album');
+  const sel = await page.evaluate(() => [...document.getElementById('f-status').options].map(o => o.value));
+  record(n, 'Album dialog: Status offers Didn\'t like', sel.includes("Didn't like") && sel.length === 7, sel.join());
+  await page.locator('#dlgClose').click();
+  await page.locator('#shelves .s-detail [data-sa="close"]').click();
+  record(n, 'Collection: the detail strip closes', (await page.locator('#shelves .s-detail').count()) === 0);
+  // a sleeve with no buy link has no Buy pill
+  const plain = await page.evaluate(() => { const a = state.albums.find(x => !x.buy && labelOf(x) === 'heard' && toNum(x.id)); return String(toNum(a.id)); });
+  await expandShelf(page, 'heard');
+  await page.locator(`${shelfSel('heard')} .s-it[data-id="${plain}"] .s-art`).click();
+  record(n, 'Collection: no Buy pill when the album has no buy link', (await page.locator('#shelves .s-detail').count()) === 1 && (await page.locator('#shelves .s-detail a.s-buy').count()) === 0);
+  await page.locator('#shelves .s-detail [data-sa="close"]').click();
+
+  // search filters shelves by title / artist / genre and hides shelves with no match
+  const tq = 'Test Album 060';
+  const rows = fxSeedRows(seed);
+  const hit = rows.filter(r => [r[0], r[2], r[4]].some(v => String(v).toLowerCase().includes(tq.toLowerCase())));
+  const wantKeys = SHELF_ORDER.filter(k => hit.some(r => (k === 'fav' ? !!r[COLS.fav] : labelFor(r) === k)));
+  await page.locator('#libSearch').fill(tq);
+  await page.waitForTimeout(350);
+  const shown = await page.evaluate(() => [...document.querySelectorAll('#shelves .shelf')].map(s => s.dataset.key));
+  record(n, 'Collection: searching shows only the shelves that have a match', shown.join() === wantKeys.join() && shown.length >= 1, `${shown.join()} vs ${wantKeys.join()}`);
+  const artistQ = 'Test Artist 05';
+  await page.locator('#libSearch').fill(artistQ); await page.waitForTimeout(350);
+  const hitA = rows.filter(r => String(r[2]).toLowerCase().includes(artistQ.toLowerCase()));
+  const shownA = await shelfCounts(page);
+  record(n, 'Collection: search also matches the artist, and counts follow the matches', SHELF_ORDER.every(k => (shownA[k] || 0) === hitA.filter(r => (k === 'fav' ? !!r[COLS.fav] : labelFor(r) === k)).length), JSON.stringify(shownA));
+  await page.locator('#libSearch').fill('zzzzqqq'); await page.waitForTimeout(350);
+  record(n, 'Collection: a search with no match says so', (await page.locator('#shelves .shelf').count()) === 0 && /No albums match/.test(await page.locator('#shelves').textContent()));
+  await page.locator('#libSearch').fill(''); await page.waitForTimeout(350);
+  record(n, 'Collection: clearing the search brings every shelf back', (await page.locator('#shelves .shelf').count()) === 7);
+  let o = await page.evaluate(overflow);
+  record(n, 'Collection: no sideways scroll (Shelves)', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+
+  // Table view: the old Library
+  await page.locator('#colView button[data-v="table"]').click();
+  const tv = await page.evaluate(() => ({ shelves: document.getElementById('colShelves').hidden, table: !document.getElementById('colTable').hidden, rows: document.querySelectorAll('#libBody tr.row').length, picks: document.querySelectorAll('#libBody tr.row .pickbtn-sm').length, head: [...document.querySelectorAll('#libHead th')].map(t => t.textContent.trim()) }));
+  record(n, 'Table view: shows the Library table (first 100 albums) with a guitar pick on every row', tv.shelves && tv.table && tv.rows === 100 && tv.picks === 100 && tv.head.slice(0, 7).join() === 'Title,Artist,Rating,Status,Genre,Format,Year', JSON.stringify(tv));
+  await page.locator('#libSearch').fill('Test Album 06'); await page.waitForTimeout(350);
+  record(n, 'Table view: the search box filters the table', (await page.locator('#libBody tr.row').count()) === rows.filter(r => [r[0], r[2], r[4], r[8]].some(v => String(v).toLowerCase().includes('test album 06'))).length);
+  await page.locator('#libSearch').fill(''); await page.waitForTimeout(350);
+  await page.locator('#fColl .chip[data-v="fav"]').click();
+  record(n, 'Table view: the Favourites chip lists the four favourites', (await page.locator('#libBody tr.row').count()) === 4 && (await page.locator('#libBody tr.row .pickbtn-sm[aria-pressed="true"]').count()) === 4);
+  await page.locator('#fColl .chip[data-v="fav"]').click();
+  await page.locator('#fStatus .chip[data-v="Didn\'t like"]').click();
+  record(n, 'Table view: Status filter has a "Didn\'t like" chip with its four albums', (await page.locator('#libBody tr.row').count()) === 4 && (await page.locator('#libBody tr.row .pill').first().textContent()) === "Didn't like");
+  await page.locator('#fStatus .chip[data-v="All"]').click();
+  await page.locator('#libBody tr.row').first().click();
+  const td = await page.evaluate(() => { const e = document.querySelector('#libBody tr.detail'); return { btns: [...e.querySelectorAll('button')].map(b => b.textContent.trim()), none: !e.querySelector('[data-log]') }; });
+  record(n, 'Table view: the detail row has Edit album, Tracks, the label chip and Favourite (no "Log a listen" while the log is hidden)', td.btns.includes('Edit album') && td.btns.includes('Tracks') && td.btns.includes('Favourite') && td.btns.some(b => /▾$/.test(b)) && td.none, td.btns.join());
+  o = await page.evaluate(overflow);
+  record(n, 'Table view: no sideways scroll', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  await page.screenshot({ path: join(OUT, `${n}-collection-table.png`), fullPage: true });
+  record(n, 'Collection: browsing, searching, Show all and the table cause no sheet writes', (await gw(page)).length === 0 && (await allOnTab(page)));
+  record(n, 'Collection: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// ----- relabel table: exactly which cells each move writes
+const SCENARIOS = [
+  { name: 'To hear → Heard', pick: r => labelFor(r) === 'hear' && !r[COLS.format], to: 'heard', writes: { D: 'Listened' }, both: true },
+  { name: 'wish list (Vinyl (Wanted)) → Owned', pick: r => isPW(r), to: 'owned', writes: { D: 'Owned', F: 'Vinyl (Owned)' }, both: true },
+  { name: 'Owned (by Status) → wish list', pick: r => r[COLS.status] === 'Owned' && !r[COLS.format], to: 'wish', writes: { D: 'Purchase' } },
+  { name: 'Owned (Vinyl (Owned)) → wish list', pick: r => r[COLS.status] === 'Owned' && r[COLS.format] === 'Vinyl (Owned)', to: 'wish', writes: { D: 'Purchase', F: 'Vinyl (Wanted)' } },
+  { name: 'Heard on Vinyl (Owned) → wish list', pick: r => r[COLS.status] === 'Listened' && r[COLS.format] === 'Vinyl (Owned)', to: 'wish', writes: { D: 'Purchase', F: 'Vinyl (Wanted)' } },
+  { name: 'wish list (Vinyl (Wanted)) → To hear (Format cleared)', pick: r => isPW(r), to: 'hear', writes: { D: 'Listen', F: '' } },
+  { name: 'To hear → Didn\'t like', pick: r => labelFor(r) === 'hear' && !r[COLS.format], to: 'nope', writes: { D: "Didn't like" } },
+  { name: 'wish list (Vinyl (Wanted)) → Didn\'t like (Format cleared)', pick: r => isPW(r), to: 'nope', writes: { D: "Didn't like", F: '' } },
+  { name: 'Heard → Upcoming', pick: r => labelFor(r) === 'heard' && !r[COLS.format], to: 'upcoming', writes: { D: 'Coming Soon' } },
+  { name: 'Owned (Vinyl (Owned)) → Didn\'t like (Format kept)', pick: r => r[COLS.status] === 'Owned' && r[COLS.format] === 'Vinyl (Owned)', to: 'nope', writes: { D: "Didn't like" } },
+];
+const colIdx = { D: COLS.status, F: COLS.format, R: COLS.labelled };
+
+async function relabelTests(browser, vp, seed, seedL, url) {
+  const n = vp.name;
+  const runs = [];
+  for (const sc of SCENARIOS) runs.push([sc, seed, false]);
+  for (const sc of SCENARIOS.filter(x => x.both)) runs.push([sc, seedL, true]);
+  let allTab = true, problemsAll = [];
+  for (const [sc, sd, withLabelled] of runs) {
+    const row = fxSeedRows(sd).find(sc.pick), id = row[COLS.id], from = labelFor(row);
+    const { context, page, problems } = await freshPage(browser, vp, sd, url, 'collection');
+    const sr = await page.evaluate(sheetRow, id), before = JSON.parse(await cellOf(page, id)), todayIso = await page.evaluate(() => today());
+    await cw(page);
+    await relabelViaMenu(page, id, from, sc.to);
+    const wantCells = { ...sc.writes, ...(withLabelled ? { R: todayIso } : {}) };
+    await waitWrites(page, Object.keys(wantCells).length);
+    await settle(page);
+    const w = await gw(page);
+    const got = w.map(x => `${x.range}=${x.v}`).sort().join(' | ');
+    const exp = Object.entries(wantCells).map(([c, v]) => `'🎸'!${c}${sr}=${v}`).sort().join(' | ');
+    const tag = `${sc.name}${withLabelled ? ' (sheet has a Labelled column)' : ''}`;
+    record(n, `Relabel: ${tag} writes exactly ${Object.keys(wantCells).join('+')}`, got === exp && w.every(x => x.sheet === '🎸' && x.tool === 'update_values' && x.n === 1), `${got} vs ${exp}`);
+    const after = JSON.parse(await cellOf(page, id)), wantRow = [...before];
+    for (const [c, v] of Object.entries(wantCells)) wantRow[colIdx[c]] = v;
+    record(n, `Relabel: ${tag} changes only those cells of the row`, JSON.stringify(after) === JSON.stringify(wantRow), JSON.stringify(after));
+    const tt = await toasts(page);
+    record(n, `Relabel: ${tag} shows "Moved <title> to <label>" with Undo`, tt.length === 1 && tt[0].includes(`Moved ${row[0]} to ${LABEL_NAME[sc.to]}`) && tt[0].includes('Undo'), tt.join(' | '));
+    const onNew = await page.locator(`${shelfSel(sc.to)} .s-it[data-id="${id}"]`).count(), onOld = await page.locator(`${shelfSel(from)} .s-it[data-id="${id}"]`).count();
+    record(n, `Relabel: ${tag} moves the sleeve to the ${LABEL_NAME[sc.to]} shelf`, onNew === 1 && onOld === 0, `new ${onNew}, old ${onOld}`);
+    if (!withLabelled) record(n, `Relabel: ${tag} writes nothing extra when the sheet has no Labelled column`, !w.some(x => x.range.includes('!R')));
+    allTab = allTab && (await allOnTab(page)); problemsAll.push(...problems);
+    await context.close();
+  }
+  record(n, 'Relabel: no write ever leaves the 🎸 tabs', allTab);
+  record(n, 'Relabel: no console errors', problemsAll.length === 0, problemsAll.slice(0, 2).join(' | '));
+
+  // locked targets for an album that is Vinyl (Owned)
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+    const row = fxSeedRows(seed).find(r => r[COLS.status] === 'Listened' && r[COLS.format] === 'Vinyl (Owned)'), id = row[COLS.id];
+    await cw(page);
+    await openChip(page, id, 'owned');
+    const items = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.s-menu button')].map(b => [b.dataset.k, { disabled: b.getAttribute('aria-disabled') === 'true', title: b.title, checked: b.getAttribute('aria-checked') }])));
+    record(n, 'Relabel: for a Vinyl (Owned) album To hear, Heard and Upcoming are disabled with an explanation', ['hear', 'heard', 'upcoming'].every(k => items[k].disabled && items[k].title === LOCK_MSG), JSON.stringify(items));
+    record(n, 'Relabel: for a Vinyl (Owned) album Owned, Vinyl wish list and Didn\'t like stay available', ['owned', 'wish', 'nope'].every(k => !items[k].disabled) && items.owned.checked === 'true', JSON.stringify(items));
+    await page.locator('.s-menu button[data-k="heard"]').click({ force: true });   // aria-disabled: Playwright would wait forever otherwise
+    const t1 = await toasts(page);
+    record(n, 'Relabel: choosing a disabled label explains why and writes nothing', (await gw(page)).length === 0 && t1.some(t => t.includes(LOCK_MSG)) && (await page.locator('.s-menu').count()) === 1, t1.join(' | '));
+    await page.keyboard.press('Escape');
+    // no-op: choosing the label it already has writes nothing and says nothing
+    await cw(page);
+    await openChip(page, id, 'owned');
+    await page.locator('.s-menu button[data-k="owned"]').click();
+    await settle(page);
+    record(n, 'Relabel: choosing the current label is a no-op (no writes, no "Moved" toast)', (await gw(page)).length === 0 && !(await toasts(page)).some(t => t.startsWith('Moved')), (await toasts(page)).join(' | '));
+    record(n, 'Relabel: no console errors (locked and no-op cases)', problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+}
+
+// ----- undo, and the 6 second toast
+async function undoTests(browser, vp, seed, seedL, url) {
+  const n = vp.name;
+  for (const [label, sd, withL] of [['plain sheet', seed, false], ['sheet with a Labelled column', seedL, true]]) {
+    const { context, page, problems } = await freshPage(browser, vp, sd, url, 'collection');
+    const row = fxSeedRows(sd).find(isPW), id = row[COLS.id], sr = await page.evaluate(sheetRow, id);
+    const before = await cellOf(page, id);
+    await cw(page);
+    await relabelViaMenu(page, id, 'wish', 'owned');
+    const k = withL ? 3 : 2;
+    await waitWrites(page, k); await settle(page);
+    record(n, `Undo (${label}): the move changed the row`, (await cellOf(page, id)) !== before);
+    await cw(page);
+    await page.locator('#toasts .toast button', { hasText: 'Undo' }).click();
+    await waitWrites(page, k); await settle(page);
+    const w = await gw(page);
+    const got = w.map(x => `${x.range}=${x.v}`).sort().join(' | ');
+    const exp = [`'🎸'!D${sr}=Purchase`, `'🎸'!F${sr}=Vinyl (Wanted)`, ...(withL ? [`'🎸'!R${sr}=`] : [])].sort().join(' | ');
+    record(n, `Undo (${label}): writes back the previous value of exactly the cells that changed${withL ? ', including the blank Labelled' : ''}`, got === exp, `${got} vs ${exp}`);
+    record(n, `Undo (${label}): the row is exactly as it was`, (await cellOf(page, id)) === before);
+    record(n, `Undo (${label}): the sleeve is back on the Vinyl wish list shelf and the toast is gone`, (await page.locator(`${shelfSel('wish')} .s-it[data-id="${id}"]`).count()) === 1 && (await page.locator('#toasts .toast').count()) === 0);
+    record(n, `Undo (${label}): nothing outside 🎸 tabs, no console errors`, (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+  // the toast lasts 6 seconds; toasts live in a polite live region
+  const { context, page } = await freshPage(browser, vp, seed, url, 'collection');
+  const row = fxSeedRows(seed).find(r => labelFor(r) === 'hear' && !r[COLS.format]), id = row[COLS.id];
+  const live = await page.evaluate(() => { const t = document.getElementById('toasts'); return t.getAttribute('role') + '/' + t.getAttribute('aria-live'); });
+  record(n, 'Toast: toasts sit in a live region (role=status, polite)', live === 'status/polite', live);
+  await relabelViaMenu(page, id, 'hear', 'heard');
+  await settle(page);
+  record(n, 'Toast: the Undo toast is shown right after a move', (await page.locator('#toasts .toast').count()) === 1);
+  await page.clock.fastForward(5000);
+  record(n, 'Toast: still there after 5 seconds', (await page.locator('#toasts .toast').count()) === 1);
+  await page.clock.fastForward(1500);
+  record(n, 'Toast: gone after 6 seconds', (await page.locator('#toasts .toast').count()) === 0);
+  await context.close();
+}
+
+// ----- the guitar pick
+async function pickTests(browser, vp, seed, seedL, url) {
+  const n = vp.name;
+  const rows = fxSeedRows(seed);
+  const target = rows.find(r => labelFor(r) === 'heard' && !r[COLS.fav] && !r[COLS.format]), id = target[COLS.id];
+  const { context, page, problems } = await freshPage(browser, vp, seedL, url, 'collection');   // Labelled column present: a pick must not touch it
+  const sr = await page.evaluate(sheetRow, id), todayIso = await page.evaluate(() => today());
+  const favCountBefore = (await shelfCounts(page)).fav;
+  await cw(page);
+  await expandShelf(page, 'heard');
+  const pick = page.locator(`${shelfSel('heard')} .s-it[data-id="${id}"] .s-pick`);
+  await pick.scrollIntoViewIfNeeded();
+  record(n, 'Pick: starts unpressed', (await pick.getAttribute('aria-pressed')) === 'false');
+  await pick.click();
+  await waitWrites(page, 1); await settle(page);
+  let w = await gw(page);
+  record(n, 'Pick: turning a favourite on writes exactly one cell, Favourite = today', w.length === 1 && w[0].range === `'🎸'!Q${sr}` && w[0].v === todayIso && w[0].sheet === '🎸' && w[0].n === 1, JSON.stringify(w));
+  record(n, 'Pick: the pick is pressed and the album joined Favourites (first, newest)', (await pick.getAttribute('aria-pressed')) === 'true' && (await shelfCounts(page)).fav === favCountBefore + 1 && (await shelfIds(page, 'fav'))[0] === id, JSON.stringify(await shelfCounts(page)));
+  record(n, 'Pick: it stays on its label shelf too (favourite is not a label)', (await page.locator(`${shelfSel('heard')} .s-it[data-id="${id}"]`).count()) === 1);
+  record(n, 'Pick: the header record spins after a successful pick', (await page.evaluate(MARK_ANIMS)) === 1);
+  record(n, 'Pick: status reads "Favourite saved"', (await page.locator('#statusText').textContent()) === 'Favourite saved');
+  // off, from the Favourites shelf
+  await cw(page);
+  await expandShelf(page, 'fav');
+  await page.locator(`${shelfSel('fav')} .s-it[data-id="${id}"] .s-pick`).click();
+  await waitWrites(page, 1); await settle(page);
+  w = await gw(page);
+  record(n, 'Pick: turning it off writes exactly one empty Favourite cell', w.length === 1 && w[0].range === `'🎸'!Q${sr}` && w[0].v === '' && w[0].n === 1, JSON.stringify(w));
+  record(n, 'Pick: it leaves Favourites but stays on its label shelf', !(await shelfIds(page, 'fav')).includes(id) && (await shelfIds(page, 'heard')).includes(id) && (await shelfCounts(page)).fav === favCountBefore);
+  // from the detail strip
+  await cw(page);
+  await page.locator(`${shelfSel('heard')} .s-it[data-id="${id}"] .s-art`).click();
+  await page.locator('#shelves .s-detail .s-pickbtn').click();
+  await waitWrites(page, 1); await settle(page);
+  w = await gw(page);
+  record(n, 'Pick: the detail strip button writes the same single cell', w.length === 1 && w[0].range === `'🎸'!Q${sr}` && w[0].v === todayIso && (await page.locator('#shelves .s-detail .s-pickbtn').getAttribute('aria-pressed')) === 'true', JSON.stringify(w));
+  // from the Table view
+  await cw(page);
+  await toTable(page);
+  await page.locator('#libSearch').fill(target[0]); await page.waitForTimeout(350);
+  const tpick = page.locator(`#libBody tr.row[data-id="${id}"] .pickbtn-sm`);
+  record(n, 'Pick: the Table row shows it pressed', (await tpick.getAttribute('aria-pressed')) === 'true');
+  await tpick.click();
+  await waitWrites(page, 1); await settle(page);
+  w = await gw(page);
+  record(n, 'Pick: a Table row pick writes one cell and does not open the row', w.length === 1 && w[0].range === `'🎸'!Q${sr}` && w[0].v === '' && (await page.locator('#libBody tr.detail').count()) === 0, JSON.stringify(w));
+  record(n, 'Pick: no write outside 🎸, no console errors', (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+
+  // a failed write puts the screen back and says so
+  {
+    const f = await freshPage(browser, vp, seed, url, 'collection');
+    const fsr = await f.page.evaluate(sheetRow, id), fbefore = await cellOf(f.page, id);
+    await f.page.evaluate(() => { const m = window.__sg.state.mcp, orig = m.callTool.bind(m); m.callTool = (srv, tool, args, o) => tool === 'update_values' ? Promise.reject({ code: 'tool_error', message: 'simulated failure' }) : orig(srv, tool, args, o); });
+    await expandShelf(f.page, 'heard');
+    await f.page.locator(`${shelfSel('heard')} .s-it[data-id="${id}"] .s-pick`).click();
+    await f.page.waitForFunction(() => /simulated failure/.test(document.getElementById('notice').textContent), null, { timeout: 8000 });
+    await settle(f.page);
+    record(n, 'Pick: if the write fails the pick goes back, the sheet is untouched and a message explains', (await cellOf(f.page, id)) === fbefore && (await shelfIds(f.page, 'fav')).length === 4 && (await f.page.locator('#notice').textContent()).includes(`Couldn't save the favourite for “${target[0]}”`) && fsr > 0);
+    await f.context.close();
+    const g = await freshPage(browser, vp, seed, url, 'collection');
+    const grow = fxSeedRows(seed).find(r => labelFor(r) === 'hear' && !r[COLS.format]), gid = grow[COLS.id], gbefore = await cellOf(g.page, gid);
+    await g.page.evaluate(() => { const m = window.__sg.state.mcp, orig = m.callTool.bind(m); m.callTool = (srv, tool, args, o) => tool === 'update_values' ? Promise.reject({ code: 'tool_error', message: 'simulated failure' }) : orig(srv, tool, args, o); });
+    await relabelViaMenu(g.page, gid, 'hear', 'heard');
+    await g.page.waitForFunction(() => /simulated failure/.test(document.getElementById('notice').textContent), null, { timeout: 8000 });
+    await settle(g.page);
+    record(n, 'Relabel: if the write fails the sleeve goes back to its shelf, the row is untouched and the toast goes', (await cellOf(g.page, gid)) === gbefore && (await shelfIds(g.page, 'hear')).includes(gid) && (await g.page.locator('#toasts .toast').count()) === 0);
+    await g.context.close();
+  }
+  // offline (no connection to the sheet): the usual notice, nothing changes
+  {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+    await ctx.route('**/*', r => { const u = r.request().url(); return /^(file|data|blob):/.test(u) ? r.continue() : r.abort(); });
+    await ctx.addInitScript(() => { window.claude = { use: async () => null }; });
+    const page = await ctx.newPage(); const errs = [];
+    page.on('pageerror', e => errs.push(e.message));
+    await page.goto(url);
+    await page.waitForLoadState('load');
+    await page.locator('#tab-collection').click();
+    const sample = await page.evaluate(() => { const a = state.albums.find(x => labelOf(x) === 'hear'); return String(toNum(a.id)); });
+    await relabelViaMenu(page, sample, 'hear', 'heard');
+    const note = await page.locator('#notice').textContent();
+    record(n, 'Relabel: offline shows the usual "needs the live connection" notice and changes nothing', /Changing a label needs the live connection/.test(note) && (await page.locator(`${shelfSel('hear')} .s-it[data-id="${sample}"]`).count()) === 1 && (await toasts(page)).length === 0, note);
+    await page.locator(`${shelfSel('hear')} .s-it[data-id="${sample}"] .s-pick`).click();
+    record(n, 'Pick: offline shows the usual notice too', /Picking favourites needs the live connection/.test(await page.locator('#notice').textContent()));
+    record(n, 'Offline snapshot: shelves render without errors', (await page.locator('#shelves .shelf').count()) === 7 && errs.length === 0, errs.join(' | '));
+    await ctx.close();
+  }
+}
+
+// ----- keyboard: the label popover is a proper menu
+async function menuKeyboardTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+  const row = fxSeedRows(seed).find(r => labelFor(r) === 'hear' && !r[COLS.format]), id = row[COLS.id], sr = await page.evaluate(sheetRow, id);
+  const chipSel = `${shelfSel('hear')} .s-it[data-id="${id}"] .s-chip`;
+  await expandShelf(page, 'hear');
+  await cw(page);
+  await page.locator(chipSel).focus();
+  await page.keyboard.press('Enter');
+  await page.locator('.s-menu').waitFor();
+  const m0 = await page.evaluate(() => ({ role: document.querySelector('.s-menu').getAttribute('role'), items: [...document.querySelectorAll('.s-menu button')].map(b => b.getAttribute('role')).join(), exp: document.querySelector('.s-chip[aria-expanded="true"]') !== null, focus: document.activeElement.dataset.k, checked: document.querySelector('.s-menu [aria-checked="true"]').dataset.k }));
+  record(n, 'Menu: Enter on the label chip opens a role=menu of radio items, focus on the current label', m0.role === 'menu' && /^(menuitemradio,){5}menuitemradio$/.test(m0.items) && m0.exp && m0.focus === 'hear' && m0.checked === 'hear', JSON.stringify(m0));
+  await page.keyboard.press('ArrowDown');
+  const a1 = await page.evaluate(() => document.activeElement.dataset.k);
+  await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp');
+  const a2 = await page.evaluate(() => document.activeElement.dataset.k);
+  await page.keyboard.press('End'); const a3 = await page.evaluate(() => document.activeElement.dataset.k);
+  await page.keyboard.press('Home'); const a4 = await page.evaluate(() => document.activeElement.dataset.k);
+  await page.keyboard.press('ArrowUp'); const a5 = await page.evaluate(() => document.activeElement.dataset.k);
+  record(n, 'Menu: ArrowDown/ArrowUp/Home/End move through the labels (and wrap)', a1 === 'heard' && a2 === 'upcoming' && a3 === 'nope' && a4 === 'owned' && a5 === 'nope', [a1, a2, a3, a4, a5].join());
+  await page.keyboard.press('Escape');
+  const esc = await page.evaluate(() => ({ menu: !!document.querySelector('.s-menu'), onChip: document.activeElement.classList.contains('s-chip'), id: document.activeElement.closest('.s-it') && document.activeElement.closest('.s-it').dataset.id, exp: document.activeElement.getAttribute('aria-expanded') }));
+  record(n, 'Menu: Escape closes it and focus returns to the label chip', !esc.menu && esc.onChip && esc.id === id && esc.exp === 'false', JSON.stringify(esc));
+  record(n, 'Menu: Escape writes nothing', (await gw(page)).length === 0);
+  await page.keyboard.press('Enter');
+  await page.locator('.s-menu').waitFor();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await waitWrites(page, 1); await settle(page);
+  const w = await gw(page);
+  record(n, 'Menu: Enter on "Heard" moves the album (one Status write)', w.length === 1 && w[0].range === `'🎸'!D${sr}` && w[0].v === 'Listened', JSON.stringify(w));
+  const f2 = await page.evaluate(() => { const a = document.activeElement; const it = a.closest && a.closest('.s-it'); return { chip: a.classList.contains('s-chip'), id: it && it.dataset.id, shelf: it && it.dataset.shelf, menu: !!document.querySelector('.s-menu') }; });
+  record(n, 'Menu: after Enter the menu is closed and focus is on the chip of the same album on its new shelf', f2.chip && f2.id === id && f2.shelf === 'heard' && !f2.menu, JSON.stringify(f2));
+  // Tab leaves the menu
+  await page.keyboard.press('Enter');
+  await page.locator('.s-menu').waitFor();
+  await page.keyboard.press('Tab');
+  record(n, 'Menu: Tab closes the menu', (await page.locator('.s-menu').count()) === 0);
+  record(n, 'Menu: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// ----- drag and drop between shelves (laptop pointer)
+async function dragTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+  const rows = fxSeedRows(seed);
+  const firstHear = (await shelfIds(page, 'hear')).find(i => !rows.find(r => r[COLS.id] === i)[COLS.format]);   // a sleeve standing on the shelf
+  const row = rows.find(r => r[COLS.id] === firstHear), id = firstHear, sr = await page.evaluate(sheetRow, id);
+  await cw(page);
+  // a real mouse drag: press on the sleeve, move over the Heard shelf, release
+  const src = page.locator(`${shelfSel('hear')} .s-it[data-id="${id}"] .s-art`);
+  await src.scrollIntoViewIfNeeded();
+  let sb = await src.boundingBox();
+  const tgtBox = await page.locator(shelfSel('heard')).boundingBox();
+  const vh = vp.height;
+  if (tgtBox.y + 120 > vh) { await page.evaluate(d => window.scrollBy(0, d), tgtBox.y + 120 - vh + 20); sb = await src.boundingBox(); }
+  const tb = await page.locator(shelfSel('heard')).boundingBox();
+  await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(sb.x + sb.width / 2 + 12, sb.y + sb.height / 2 + 12, { steps: 4 });
+  await page.mouse.move(tb.x + tb.width / 2, Math.min(tb.y + 100, vh - 30), { steps: 14 });
+  const over = await page.evaluate(() => !!document.querySelector('.shelf.drop'));
+  await page.mouse.up();
+  await waitWrites(page, 1); await settle(page);
+  let w = await gw(page);
+  record(n, 'Drag: dragging a sleeve onto another shelf highlights the shelf while over it', over);
+  record(n, 'Drag: dropping To hear → Heard writes the Status cell only', w.length === 1 && w[0].range === `'🎸'!D${sr}` && w[0].v === 'Listened', JSON.stringify(w));
+  record(n, 'Drag: the sleeve is on the Heard shelf now and a Moved toast with Undo appears', (await shelfIds(page, 'heard')).includes(id) && !(await shelfIds(page, 'hear')).includes(id) && (await toasts(page)).some(t => t.includes(`Moved ${row[0]} to Heard`) && t.includes('Undo')));
+  record(n, 'Drag: the highlight clears after the drop', (await page.locator('.shelf.drop').count()) === 0);
+
+  // the rest use drag events directly (the shelves are too far apart to reach with one mouse path)
+  const dnd = async (fromId, toKey, fromShelf) => {
+    const dt = await page.evaluateHandle(() => new DataTransfer());
+    await page.locator(`${shelfSel(fromShelf)} .s-it[data-id="${fromId}"]`).dispatchEvent('dragstart', { dataTransfer: dt });
+    await page.locator(shelfSel(toKey)).dispatchEvent('dragover', { dataTransfer: dt });
+    await page.locator(shelfSel(toKey)).dispatchEvent('drop', { dataTransfer: dt });
+    await page.evaluate(() => document.dispatchEvent(new Event('dragend', { bubbles: true })));   // the sleeve has usually moved by now
+  };
+  // a Vinyl (Owned) album cannot be dropped on To hear
+  const owned = rows.find(r => r[COLS.status] === 'Listened' && r[COLS.format] === 'Vinyl (Owned)'), oid = owned[COLS.id];
+  await cw(page);
+  await expandShelf(page, 'owned');
+  await dnd(oid, 'hear', 'owned');
+  await settle(page);
+  const rej = await toasts(page);
+  record(n, 'Drag: dropping a Vinyl (Owned) album on To hear is rejected with a message and writes nothing', (await gw(page)).length === 0 && rej.some(t => t.includes(LOCK_MSG)) && (await shelfIds(page, 'owned')).includes(oid), rej.join(' | '));
+  // dropping on its own shelf does nothing
+  await dnd(oid, 'owned', 'owned'); await settle(page);
+  record(n, 'Drag: dropping on the shelf it is already on writes nothing', (await gw(page)).length === 0);
+  // dropping on Vinyl wish list is allowed, with the Format pairing
+  await dnd(oid, 'wish', 'owned');
+  await waitWrites(page, 2); await settle(page);
+  const osr = await page.evaluate(sheetRow, oid);
+  w = await gw(page);
+  record(n, 'Drag: Vinyl (Owned) → Vinyl wish list writes Status and Format', w.map(x => `${x.range}=${x.v}`).sort().join('|') === [`'🎸'!D${osr}=Purchase`, `'🎸'!F${osr}=Vinyl (Wanted)`].sort().join('|'), JSON.stringify(w));
+  // dropping on Favourites turns the pick on (one cell)
+  await cw(page);
+  const plain = rows.find(r => labelFor(r) === 'hear' && !r[COLS.format] && !r[COLS.fav] && r[COLS.id] !== id), pid = plain[COLS.id], psr = await page.evaluate(sheetRow, pid);
+  await expandShelf(page, 'hear');
+  await dnd(pid, 'fav', 'hear');
+  await waitWrites(page, 1); await settle(page);
+  w = await gw(page);
+  record(n, 'Drag: dropping a sleeve on Favourites writes only the Favourite cell', w.length === 1 && w[0].range === `'🎸'!Q${psr}` && /^\d{4}-\d{2}-\d{2}$/.test(w[0].v), JSON.stringify(w));
+  record(n, 'Drag: no write outside 🎸, no console errors', (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// ----- Home (default state: the listening log hidden)
+async function homeDefaultTests(browser, vp, seed, url) {
+  const n = vp.name, laptop = vp.width >= 1000;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'home');
+  await cw(page);
+  const rows = fxSeedRows(seed), want = expectedShelves(seed);
+  const heads = (await page.locator('#view-home .panel h2').allTextContents()).map(h => h.trim());
+  record(n, 'Home: six panels - Album of the day, Favourites, Upcoming, Something to hear, On this day, Anniversaries', heads.join('|') === 'Album of the day|Favourites|Upcoming|Something to hear|On this day|Anniversaries', heads.join('|'));
+  // Album of the day
+  const pool = rows.filter(r => Number(r[COLS.rating]) >= 8 && labelFor(r) !== 'nope').map(r => r[0]);
+  const aotd = await page.locator('#aotdBox h3').textContent();
+  const aBtns = await page.locator('#aotdBox button').allTextContents();
+  record(n, 'Home: Album of the day comes from the rated 8+ pool, with a Favourite pick and no "Log a listen today" while the log is hidden', pool.includes(aotd) && aBtns.some(b => /Favourite/.test(b)) && !aBtns.some(b => /Log a listen/.test(b)), `${aotd}: ${aBtns.join(' / ')}`);
+  const arow = rows.find(r => r[0] === aotd), asr = await page.evaluate(sheetRow, arow[COLS.id]), todayIso = await page.evaluate(() => today());
+  await page.locator('#aotdBox .s-pickbtn').click();
+  await waitWrites(page, 1); await settle(page);
+  let w = await gw(page);
+  record(n, 'Home: the Album of the day pick writes one Favourite cell', w.length === 1 && w[0].range === `'🎸'!Q${asr}` && w[0].v === todayIso && (await page.locator('#aotdBox .s-pickbtn').getAttribute('aria-pressed')) === 'true', JSON.stringify(w));
+  record(n, 'Home: and it joins the Favourites shelf on Home, first', (await page.locator('#homeFav .s-it').first().getAttribute('data-id')) === arow[COLS.id]);
+  await cw(page);
+  await page.locator('#aotdBox .s-pickbtn').click();
+  await waitWrites(page, 1); await settle(page);
+  w = await gw(page);
+  record(n, 'Home: pressing it again writes one empty cell', w.length === 1 && w[0].range === `'🎸'!Q${asr}` && w[0].v === '');
+  // Favourites shelf on Home
+  const homeFav = await page.evaluate(() => [...document.querySelectorAll('#homeFav .s-it')].map(e => e.dataset.id));
+  record(n, 'Home: the Favourites shelf lists the favourites newest first', homeFav.join() === want.fav.join(), `${homeFav.join()} vs ${want.fav.join()}`);
+  const hcount = await page.locator('#homeFav .sh-count').textContent();
+  record(n, 'Home: the Favourites shelf shows its count', hcount === String(want.fav.length));
+  await page.locator('#homeFav [data-sa="seeall"]').click();
+  record(n, 'Home: "See all on Collection" switches to the Collection tab', await page.locator('#view-collection').isVisible() && (await page.locator('#tab-collection').getAttribute('aria-selected')) === 'true');
+  await page.locator('#tab-home').click();
+  // Upcoming
+  const up = await page.locator('#upcomingList > li:not(.empty)').allTextContents();
+  record(n, 'Home: Upcoming lists four albums with a countdown or year', up.length === 4 && up.some(t => /in 12 days$/.test(t)) && up.some(t => /in 40 days$/.test(t)) && up.some(t => /2027$/.test(t)), up.join(' | '));
+  // On this day: releases only while the log is hidden
+  const od = await page.locator('#onDayList li').allTextContents();
+  record(n, 'Home: On this day shows releases but no plays while the log is hidden', od.some(t => t.includes(`${S4.release} was released 7 years ago today`)) && !od.some(t => /you played/.test(t)), od.join(' | '));
+  record(n, 'Home: Anniversaries panel renders', (await page.locator('#annivBox').textContent()).length > 0);
+  // Something to hear
+  const hearSet = new Set(rows.filter(r => labelFor(r) === 'hear').map(r => r[0]));
+  const before = await page.locator('#hearBox').textContent();
+  record(n, 'Something to hear: shows a prompt until you ask', /Pick for me/.test(before) && (await page.locator('#hearBox h3').count()) === 0, before);
+  const seen = [];
+  for (let i = 0; i < 12; i++) {
+    await page.locator('#hearPick').click();
+    seen.push(await page.locator('#hearBox h3').textContent());
+  }
+  // the sample plan already has some To hear albums on Up next: keep picking until the card offers a fresh one
+  for (let i = 0; i < 40 && await page.evaluate(() => albumByKey(home.hearId).plan === 'Up next'); i++) { await page.locator('#hearPick').click(); seen.push(await page.locator('#hearBox h3').textContent()); }
+  record(n, 'Something to hear: "Pick for me" only picks To hear albums', seen.every(t => hearSet.has(t)), seen.join(' | '));
+  record(n, 'Something to hear: never the same album twice in a row', seen.every((t, i) => i === 0 || t !== seen[i - 1]) && new Set(seen).size > 2, seen.join(' | '));
+  const hc = await page.evaluate(() => ({ chip: document.querySelector('#hearBox .lblchip').textContent, btns: [...document.querySelectorAll('#hearBox button')].map(b => b.textContent.trim()) }));
+  record(n, 'Something to hear: the card has the label chip and an Up next button', hc.chip === 'To hear ▾' && hc.btns.includes('Up next'), JSON.stringify(hc));
+  const pickedTitle = seen[seen.length - 1], psr = await page.evaluate(sheetRow, rows.find(r => r[0] === pickedTitle)[COLS.id]);
+  await cw(page);
+  await page.locator('#hearBox button', { hasText: /^Up next$/ }).click();
+  await waitSaved(page);
+  w = await gw(page);
+  record(n, 'Something to hear: Up next writes only the plan cells (K, L, O) of that album', w.length > 0 && w.every(x => [`'🎸'!K${psr}`, `'🎸'!L${psr}`, `'🎸'!O${psr}`].includes(x.range)), JSON.stringify(w.map(x => x.range)));
+  record(n, 'Something to hear: the button then reads "On Up next"', await page.locator('#hearBox button', { hasText: 'On Up next' }).isDisabled());
+  // the label chip on the card changes the label from Home
+  await cw(page);
+  await page.locator('#hearBox .lblchip').click();
+  await page.locator('.s-menu button[data-k="heard"]').click();
+  await waitWrites(page, 1); await settle(page);
+  w = await gw(page);
+  record(n, 'Something to hear: the label chip moves the album (Status write) from Home', w.length === 1 && w[0].v === 'Listened' && (await page.locator('#hearBox .lblchip').textContent()) === 'Heard ▾', JSON.stringify(w));
+  // layout: paired panels share a row and a height
+  const pairs = await page.evaluate(() => {
+    const ps = [...document.querySelectorAll('#view-home .home-grid > .panel')].map(p => p.getBoundingClientRect());
+    return [[0, 1], [2, 3]].map(([a, b]) => ({ same: Math.abs(ps[a].top - ps[b].top) <= 2, h: Math.abs(ps[a].height - ps[b].height) <= 2, w: Math.abs(ps[a].width - ps[b].width) <= 2 }));
+  });
+  if (laptop) record(n, 'Home: the first four panels sit in equal pairs (same row, same height, same width); On this day and Anniversaries are full width', pairs.every(p => p.same && p.h && p.w), JSON.stringify(pairs));
+  else record(n, 'Home: panels stack in one column on a phone', await page.evaluate(() => { const ps = [...document.querySelectorAll('#view-home .home-grid > .panel')].map(p => p.getBoundingClientRect()); return ps.every((p, i) => i === 0 || p.top >= ps[i - 1].bottom - 1) && ps.every(p => p.width > innerWidth - 40); }));
+  const o = await page.evaluate(overflow);
+  record(n, 'Home: no sideways scroll', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  record(n, 'Home: nothing outside 🎸 written, no console errors', (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// ----- the listening log switch (Tools > Look), tabs, Dashboard tiles
+async function logSwitchTests(browser, vp, seed, url) {
+  const n = vp.name, laptop = vp.width >= 1000;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'tools');
+  const rows = fxSeedRows(seed);
+  const vis = sel => page.locator(sel).isVisible();
+  let labels = await page.locator('nav.tabs .tab:visible').allTextContents();
+  record(n, 'Log switch: by default there are five tabs - Home, Collection, Plan, Dashboard, Tools', labels.join() === FIVE.join() && !(await vis('#tab-log')), labels.join());
+  record(n, 'Log switch: the Look panel has "Show listening log", off by default, and nothing is stored', (await page.locator('#lookLog').isChecked()) === false && (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === null);
+  record(n, 'Log switch: Tools hides Nudges, Goal planner and Year in review, and keeps Lucky dip, Do I own this?, Recommendations and Look', !(await vis('#nudPanel')) && !(await vis('#goalPanel')) && !(await vis('#yirPanel')) && (await vis('#dipH')) && (await vis('#ownH')) && (await vis('#recsH')) && (await vis('#lookH')));
+  const dipBtns = await page.locator('#dipCard button').allTextContents();
+  record(n, 'Log switch: Lucky dip has no "Log a listen today" while the log is hidden', dipBtns.join() === 'Another,Up next' || dipBtns.join() === 'Another,On Up next', dipBtns.join());
+  await page.locator('#recModes .chip[data-m="revisit"]').click();
+  const rv = await page.evaluate(() => [...document.querySelectorAll('#recList .rec')].map(r => ({ t: r.querySelector('.t').textContent, acts: [...r.querySelectorAll('.rec-actions button')].map(b => b.textContent) })));
+  record(n, 'Log switch: Revisit lists albums rated 9 or 10 with only Open (no logging)', rv.length > 0 && rv.every(x => Number(rows.find(r => r[0] === x.t)[COLS.rating]) >= 9 && x.acts.join() === 'Open'), JSON.stringify(rv.slice(0, 2)));
+  const o1 = await page.evaluate(overflow);
+  record(n, 'Log switch: Tools (log hidden) has no sideways scroll', o1.sw <= o1.iw, `${o1.sw} vs ${o1.iw}`);
+
+  // Dashboard with the log hidden: nine tiles
+  await page.locator('#tab-dashboard').click(); await settle(page);
+  const tiles = await page.evaluate(() => [...document.querySelectorAll('#dashTiles .stat')].map(s => ({ k: s.dataset.tile, eb: s.querySelector('.eyebrow').textContent, num: s.querySelector('.num').textContent, sub: s.querySelector('.sub').textContent })));
+  const T = Object.fromEntries(tiles.map(t => [t.k, t]));
+  record(n, 'Dashboard (log hidden): nine tiles in order - Albums heard, Favourites, Average rating, Owned, Vinyl wish list, Listening backlog, Upcoming, Artists heard, Copied to MP3', tiles.map(t => t.eb).join('|') === 'Albums heard|Favourites|Average rating|Owned|Vinyl wish list|Listening backlog|Upcoming|Artists heard|Copied to MP3', tiles.map(t => t.eb).join('|'));
+  const heardRows = rows.filter(r => Number(r[COLS.rating]) > 0 || r[COLS.status] === 'Listened' || r[COLS.status] === 'Owned');
+  const ratings = heardRows.map(r => parseFloat(r[COLS.rating])).filter(x => x > 0);
+  const count = k => rows.filter(r => labelFor(r) === k).length;
+  const vinyl = rows.filter(r => r[COLS.format] === 'Vinyl (Owned)').length;
+  const artists = new Set(heardRows.map(r => r[2].trim().toLowerCase()).filter(Boolean)).size;
+  const checks = {
+    heard: T.heard.num === String(heardRows.length), favs: T.favs.num === '4', avg: T.avg.num === (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1),
+    owned: T.owned.num === String(count('owned')) && T.owned.sub === `${vinyl} on vinyl`, wish: T.wish.num === String(count('wish')), backlog: T.backlog.num === String(count('hear')),
+    upcoming: T.upcoming.num === String(count('upcoming')) && /next in 12 days/.test(T.upcoming.sub), artists: T.artists.num === String(artists), copied: T.copied.num === '4'
+  };
+  record(n, 'Dashboard (log hidden): tile numbers match the sheet (checked independently)', Object.values(checks).every(Boolean), JSON.stringify(checks) + ' ' + JSON.stringify(tiles.map(t => t.num)));
+  const hid = await page.evaluate(() => ['dashPeriods', 'monthPanel', 'heatPanel', 'artPlaysCol'].map(id => document.getElementById(id).getBoundingClientRect().height === 0));
+  record(n, 'Dashboard (log hidden): listens per month, the listening calendar, the year picker and "most plays" are hidden', hid.every(Boolean), hid.join());
+  const shownPanels = await page.evaluate(() => [...document.querySelectorAll('#view-dashboard .panel')].filter(p => p.getBoundingClientRect().height > 0).map(p => p.querySelector('h2').textContent));
+  record(n, 'Dashboard (log hidden): Ratings, Genres, Decades, Formats and Top artists remain', ['Ratings', 'Genres', 'Decades', 'Formats & ownership', 'Top artists'].every(h => shownPanels.includes(h)) && shownPanels.length === 5, shownPanels.join());
+  const layout = await page.evaluate(() => {
+    const els = [...document.querySelectorAll('#dashTiles .stat')], box = document.getElementById('dashTiles').getBoundingClientRect(), rowsM = new Map();
+    for (const e of els) { const r = e.getBoundingClientRect(); const k = Math.round(r.top); (rowsM.get(k) || rowsM.set(k, []).get(k)).push(r); }
+    const rs = [...rowsM.values()];
+    const pr = [...document.querySelectorAll('#view-dashboard .dash-2 > .panel')].filter(p => p.getBoundingClientRect().height > 0).map(p => ({ full: p.classList.contains('full'), r: p.getBoundingClientRect() }));
+    return { rows: rs.map(r => r.length), cover: rs.every(r => Math.abs(r[0].left - box.left) <= 2 && Math.abs(r[r.length - 1].right - box.right) <= 2), lastW: els[els.length - 1].getBoundingClientRect().width, boxW: box.width, panels: pr.map(p => p.full) };
+  });
+  if (laptop) record(n, 'Dashboard (log hidden): tiles form a 3x3 grid on a laptop', layout.rows.join() === '3,3,3' && layout.cover, JSON.stringify(layout));
+  else record(n, 'Dashboard (log hidden): tiles are two columns on a phone with the ninth spanning', layout.rows.join() === '2,2,2,2,1' && layout.lastW >= layout.boxW - 2, JSON.stringify(layout));
+  const pairsOk = await page.evaluate(() => { const ps = [...document.querySelectorAll('#view-dashboard .dash-2 > .panel')].filter(p => p.getBoundingClientRect().height > 0 && !p.classList.contains('full')); return ps.every((p, i) => i % 2 || !ps[i + 1] || Math.abs(p.getBoundingClientRect().height - ps[i + 1].getBoundingClientRect().height) <= 2) && ps.length % 2 === 0; });
+  if (laptop) record(n, 'Dashboard (log hidden): half-width panels come in equal pairs (no orphan)', pairsOk);
+  const o2 = await page.evaluate(overflow);
+  record(n, 'Dashboard (log hidden): no sideways scroll', o2.sw <= o2.iw, `${o2.sw} vs ${o2.iw}`);
+
+  // switch it on
+  await page.locator('#tab-tools').click();
+  await page.locator('#lookLog').check();
+  await settle(page);
+  labels = await page.locator('nav.tabs .tab:visible').allTextContents();
+  record(n, 'Log switch: turning it on adds the Log tab after Collection', labels.join() === SIX.join(), labels.join());
+  record(n, 'Log switch: it is remembered in sg-showlog', (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === '1');
+  record(n, 'Log switch: Nudges, Goal planner and Year in review come back', (await vis('#nudPanel')) && (await vis('#goalPanel')) && (await vis('#yirPanel')) && (await page.locator('#nudgeBox').textContent()).length > 0);
+  const dipBtns2 = await page.locator('#dipCard button').allTextContents();
+  record(n, 'Log switch: Lucky dip gets "Log a listen today" back', dipBtns2.includes('Log a listen today'), dipBtns2.join());
+  await page.locator('#tab-log').click();
+  record(n, 'Log switch: the Log tab shows the log form', (await vis('#view-log')) && (await vis('#lgSave')));
+  await page.locator('#tab-dashboard').click(); await settle(page);
+  const t2 = await page.locator('#dashTiles .stat').evaluateAll(els => els.map(e => e.dataset.tile));
+  record(n, 'Log switch: Dashboard goes back to the log tiles and panels', t2.includes('plays') && t2.includes('logged') && !t2.includes('favs') && (await vis('#monthPanel')) && (await vis('#heatPanel')) && (await vis('#dashPeriods')));
+  await page.locator('#tab-home').click();
+  record(n, 'Log switch: Home gets "Log a listen today" on the Album of the day and plays in On this day', (await page.locator('#aotdBox button', { hasText: 'Log a listen today' }).count()) === 1);
+  await page.reload();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  record(n, 'Log switch: stays on after a reload', (await vis('#tab-log')) && (await page.locator('#lookLog').isChecked()));
+  // and off again
+  await page.locator('#tab-tools').click();
+  await page.locator('#lookLog').uncheck();
+  record(n, 'Log switch: turning it off hides the tab again', !(await vis('#tab-log')) && (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === '0');
+  record(n, 'Log switch: changing it writes nothing to the sheet, no console errors', (await gw(page)).length === 0 && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
 }
 
 // ---------- runner ----------
@@ -1295,7 +1970,7 @@ const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.u
 const CHART_LOCAL = join(here, 'node_modules', 'chart.js', 'dist', 'chart.umd.js');
 const HAVE_CHART = existsSync(CHART_LOCAL);
 
-async function openContext(browser, vp, seed, { blockChart = false, reducedMotion } = {}) {
+async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}) });
   await context.clock.install({ time: RUN_START });
   let externalBlocked = 0;
@@ -1307,6 +1982,8 @@ async function openContext(browser, vp, seed, { blockChart = false, reducedMotio
     return route.abort();
   });
   await context.addInitScript(installStub, seed);
+  // The listening log is hidden by default; tests that exercise it switch it on the way a person does (Tools > Look)
+  if (showLog) await context.addInitScript(() => { try { localStorage.setItem('sg-showlog', '1'); } catch (e) {} });
   const page = await context.newPage();
 
   const problems = [];
@@ -1321,73 +1998,97 @@ async function openContext(browser, vp, seed, { blockChart = false, reducedMotio
   return { context, page, problems, blocked: () => externalBlocked };
 }
 
-async function runViewport(browser, vp, seed, wrapperUrl, rawUrl) {
+async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl) {
   console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
-  const { context, page, problems, blocked } = await openContext(browser, vp, seed);
-  const externalBlocked = blocked();
+  const only = (process.env.SMOKE_ONLY || '').split(',').filter(Boolean);
+  const run = (name, fn) => (!only.length || only.includes(name)) ? fn() : null;
 
-  await page.goto(wrapperUrl);
-  await page.waitForLoadState('load');
-  await page.waitForLoadState('networkidle').catch(() => {});
-  await page.waitForTimeout(300);
+  // A. the page as a person first sees it: listening log hidden
+  if (!only.length || only.includes('tabs')) {
+    const { context, page, problems, blocked } = await openContext(browser, vp, seed);
+    const externalBlocked = blocked();
+    await page.goto(wrapperUrl);
+    await page.waitForLoadState('load');
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForTimeout(300);
 
-  const load = await page.evaluate(overflow);
-  record(vp.name, 'page loads without console errors or uncaught exceptions', problems.length === 0,
-    problems.length ? problems.slice(0, 3).join(' | ') : `${blocked()} external request(s) refused${HAVE_CHART ? ', Chart.js served locally' : ', no local Chart.js'}`);
-  record(vp.name, 'no sideways scroll on load', load.sw <= load.iw, `scrollWidth ${load.sw} vs innerWidth ${load.iw}`);
+    const load = await page.evaluate(overflow);
+    record(vp.name, 'page loads without console errors or uncaught exceptions', problems.length === 0,
+      problems.length ? problems.slice(0, 3).join(' | ') : `${blocked()} external request(s) refused${HAVE_CHART ? ', Chart.js served locally' : ', no local Chart.js'}`);
+    record(vp.name, 'no sideways scroll on load', load.sw <= load.iw, `scrollWidth ${load.sw} vs innerWidth ${load.iw}`);
 
-  const bar = await page.evaluate(DISCOVER);
-  record(vp.name, 'tab pill bar discovered', bar.found && bar.tabs.length > 0,
-    bar.found ? `${bar.tabs.length} tabs${bar.usingRoleTab ? ' (role=tab)' : ' (all buttons in bar)'}: ${bar.tabs.map(t => t.label).join(', ')}` : 'no tab bar found');
+    const bar = await page.evaluate(DISCOVER);
+    record(vp.name, 'tab pill bar discovered', bar.found && bar.tabs.length > 0,
+      bar.found ? `${bar.tabs.length} tabs${bar.usingRoleTab ? ' (role=tab)' : ' (all buttons in bar)'}: ${bar.tabs.map(t => t.label).join(', ')}` : 'no tab bar found');
+    record(vp.name, 'tabs: Home, Collection, Plan, Dashboard, Tools (no Log tab by default)', bar.tabs.map(t => t.label).join() === FIVE.join(), bar.tabs.map(t => t.label).join());
+    record(vp.name, 'Home is the tab shown on load', (await page.locator('#tab-home').getAttribute('aria-selected')) === 'true' && await page.locator('#view-home').isVisible());
 
-  const seenSlugs = new Set();
-  for (const tab of bar.tabs) {
-    const slugBase = tab.label.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `tab-${tab.i + 1}`;
-    let slug = slugBase;
-    for (let n = 2; seenSlugs.has(slug); n++) slug = `${slugBase}-${n}`;
-    seenSlugs.add(slug);
+    const seenSlugs = new Set();
+    for (const tab of bar.tabs) {
+      const slugBase = tab.label.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `tab-${tab.i + 1}`;
+      let slug = slugBase;
+      for (let n = 2; seenSlugs.has(slug); n++) slug = `${slugBase}-${n}`;
+      seenSlugs.add(slug);
 
-    let clickErr = '';
-    await page.locator(`[data-smoke-tab="${tab.i}"]`).click({ timeout: 5000 }).catch(e => { clickErr = e.message.split('\n')[0]; });
-    if (clickErr) {
-      record(vp.name, `tab "${tab.label}" can be clicked`, false, clickErr);
-      continue;
+      let clickErr = '';
+      await page.locator(`[data-smoke-tab="${tab.i}"]`).click({ timeout: 5000 }).catch(e => { clickErr = e.message.split('\n')[0]; });
+      if (clickErr) {
+        record(vp.name, `tab "${tab.label}" can be clicked`, false, clickErr);
+        continue;
+      }
+      await page.waitForTimeout(250);
+      const panel = await page.evaluate(PANEL_STATE, tab.i);
+      record(vp.name, `tab "${tab.label}" shows its panel`, panel.visible, `via ${panel.method}`);
+      const o = await page.evaluate(overflow);
+      if (o.sw > o.iw) record(vp.name, `no sideways scroll on tab "${tab.label}"`, false, `scrollWidth ${o.sw} vs ${o.iw}`);
+      await page.screenshot({ path: join(OUT, `${vp.name}-${slug}.png`), fullPage: true });
     }
-    await page.waitForTimeout(250);
-    const panel = await page.evaluate(PANEL_STATE, tab.i);
-    record(vp.name, `tab "${tab.label}" shows its panel`, panel.visible, `via ${panel.method}`);
-    const o = await page.evaluate(overflow);
-    if (o.sw > o.iw) record(vp.name, `no sideways scroll on tab "${tab.label}"`, false, `scrollWidth ${o.sw} vs ${o.iw}`);
-    await page.screenshot({ path: join(OUT, `${vp.name}-${slug}.png`), fullPage: true });
+    if (bar.tabs.length) {
+      const o = await page.evaluate(overflow);
+      record(vp.name, 'no sideways scroll after visiting all tabs', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+    }
+    const forbidden = await page.evaluate(() => window.__forbidden);
+    record(vp.name, 'no access outside 🎸 tabs (window.__forbidden empty)', forbidden.length === 0, forbidden.length ? JSON.stringify(forbidden.slice(0, 3)) : '');
+    record(vp.name, 'visiting every tab writes nothing to the sheet', (await page.evaluate(() => window.__writes.length)) === 0);
+    record(vp.name, 'no console errors or uncaught exceptions during the run', problems.length === 0, problems.slice(0, 3).join(' | '));
+    void externalBlocked;
+    await context.close();
   }
-  if (bar.tabs.length) {
-    const o = await page.evaluate(overflow);
-    record(vp.name, 'no sideways scroll after visiting all tabs', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+
+  // B. with the listening log switched on: the Dashboard log panels and the Plan tab, as before
+  if (!only.length || only.includes('dash')) {
+    const { context, page, problems } = await openContext(browser, vp, seed, { showLog: true });
+    await page.goto(wrapperUrl);
+    await page.waitForLoadState('load');
+    await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+    await page.waitForTimeout(300);
+    await dashTests(page, vp, seed);
+    await planTests(page, vp);
+    const forbidden = await page.evaluate(() => window.__forbidden);
+    record(vp.name, 'with the log on: no access outside 🎸 tabs', forbidden.length === 0, forbidden.length ? JSON.stringify(forbidden.slice(0, 3)) : '');
+    record(vp.name, 'with the log on: no console errors or uncaught exceptions during the run', problems.length === 0, problems.slice(0, 3).join(' | '));
+    const writes = await page.evaluate(() => window.__writes);
+    console.log(`  info  ${writes.length} sheet write call(s) recorded during the run`);
+    await context.close();
   }
 
-  await dashTests(page, vp, seed);
-  await planTests(page, vp);
-
-  const forbidden = await page.evaluate(() => window.__forbidden);
-  record(vp.name, 'no access outside 🎸 tabs (window.__forbidden empty)', forbidden.length === 0,
-    forbidden.length ? JSON.stringify(forbidden.slice(0, 3)) : '');
-  const finalProblems = problems.length;
-  record(vp.name, 'no console errors or uncaught exceptions during the run', finalProblems === 0,
-    problems.length ? problems.slice(0, 3).join(' | ') : '');
-
-  const writes = await page.evaluate(() => window.__writes);
-  console.log(`  info  ${writes.length} sheet write call(s) recorded during the run`);
-  await context.close();
-
-  await dashEmptyLogTest(browser, vp, seed, wrapperUrl);
-  await dashNoChartTest(browser, vp, seed, wrapperUrl);
-  await connectTest(browser, vp, seed, rawUrl);
-  await toolsTests(browser, vp, seed, wrapperUrl);
-  await goalTests(browser, vp, seed, wrapperUrl);
-  await discoverTests(browser, vp, seed, wrapperUrl);
-  await tracksTests(browser, vp, seed, wrapperUrl);
-  await lookTests(browser, vp, seed, wrapperUrl);
-  await layoutTests(browser, vp, seed, wrapperUrl);
+  await run('dashlog', () => dashEmptyLogTest(browser, vp, seed, wrapperUrl));
+  await run('dashlog', () => dashNoChartTest(browser, vp, seed, wrapperUrl));
+  await run('connect', () => connectTest(browser, vp, seed, rawUrl));
+  await run('tools', () => toolsTests(browser, vp, seed, wrapperUrl));
+  await run('tools', () => goalTests(browser, vp, seed, wrapperUrl));
+  await run('home', () => homeTests(browser, vp, seed, wrapperUrl));
+  await run('home', () => homeDefaultTests(browser, vp, seed, wrapperUrl));
+  await run('collection', () => collectionTests(browser, vp, seed, wrapperUrl));
+  await run('relabel', () => relabelTests(browser, vp, seed, seedL, wrapperUrl));
+  await run('undo', () => undoTests(browser, vp, seed, seedL, wrapperUrl));
+  await run('pick', () => pickTests(browser, vp, seed, seedL, wrapperUrl));
+  await run('menu', () => menuKeyboardTests(browser, vp, seed, wrapperUrl));
+  await run('dnd', () => dragTests(browser, vp, seed, wrapperUrl));
+  await run('log', () => logSwitchTests(browser, vp, seed, wrapperUrl));
+  await run('tracks', () => tracksTests(browser, vp, seed, wrapperUrl));
+  await run('look', () => lookTests(browser, vp, seed, wrapperUrl));
+  await run('layout', () => layoutTests(browser, vp, seed, wrapperUrl));
 }
 
 async function main() {
@@ -1413,9 +2114,9 @@ async function main() {
     args: ['--no-sandbox'],          // container runs as root
   });
   try {
-    const seed = buildSeed();
+    const seed = buildSeed(), seedL = buildSeed({ labelled: true });   // seedL: the sheet also has a Labelled column
     for (const vp of VIEWPORTS) {
-      await runViewport(browser, vp, seed, pathToFileURL(wrapperPath).href, pathToFileURL(rawPath).href);
+      await runViewport(browser, vp, seed, seedL, pathToFileURL(wrapperPath).href, pathToFileURL(rawPath).href);
     }
   } finally {
     await browser.close();
