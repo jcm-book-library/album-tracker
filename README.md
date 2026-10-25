@@ -73,7 +73,11 @@ See [ROADMAP.md](ROADMAP.md).
   Every kind of thing gets its own `Favourite` column in its own tab (albums now; artists, tracks and shows when those tabs exist),
   and the Home page gathers them all.
 - Status dropdown: "Didn't like" added (chip style kept).
-- Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact.
+- 🎸 gained column R, `Labelled`: the date of the album's last label change (the Status shelf it was moved to).
+  Optional: the app works without it, and writes it only when the header exists. It orders the Didn't like shelf,
+  so the newest albums sit at the far end and the oldest are closest to the incinerator.
+  Backup before this change: `🎸 backup 2026-10-25 (before Labelled)`.
+- Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact; later A–Q identical to the second backup and Labelled empty.
 
 ## Look
 
