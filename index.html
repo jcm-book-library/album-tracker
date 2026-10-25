@@ -149,11 +149,15 @@ input.plays{width:84px}
 .tab{border:0;background:transparent;color:var(--muted);border-radius:8px;padding:7px 16px;font-weight:600;font-size:14px;white-space:nowrap}
 .tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
 
-/* library */
-.lib-bar{display:flex;flex-wrap:wrap;gap:var(--gap-tile);align-items:stretch;margin-bottom:var(--gap-tile)}
-.lib-bar > *{height:38px;margin:0}
-.lib-bar input[type="search"]{flex:1 1 220px;min-width:0}
-.lib-bar .btn{padding-block:0}
+/* collection toolbar and table view */
+.col-bar,.tbl-bar{display:flex;flex-wrap:wrap;gap:var(--gap-tile);align-items:stretch;margin-bottom:var(--gap-tile)}
+.col-bar > *,.tbl-bar > *{height:38px;margin:0}
+.col-bar input[type="search"]{flex:1 1 220px;min-width:0}
+.tbl-bar select{flex:1 1 160px;min-width:0}
+.col-bar .btn,.tbl-bar .btn{padding-block:0}
+.seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:0 16px;height:30px;font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .fgroup{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:var(--gap-tile)}
 .fgroup .chip{height:30px;padding-block:0}
 .fgroup .flabel{min-width:4.2em}
@@ -274,6 +278,7 @@ div.hbar{padding:3px 6px}
 .art-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
 .art-cols .sub-head{margin-top:0}
 @media (max-width:700px){.art-cols{grid-template-columns:minmax(0,1fr)}.art-cols > div + div{margin-top:16px}}
+.art-cols.one{grid-template-columns:minmax(0,1fr)}
 .sub-head{margin:16px 0 6px}
 .sub-head:first-of-type{margin-top:0}
 .drill-list{list-style:none;margin:0;padding:8px 12px 16px;display:flex;flex-direction:column}
@@ -358,6 +363,203 @@ div.hbar{padding:3px 6px}
 @media (max-width:700px){.rec-list{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:560px){.yir-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tab{padding:7px 12px;font-size:13px}.tabs{scrollbar-width:thin}}
 
+/* shelves: Collection and the Home favourites. Wall, wooden ledge, standing sleeves and a leaning fan at the end. */
+:root{
+  --wall-1:color-mix(in srgb,var(--vein) 40%,#0b0c12); --wall-2:color-mix(in srgb,var(--deep) 12%,#14151f);
+  --wood-top:color-mix(in srgb,var(--c) 14%,#54485a); --wood:color-mix(in srgb,var(--deep) 14%,#2e2535); --wood-lo:color-mix(in srgb,var(--deep) 10%,#1a1520);
+  --shadow:rgba(0,0,0,.6);
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.shelves{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap)}
+.shelf{transition:box-shadow .15s,border-color .15s}
+.shelf.drop{border-color:var(--c);box-shadow:0 0 0 2px var(--c)}
+.sh-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;min-height:36px}
+.sh-head h2{font-size:21px;line-height:1.2;display:flex;align-items:center;gap:10px;min-width:0}
+.sh-head h2 svg{width:22px;height:22px;flex:none;color:var(--c);--pf:var(--c)}
+.sh-head h2 .sh-dot{width:10px;height:10px;border-radius:50%;background:var(--c);opacity:.55;flex:none}
+.sh-right{display:flex;align-items:center;gap:10px;flex:none}
+.sh-count{font-family:var(--display);font-weight:700;font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sh-btn{border-radius:999px;padding:6px 14px;white-space:nowrap}
+.sh-btn:hover{border-color:var(--c)}
+.s-board{container-type:inline-size;position:relative;padding:78px 12px 0;border-radius:10px 10px 0 0;background:linear-gradient(180deg,var(--wall-1),var(--wall-2));box-shadow:inset 0 10px 24px rgba(0,0,0,.45);--n:5;--gc:6}
+.s-board.compact{--n:4}
+.s-row{--s:clamp(52px,12.2cqw,132px);--lw:calc(var(--s) * 1.6);--free:calc(var(--lw) - var(--s));position:relative;z-index:2;display:flex;align-items:flex-end;min-height:var(--s)}
+.s-board.compact .s-row{--s:clamp(52px,13cqw,100px)}
+.s-standing{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));align-items:end}
+.s-cell{display:flex;justify-content:center;align-items:flex-end}
+.s-stack{--sw:12px;--pitch:9.5px;--ang:12deg;--w0:calc(var(--s) * .6);--R:calc(var(--s) * .5);--stw:calc((var(--k) - 1) * var(--pitch) + var(--sw));position:relative;z-index:3;flex:none;width:var(--stw);height:var(--s);margin-left:calc(var(--s) * .24);outline:none}
+.s-stack.more{margin-right:var(--morew,44px)}
+.s-more{position:absolute;left:calc(100% + 8px);bottom:6px;min-width:34px;padding:2px 8px;border-radius:999px;background:rgba(14,15,22,.92);border:1px solid rgba(255,255,255,.22);color:var(--muted);font-size:12px;font-weight:700;line-height:1.5;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+.s-grid{--s:clamp(52px,12.2cqw,132px);position:relative;z-index:2;display:grid;grid-template-columns:repeat(var(--gc),minmax(0,1fr));row-gap:78px;align-items:end}
+.s-ledge{position:relative;z-index:1;height:20px;margin:-5px -8px 0;border-radius:3px 3px 8px 8px;background:linear-gradient(180deg,var(--wood-top) 0 6px,rgba(255,255,255,.34) 6px 7px,var(--wood) 7px,var(--wood-lo));box-shadow:0 14px 16px -8px var(--shadow),0 2px 0 rgba(0,0,0,.35)}
+.s-empty{position:relative;z-index:2;color:var(--muted);font-size:14px;padding:0 0 20px;text-align:center;margin:0}
+
+.s-it{position:relative;width:var(--s);display:flex;align-items:flex-end}
+.s-it::before{content:"";position:absolute;left:6%;right:6%;bottom:-4px;height:10px;z-index:-1;background:radial-gradient(ellipse at center,rgba(0,0,0,.6),transparent 70%)}
+.s-lift{position:relative;width:100%;display:flex;justify-content:center;align-items:flex-end;transition:transform .2s ease,opacity .18s ease}
+.s-it.stand:hover .s-lift,.s-it.stand:focus-within .s-lift{transform:translateY(-5px)}
+.s-it:hover,.s-it:focus-within{z-index:80}
+.s-art{position:relative;display:block;padding:0;border:0;background:none;overflow:hidden;width:var(--s);height:var(--s);border-radius:4px;color:inherit}
+.s-it.sel .s-art{outline:2px solid var(--c);outline-offset:2px}
+.s-it.album .s-art{box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 6px 10px -2px var(--shadow)}
+.s-it.album .s-art::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.22),rgba(255,255,255,0) 7%,rgba(0,0,0,0) 90%,rgba(0,0,0,.25));pointer-events:none}
+.s-art svg{display:block;width:100%;height:100%}
+.s-art svg text{font-family:var(--body);font-weight:600}
+
+.s-chip,.s-pick{position:absolute;opacity:0;transition:opacity .15s}
+.s-it:hover .s-chip,.s-it:hover .s-pick,.s-it:focus-within .s-chip,.s-it:focus-within .s-pick,.s-it.sel .s-chip,.s-it.sel .s-pick,.s-chip[aria-expanded="true"]{opacity:1}
+@media (hover:none){.s-it.album .s-chip,.s-it.album .s-pick{opacity:1}}
+.s-chip{left:50%;bottom:5px;transform:translateX(-50%);max-width:calc(100% - 8px);border:1px solid rgba(255,255,255,.28);background:rgba(14,15,22,.9);color:var(--fg);border-radius:999px;padding:2px 8px;font-size:clamp(9px,calc(var(--s) * .085),12px);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
+.s-chip:hover{border-color:var(--c)}
+.s-pick{top:4px;right:4px;width:clamp(22px,calc(var(--s) * .22),30px);height:clamp(22px,calc(var(--s) * .22),30px);padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.28);background:rgba(14,15,22,.9);color:var(--fg)}
+.s-pick svg{width:68%;height:68%}
+.s-pick[aria-pressed="true"]{--pf:var(--c);color:var(--c);border-color:var(--c);opacity:1}
+.s-pick:hover{border-color:var(--c)}
+.s-cd{position:absolute;top:4px;left:4px;padding:1px 7px;border-radius:999px;background:var(--c);color:var(--ink);font-size:clamp(9px,calc(var(--s) * .08),11px);font-weight:700;white-space:nowrap;pointer-events:none;max-width:calc(100% - 40px);overflow:hidden;text-overflow:ellipsis}
+
+.s-cap{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(4px);width:max-content;max-width:190px;z-index:5;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:7px 10px;display:grid;gap:1px;text-align:left;font-size:12px;line-height:1.35;color:var(--muted);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;box-shadow:0 8px 18px -6px var(--shadow)}
+.s-cap b{color:var(--fg);font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.s-cap .k{display:inline-block;justify-self:start;margin-top:3px;padding:0 7px;border-radius:999px;background:var(--c);color:var(--ink);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.s-it:hover .s-cap,.s-it:focus-within .s-cap{opacity:1;transform:translateX(-50%)}
+.s-cell.first .s-cap{left:0;transform:translateY(4px)}
+.s-cell.first .s-it:hover .s-cap,.s-cell.first .s-it:focus-within .s-cap{transform:none}
+.s-cell.last .s-cap{left:auto;right:0;transform:translateY(4px)}
+.s-cell.last .s-it:hover .s-cap,.s-cell.last .s-it:focus-within .s-cap{transform:none}
+
+/* the packed stack: narrow slices of the remaining sleeves, leaning like records filed in a crate */
+.s-it.slice{position:absolute;bottom:0;left:var(--x);--x:calc(var(--i) * var(--pitch));width:var(--sw);height:var(--s);z-index:calc(var(--i) + 1);transform-origin:50% 100%;transform:translateX(0) rotate(-10deg);transition:transform .12s ease-out,width .12s ease-out}
+.s-it.slice::before{display:none}
+.s-it.slice:hover,.s-it.slice:focus-within{z-index:calc(var(--i) + 1)}
+.s-it.slice .s-lift{height:100%;transition:transform .12s ease-out}
+.s-it.slice .s-art{width:100%;height:100%;border-radius:1px;box-shadow:none;background:#000}
+.s-it.slice .s-art svg{position:absolute;top:0;left:calc(var(--s) * var(--ox) / -100);width:var(--s);height:var(--s);max-width:none}
+.s-it.slice .s-art::after{background:linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,0) 22%,rgba(0,0,0,0) 62%,rgba(0,0,0,.6))}
+.s-it.slice.sel .s-art{outline-offset:0}
+.s-it.slice .s-chip,.s-it.slice .s-pick,.s-it.slice .s-cap,.s-it.slice .s-cd{display:none}
+.s-it.slice .s-chip{font-size:9px;padding:2px 6px}
+.s-stack.fan{z-index:60;--ang:15deg;--hw:1.3;--ac:calc((var(--ci) - var(--f0) - (var(--m) - 1) / 2) * var(--ang));--px:min(calc(var(--ci) * var(--pitch) + var(--sw) / 2 - var(--s) * .087 - (var(--hw) - 1) * var(--w0) / 2 - (var(--R) + var(--s) / 2) * sin(var(--ac))),calc(var(--stw) - var(--s) * .6))}
+.s-stack.fan .s-it.slice.fanned{--a:calc((var(--j) - (var(--m) - 1) / 2) * var(--ang));width:var(--w0);z-index:calc(40 + var(--j));transform-origin:calc(var(--w0) / 2) calc(100% + var(--R));transform:translateX(calc(var(--px) - var(--w0) / 2 - var(--x))) rotate(var(--a))}
+.s-stack.fan:not(.touch) .s-it.slice.fanned:not(.cur){pointer-events:none}
+.s-stack.fan .s-it.slice.fanned .s-art{border-radius:4px;box-shadow:0 0 0 1px rgba(255,255,255,.14) inset,-4px 4px 9px -3px var(--shadow)}
+.s-stack.fan .s-it.slice.fanned .s-art::after{background:linear-gradient(90deg,rgba(255,255,255,.2),rgba(255,255,255,0) 8%,rgba(0,0,0,0) 85%,rgba(0,0,0,.3))}
+.s-stack.fan .s-it.slice.fanned.cur{z-index:90;width:calc(var(--w0) * var(--hw))}
+.s-stack.fan .s-it.slice.fanned.cur .s-lift{transform:translateY(-10px)}
+.s-stack.fan .s-it.slice.fanned.cur .s-chip{display:block;opacity:1}
+.s-stack.fan .s-it.slice.fanned.cur .s-pick{display:grid;opacity:1;left:50%;right:auto;margin-left:calc(clamp(22px,calc(var(--s) * .22),30px) / -2)}
+.s-stack.fan .s-it.slice.fanned.cur .s-cap{display:grid;left:auto;right:0;opacity:1;transform:rotate(calc(var(--a) * -1));transform-origin:100% 100%}
+.s-stack.touch.fan .s-it.slice.fanned.cur .s-cap{display:none}
+.s-chev{display:none;position:absolute;bottom:calc(100% + 12px);width:36px;height:36px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(14,15,22,.94);color:var(--fg);font-size:20px;line-height:1;z-index:95}
+.s-chev.prev{left:calc(var(--px, 0px) - var(--s) * .62 - 18px)}
+.s-chev.next{left:calc(var(--px, 0px) + var(--s) * .62 - 18px)}
+.s-stack.touch .s-chev{display:grid;place-items:center}
+.s-it.dragging{opacity:.4}
+
+/* Didn't like: a cartoon incinerator at the end of the shelf, the newest few albums standing in slots towards its mouth */
+.s-standing.inc{grid-template-columns:1.5fr 1.25fr 1fr .82fr}
+.s-standing.inc.n3{grid-template-columns:1.3fr 1fr .8fr}
+.s-furnace{position:relative;flex:none;align-self:flex-end;width:calc(var(--s) * 1.4);height:var(--s);margin-left:calc(var(--s) * .08);z-index:1}
+.s-furnace::before{content:"";position:absolute;left:-30%;right:-18%;bottom:-6px;height:90%;background:radial-gradient(ellipse at 50% 70%,rgba(255,122,26,.34),rgba(255,122,26,0) 68%);pointer-events:none}
+.furnace{position:absolute;left:0;bottom:-2px;width:100%;height:auto;overflow:visible;display:block;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
+.fn-p{transform-box:fill-box;transform-origin:50% 50%;fill:#c9c5d6;opacity:.34}
+.fn-boom{fill:#d8d3e2;opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.fn-fl{transform-box:fill-box;transform-origin:50% 100%}
+.fn-sign text{font-family:'Segoe Print','Bradley Hand','Marker Felt','Comic Sans MS','Chalkboard SE',cursive}
+.s-it.warm .s-art::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 100% 100%,rgba(12,5,2,.88) 0 18%,rgba(12,5,2,0) 52%),linear-gradient(270deg,rgba(255,150,40,.62),rgba(255,110,20,.22) 45%,rgba(255,110,20,0) 80%)}
+.s-it.warm .s-art{box-shadow:0 0 0 1px rgba(255,170,80,.35) inset,10px 0 22px -6px rgba(255,120,30,.55),0 6px 10px -2px var(--shadow)}
+.s-it.ash .s-art{filter:grayscale(.88) brightness(.62) contrast(1.05)}
+.s-it.ash .s-art::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 100% 100%,rgba(8,4,2,.92) 0 24%,rgba(8,4,2,0) 60%),radial-gradient(circle at 0 100%,rgba(8,4,2,.6),rgba(8,4,2,0) 42%),radial-gradient(circle at 80% 0,rgba(8,4,2,.5),rgba(8,4,2,0) 38%)}
+.s-ghost .s-art{position:relative;display:block;width:100%;height:100%;overflow:hidden;border-radius:4px;box-shadow:0 0 0 1px rgba(255,170,80,.35) inset,10px 0 22px -6px rgba(255,120,30,.55)}
+.s-ghost .s-art svg{display:block;width:100%;height:100%}
+.s-ghost .s-art::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 100% 100%,rgba(12,5,2,.88) 0 18%,rgba(12,5,2,0) 52%),linear-gradient(270deg,rgba(255,150,40,.62),rgba(255,110,20,.22) 45%,rgba(255,110,20,0) 80%)}
+.s-ash{position:absolute;top:4px;left:4px;z-index:2;display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 5px;border-radius:999px;background:rgba(14,15,22,.92);border:1px solid rgba(255,138,42,.55);color:#ffb067;font-size:clamp(9px,calc(var(--s) * .08),11px);font-weight:700;line-height:1.5;pointer-events:none}
+.s-ash svg{width:11px;height:11px;flex:none}
+.s-cap .ash-note{color:#ffb067;font-weight:600}
+.sh-note{color:var(--muted);font-size:12px;white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){
+  .fn-fl{animation:fnflick .46s ease-in-out infinite alternate}
+  .fn-fl.f2{animation-duration:.62s;animation-delay:-.2s}
+  .fn-fl.f3{animation-duration:.52s;animation-delay:-.35s}
+  .fn-fl.f4{animation-duration:.7s;animation-delay:-.1s}
+  @keyframes fnflick{from{transform:scaleY(.8) scaleX(1.08)}to{transform:scaleY(1.14) scaleX(.92)}}
+  .fn-p{animation:fnpuff 3.6s ease-out infinite}
+  .fn-p.p2{animation-delay:-1.2s}.fn-p.p3{animation-delay:-2.4s}
+  @keyframes fnpuff{0%{transform:translate(0,8px) scale(.45);opacity:0}18%{opacity:.5}100%{transform:translate(-10px,-26px) scale(1.5);opacity:0}}
+  .s-it.warm .s-art svg{animation:nervous .34s linear infinite}
+  @keyframes nervous{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-.7px,.3px) rotate(-.7deg)}45%{transform:translate(.6px,-.3px) rotate(.6deg)}70%{transform:translate(-.5px,0) rotate(-.4deg)}}
+}
+
+/* detail strip under a shelf */
+.s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
+.s-dcover{width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+.s-dcover svg{display:block;width:100%;height:100%}
+.s-dcover svg text{font-family:var(--body);font-weight:600}
+.s-dinfo{min-width:0;display:grid;gap:6px}
+.s-dinfo h3{font-family:var(--display);font-size:20px;line-height:1.2;margin:0;overflow-wrap:anywhere}
+.s-dinfo p{margin:0;overflow-wrap:anywhere}
+.s-dmeta,.s-dact{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}
+.s-tag{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--surface);color:var(--muted);white-space:nowrap;border:1px solid var(--line)}
+.s-tag.hot{background:var(--c);color:var(--ink);border-color:transparent}
+.lblchip,.s-pickbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.28);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap;max-width:100%}
+.lblchip:hover,.s-pickbtn:hover{border-color:var(--c)}
+.s-pickbtn svg{width:16px;height:16px}
+.s-pickbtn[aria-pressed="true"]{--pf:var(--c);color:var(--c);border-color:var(--c)}
+.s-act{border:1px solid rgba(255,255,255,.28);background:var(--surface);color:var(--fg);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+.s-act:hover{border-color:var(--c)}
+.s-buy{display:inline-block;padding:5px 16px;border-radius:999px;background:var(--c);color:var(--ink);font-weight:700;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.s-x{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:18px;line-height:1;padding:0}
+.pickico{width:16px;height:16px;vertical-align:-3px}
+.pickbtn-sm{display:inline-grid;place-items:center;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted)}
+.pickbtn-sm svg{width:18px;height:18px}
+.pickbtn-sm[aria-pressed="true"]{--pf:var(--c);color:var(--c);border-color:var(--c)}
+.pickbtn-sm:hover{border-color:var(--c);color:var(--fg)}
+.lib th.c-pick{width:1%}
+.lib td.c-pick{text-align:right;white-space:nowrap}
+
+/* label popover */
+.s-menu{position:absolute;z-index:200;width:224px;background:var(--raise);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:6px;box-shadow:0 16px 34px -8px rgba(0,0,0,.8)}
+.s-menu button{display:flex;width:100%;align-items:center;gap:10px;text-align:left;border:0;background:none;color:var(--fg);border-radius:9px;padding:9px 10px;font-size:14px;font-weight:500}
+.s-menu button:hover,.s-menu button:focus-visible{background:color-mix(in srgb,var(--c) 22%,var(--raise));outline-offset:-2px}
+.s-menu button[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.s-menu button i{width:16px;font-style:normal;color:var(--c);font-weight:700}
+
+/* toasts */
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:300;display:flex;flex-direction:column;gap:8px;width:min(520px,calc(100vw - 32px));pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--raise);border:1px solid color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:12px;padding:10px 14px;box-shadow:0 12px 28px -8px rgba(0,0,0,.8);font-size:14px}
+.toast span{min-width:0;overflow-wrap:anywhere}
+.toast .btn{flex:none}
+
+/* home */
+.home-grid > .panel{display:flex;flex-direction:column}
+.home-grid > .panel > .panel-head{flex:none}
+.hear-card{margin-top:12px}
+.hear-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.cd-text{color:color-mix(in srgb,var(--accent) 70%,#fff);font-weight:600;font-variant-numeric:tabular-nums}
+.mini-list .r.cd-text{color:color-mix(in srgb,var(--accent) 70%,#fff)}
+
+/* switch (Look panel) */
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
+input[type="checkbox"][role="switch"]{appearance:none;-webkit-appearance:none;width:42px;height:24px;border-radius:999px;background:var(--raise);border:1px solid var(--line);position:relative;cursor:pointer;flex:none;margin:0;transition:background .15s}
+input[type="checkbox"][role="switch"]::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+input[type="checkbox"][role="switch"]:checked{background:color-mix(in srgb,var(--accent) 45%,var(--raise));border-color:var(--accent)}
+input[type="checkbox"][role="switch"]:checked::after{transform:translateX(18px);background:var(--accent)}
+
+@media (max-width:560px){
+  .s-board{--n:3;--gc:4;padding:76px 10px 0}
+  .s-board.compact{--n:3}
+  .s-row,.s-grid,.s-board.compact .s-row{--s:clamp(48px,18cqw,80px)}
+  .s-ledge{margin-inline:-6px}
+  .s-stack{--sw:9px;--pitch:7px;--morew:36px}
+  .s-stack.fan{--hw:1.5}
+  .s-more{min-width:28px;padding:1px 6px;font-size:11px}
+  .s-furnace{width:calc(var(--s) * 1.45)}
+  .sh-note{font-size:11px}
+  .sh-head h2{font-size:19px}
+  .s-detail{grid-template-columns:auto minmax(0,1fr);padding:14px}
+  .s-detail .s-x{position:absolute;top:10px;right:10px}
+  .s-dcover{width:76px;height:76px}
+  .sh-btn{padding:6px 11px;font-size:13px}
+}
+
 /* edit dialog */
 dialog{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:16px;padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 40px)}
 dialog::backdrop{background:rgba(8,6,14,.65)}
@@ -421,10 +623,9 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 @media (max-width:860px){
   :root{--pad:16px}
   .grid,.pair-grid{display:flex;flex-direction:column;gap:var(--gap)}
-  .lib-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-  .lib-bar input[type="search"]{grid-column:1/-1}
-  .lib-bar select{width:100%}
-  .lib-bar .btn{width:100%}
+  .col-bar .seg{order:1}
+  .col-bar #addAlbumBtn{order:2;margin-left:auto}
+  .col-bar input[type="search"]{order:3;flex:1 1 100%}
   .p-log{order:1}.p-rot{order:2}.p-first{order:3}.p-recent{order:4}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .dlg-body{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -436,8 +637,9 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   .lib td{padding:0;border:0}
   .lib tbody tr.row:hover td,.lib tr.open td{background:transparent}
   .lib tr.open{border-color:var(--accent)}
-  .lib td.c-title{order:1;flex:1 1 calc(100% - 70px);min-width:0}
+  .lib td.c-title{order:1;flex:1 1 calc(100% - 120px);min-width:0}
   .lib td.c-rating{order:2;flex:none;text-align:right}
+  .lib td.c-pick{order:2;flex:none}
   .lib td.c-artist{order:3;flex:1 0 100%;color:var(--muted)}
   .lib td.c-status{order:4}.lib td.c-genre{order:5}.lib td.c-format{order:6}
   .lib td.c-year{order:7;color:var(--muted);font-size:12px;margin-left:auto}
@@ -472,6 +674,10 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
       <circle cx="50" cy="50" r="15.5" fill="#12131c"/>
       <circle cx="50" cy="50" r="15.5" fill="none" style="stroke:var(--c)" stroke-width="1.4"/>
       <circle cx="50" cy="50" r="2.3" fill="#0e0f16"/>
+    </symbol>
+    <!-- guitar pick: a rounded triangle, wide at the top and pointing down -->
+    <symbol id="pickico" viewBox="0 0 24 24">
+      <path d="M12 2.6c-5.4 0-8.6 2.7-8.1 7.4.6 5.6 4.6 9.7 7.2 11.2.5.3 1.3.3 1.8 0 2.6-1.5 6.6-5.6 7.2-11.2.5-4.7-2.7-7.4-8.1-7.4z" style="fill:var(--pf,none)" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
     </symbol>
   </defs>
 </svg>
@@ -522,16 +728,70 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   <div class="notice" id="notice" hidden></div>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" id="tab-log" aria-selected="true" aria-controls="view-log" type="button">Log</button>
+    <button class="tab" role="tab" id="tab-home" aria-selected="true" aria-controls="view-home" type="button">Home</button>
+    <button class="tab" role="tab" id="tab-collection" aria-selected="false" aria-controls="view-collection" type="button">Collection</button>
+    <button class="tab" role="tab" id="tab-log" aria-selected="false" aria-controls="view-log" type="button" hidden>Log</button>
     <button class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="view-plan" type="button">Plan</button>
-    <button class="tab" role="tab" id="tab-library" aria-selected="false" aria-controls="view-library" type="button">Library</button>
     <button class="tab" role="tab" id="tab-dashboard" aria-selected="false" aria-controls="view-dashboard" type="button">Dashboard</button>
     <button class="tab" role="tab" id="tab-tools" aria-selected="false" aria-controls="view-tools" type="button">Tools</button>
-    <button class="tab" role="tab" id="tab-discover" aria-selected="false" aria-controls="view-discover" type="button">Discover</button>
   </nav>
 
+  <!-- ===== Home ===== -->
+  <div id="view-home" role="tabpanel" aria-labelledby="tab-home">
+    <div class="pair-grid home-grid">
+      <section class="panel" aria-labelledby="aotdH">
+        <div class="panel-head"><h2 id="aotdH">Album of the day</h2><span class="muted small" id="aotdDate"></span></div>
+        <div id="aotdBox"></div>
+      </section>
+      <section class="panel shelf" id="homeFav" data-key="fav" data-ctx="h" aria-labelledby="h-h-fav"></section>
+      <section class="panel" aria-labelledby="upcH"><div class="panel-head"><h2 id="upcH">Upcoming</h2><span class="muted small" id="upcomingNote"></span></div><ul class="mini-list" id="upcomingList"></ul></section>
+      <section class="panel" aria-labelledby="hearH">
+        <div class="panel-head"><h2 id="hearH">Something to hear</h2><span class="muted small" id="hearNote"></span></div>
+        <div><button class="btn btn-primary" type="button" id="hearPick">Pick for me</button></div>
+        <div id="hearBox" class="hear-card"></div>
+      </section>
+      <section class="panel full" aria-labelledby="odH"><div class="panel-head"><h2 id="odH">On this day</h2><span class="muted small" id="odNote"></span></div><ul class="mini-list" id="onDayList"></ul></section>
+      <section class="panel full" aria-labelledby="anH">
+        <div class="panel-head"><h2 id="anH">Anniversaries</h2><span class="muted small" id="annivNote"></span></div>
+        <div id="annivBox" class="mile-grid"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Collection ===== -->
+  <div id="view-collection" role="tabpanel" aria-labelledby="tab-collection" hidden>
+    <div class="col-bar">
+      <div class="seg" id="colView" role="group" aria-label="View">
+        <button type="button" data-v="shelves" aria-pressed="true">Shelves</button>
+        <button type="button" data-v="table" aria-pressed="false">Table</button>
+      </div>
+      <input type="search" id="libSearch" placeholder="Search title, artist or genre" aria-label="Search albums">
+      <button class="btn btn-primary" id="addAlbumBtn" type="button">Add album</button>
+    </div>
+    <div id="colShelves"><section class="shelves" id="shelves" aria-label="Shelves"></section></div>
+    <div id="colTable" hidden>
+      <div class="tbl-bar">
+        <select id="libSort" aria-label="Sort by">
+          <option value="title">Sort: Title</option><option value="artist">Sort: Artist</option><option value="year">Sort: Year</option>
+          <option value="rating">Sort: Rating</option><option value="status">Sort: Status</option><option value="added">Sort: Added</option>
+        </select>
+        <button class="btn" id="libDir" type="button" aria-label="Reverse sort order">A→Z</button>
+      </div>
+      <div class="fgroup" id="fStatus" role="group" aria-label="Status"></div>
+      <div class="fgroup" id="fGenre" role="group" aria-label="Genre"></div>
+      <div class="fgroup" id="fColl" role="group" aria-label="Collection"></div>
+      <div class="table-wrap">
+        <table class="lib">
+          <thead><tr id="libHead"></tr></thead>
+          <tbody id="libBody"></tbody>
+        </table>
+      </div>
+      <div class="lib-foot"><span id="libCount"></span><button class="btn" id="libMore" type="button" hidden>Show 100 more</button></div>
+    </div>
+  </div>
+
   <!-- ===== Log ===== -->
-  <div id="view-log" role="tabpanel" aria-labelledby="tab-log">
+  <div id="view-log" role="tabpanel" aria-labelledby="tab-log" hidden>
     <section class="stats" aria-label="Summary">
       <div class="stat">
         <span class="eyebrow" id="sHeardLabel">Heard this year</span>
@@ -631,35 +891,12 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     </div>
   </div>
 
-  <!-- ===== Library ===== -->
-  <div id="view-library" role="tabpanel" aria-labelledby="tab-library" hidden>
-    <div class="lib-bar">
-      <input type="search" id="libSearch" placeholder="Search title, artist, genre or notes" aria-label="Search albums">
-      <select id="libSort" aria-label="Sort by">
-        <option value="title">Sort: Title</option><option value="artist">Sort: Artist</option><option value="year">Sort: Year</option>
-        <option value="rating">Sort: Rating</option><option value="status">Sort: Status</option><option value="added">Sort: Added</option>
-      </select>
-      <button class="btn" id="libDir" type="button" aria-label="Reverse sort order">A→Z</button>
-      <button class="btn btn-primary" id="addAlbumBtn" type="button">Add album</button>
-    </div>
-    <div class="fgroup" id="fStatus" role="group" aria-label="Status"></div>
-    <div class="fgroup" id="fGenre" role="group" aria-label="Genre"></div>
-    <div class="fgroup" id="fColl" role="group" aria-label="Collection"></div>
-    <div class="table-wrap">
-      <table class="lib">
-        <thead><tr id="libHead"></tr></thead>
-        <tbody id="libBody"></tbody>
-      </table>
-    </div>
-    <div class="lib-foot"><span id="libCount"></span><button class="btn" id="libMore" type="button" hidden>Show 100 more</button></div>
-  </div>
-
   <!-- ===== Dashboard ===== -->
   <div id="view-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden>
     <div class="periods" id="dashPeriods" role="group" aria-label="Year"></div>
     <section class="dash-tiles" id="dashTiles" aria-label="Totals"></section>
     <div class="dash-2">
-      <section class="panel" aria-labelledby="monthH">
+      <section class="panel" id="monthPanel" aria-labelledby="monthH">
         <div class="panel-head"><h2 id="monthH">Listens per month</h2><span class="muted small" id="monthNote"></span></div>
         <p class="empty" id="monthEmpty" hidden></p>
         <div id="monthBody">
@@ -669,18 +906,18 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
       </section>
       <section class="panel" aria-labelledby="ratH"><div class="panel-head"><h2 id="ratH">Ratings</h2><span class="muted small" id="ratNote"></span></div><ul class="hbars" id="ratBars"></ul></section>
       <section class="panel" aria-labelledby="genH"><div class="panel-head"><h2 id="genH">Genres</h2><span class="muted small">Albums heard · average rating</span></div><ul class="hbars" id="genBars"></ul></section>
-      <section class="panel" aria-labelledby="decH"><div class="panel-head"><h2 id="decH">Decades</h2><div class="legend"><span><i class="sw" style="background:var(--accent)"></i>Heard</span><span><i class="sw" style="background:color-mix(in srgb,var(--accent) 32%,var(--raise))"></i>Not yet heard</span></div></div><ul class="hbars" id="decBars"></ul><p class="muted small" id="decNote" style="margin:10px 0 0"></p></section>
-      <section class="panel full" aria-labelledby="fmtH"><div class="panel-head"><h2 id="fmtH">Formats &amp; ownership</h2><span class="muted small">All albums by format</span></div><ul class="hbars" id="fmtBars"></ul></section>
+      <section class="panel" id="decPanel" aria-labelledby="decH"><div class="panel-head"><h2 id="decH">Decades</h2><div class="legend"><span><i class="sw" style="background:var(--accent)"></i>Heard</span><span><i class="sw" style="background:color-mix(in srgb,var(--accent) 32%,var(--raise))"></i>Not yet heard</span></div></div><ul class="hbars" id="decBars"></ul><p class="muted small" id="decNote" style="margin:10px 0 0"></p></section>
+      <section class="panel full" id="fmtPanel" aria-labelledby="fmtH"><div class="panel-head"><h2 id="fmtH">Formats &amp; ownership</h2><span class="muted small">All albums by format</span></div><ul class="hbars" id="fmtBars"></ul></section>
       <section class="panel full" aria-labelledby="artH">
         <div class="panel-head"><h2 id="artH">Top artists</h2></div>
-        <div class="art-cols">
+        <div class="art-cols" id="artCols">
           <div><div class="eyebrow sub-head">Most albums heard · average rating</div>
           <ul class="mini-list" id="artHeard"></ul></div>
-          <div><div class="eyebrow sub-head">Most plays</div>
+          <div id="artPlaysCol"><div class="eyebrow sub-head">Most plays</div>
           <ul class="mini-list" id="artPlays"></ul></div>
         </div>
       </section>
-      <section class="panel full" aria-labelledby="heatH">
+      <section class="panel full" id="heatPanel" aria-labelledby="heatH">
         <div class="panel-head"><h2 id="heatH">Listening calendar</h2><div class="legend"><span id="heatNote">Brighter for more plays</span></div></div>
         <p class="empty" id="heatEmpty" hidden></p>
         <div class="heat-scroll" id="heatScroll"><div class="heat" id="heat" aria-label="Plays each day"></div></div>
@@ -695,9 +932,9 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
         <div class="chips" id="dipMoods" role="group" aria-label="Mood"></div><div id="dipCard"></div></section>
       <section class="panel" aria-labelledby="ownH"><div class="panel-head"><h2 id="ownH">Do I own this?</h2><span class="muted small">Handy in a record shop</span></div>
         <input type="search" id="ownQ" class="tool-input" placeholder="Title or artist" aria-label="Title or artist to check" autocomplete="off"><ul class="own-list" id="ownList"></ul></section>
-      <section class="panel" aria-labelledby="nudH"><div class="panel-head"><h2 id="nudH">Nudges</h2><span class="muted small">Things quietly waiting on you</span></div><div id="nudgeBox"></div></section>
-      <section class="panel" aria-labelledby="goalH"><div class="panel-head"><h2 id="goalH">Goal planner</h2><span class="muted small" id="goalYear"></span></div><div class="goal-out" id="goalOut"></div></section>
-    <section class="panel full" aria-labelledby="yirH">
+      <section class="panel" id="nudPanel" aria-labelledby="nudH"><div class="panel-head"><h2 id="nudH">Nudges</h2><span class="muted small">Things quietly waiting on you</span></div><div id="nudgeBox"></div></section>
+      <section class="panel" id="goalPanel" aria-labelledby="goalH"><div class="panel-head"><h2 id="goalH">Goal planner</h2><span class="muted small" id="goalYear"></span></div><div class="goal-out" id="goalOut"></div></section>
+    <section class="panel full" id="yirPanel" aria-labelledby="yirH">
       <div class="panel-head"><h2 id="yirH">Year in review</h2><select id="yirYear" aria-label="Year"></select></div>
       <div id="yirBox"></div>
     </section>
@@ -715,26 +952,15 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
       <div class="panel-head"><h2 id="lookH">Look</h2><span class="muted small">Remembered in this browser only</span></div>
       <div class="look-row"><label for="lookPressing">Pressing</label><select id="lookPressing"></select></div>
       <div class="look-row"><label for="lookBg">Background</label><select id="lookBg"><option value="marble">Marble record</option><option value="plain">Plain dark</option></select></div>
+      <div class="look-row"><label for="lookLog">Listening log</label><label class="switch"><input type="checkbox" role="switch" id="lookLog"><span>Show listening log</span></label></div>
     </section>
     </div>
   </div>
 
-  <!-- ===== Discover ===== -->
-  <div id="view-discover" role="tabpanel" aria-labelledby="tab-discover" hidden>
-    <div class="pair-grid">
-    <section class="panel full" aria-labelledby="aotdH">
-      <div class="panel-head"><h2 id="aotdH">Album of the day</h2><span class="muted small" id="aotdDate"></span></div>
-      <div id="aotdBox"></div>
-    </section>
-      <section class="panel" aria-labelledby="odH"><div class="panel-head"><h2 id="odH">On this day</h2><span class="muted small">Plays and releases on today's date in earlier years</span></div><ul class="mini-list" id="onDayList"></ul></section>
-      <section class="panel" aria-labelledby="csH"><div class="panel-head"><h2 id="csH">Coming soon</h2><span class="muted small" id="soonNote2"></span></div><ul class="mini-list" id="soonList2"></ul></section>
-    <section class="panel full" aria-labelledby="anH">
-      <div class="panel-head"><h2 id="anH">Anniversaries</h2><span class="muted small" id="annivNote"></span></div>
-      <div id="annivBox" class="mile-grid"></div>
-    </section>
-    </div>
-  </div>
 </div>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
 
 <dialog id="gDlg" aria-labelledby="gTitle" style="width:min(520px,calc(100vw - 32px))">
   <form id="gForm" method="dialog">
@@ -867,6 +1093,7 @@ function initLook() {
     renderAll(); sync();
   });
   $('lookBg').addEventListener('change', e => { lsSet('sg-bg', e.target.value === 'plain' ? 'plain' : 'marble'); applyTheme(); });
+  $('lookLog').addEventListener('change', e => { state.showLog = e.target.checked; lsSet('sg-showlog', state.showLog ? '1' : '0'); applyLogVisibility(); render(); });
   sync();
 }
 
@@ -877,17 +1104,19 @@ const FIELDS = [
   { k: 'status', h: 'Status', t: 'select' }, { k: 'genre', h: 'Genre', t: 'select' }, { k: 'format', h: 'Format', t: 'select' },
   { k: 'release', h: 'Release Date', t: 'date' }, { k: 'year', h: 'Year', t: 'num' }, { k: 'notes', h: 'Notes', t: 'text' },
   { k: 'id', h: 'id', t: 'num' }, { k: 'plan', h: 'Plan', t: 'select' }, { k: 'upNext', h: 'Up next #', t: 'num' },
-  { k: 'why', h: 'Why', t: 'text' }, { k: 'added', h: 'Added', t: 'date' }, { k: 'planned', h: 'Planned', t: 'date' }, { k: 'buy', h: 'Buy link', t: 'text' }
+  { k: 'why', h: 'Why', t: 'text' }, { k: 'added', h: 'Added', t: 'date' }, { k: 'planned', h: 'Planned', t: 'date' }, { k: 'buy', h: 'Buy link', t: 'text' },
+  // Favourite: a date; any value means favourite. Labelled: date of the last label change; the column is optional, the app works without it.
+  { k: 'favourite', h: 'Favourite', t: 'date' }, { k: 'labelled', h: 'Labelled', t: 'date', optional: true }
 ];
 const FIELD = Object.fromEntries(FIELDS.map(f => [f.k, f]));
-const STATUSES = ['Coming Soon', 'Listen', 'Listened', 'Purchase', 'Owned'];
+const STATUSES = ['Coming Soon', 'Listen', 'Listened', 'Purchase', 'Owned', "Didn't like"];
 const GENRES = ['Rock', 'Metal', 'Electronic', 'Hip Hop', 'Soul/R&B', 'Soundtrack', 'Pop'];
 const FORMATS = ['Vinyl (Owned)', 'Vinyl (Wanted)', 'CD', 'Digital', 'Streaming'];
 const PLANS = ['Up next', 'Soon', 'Someday'];
 const OPTS = { status: STATUSES, genre: GENRES, format: FORMATS, plan: PLANS };
 // Chip colours, approximating the sheet's dropdown chips
 const CHIP = {
-  status: { 'Coming Soon': '#f2c46d', 'Listen': '#6fb1f2', 'Listened': '#6cc18f', 'Purchase': '#f29a7a', 'Owned': '#b79af2' },
+  status: { 'Coming Soon': '#f2c46d', 'Listen': '#6fb1f2', 'Listened': '#6cc18f', 'Purchase': '#f29a7a', 'Owned': '#b79af2', "Didn't like": '#f0a0ae' },
   genre: { 'Rock': '#ef7b7b', 'Metal': '#a9aab8', 'Electronic': '#58d0e0', 'Hip Hop': '#e9d35a', 'Soul/R&B': '#f0a05a', 'Soundtrack': '#4fc3a8', 'Pop': '#ef88c4' },
   format: { 'Vinyl (Owned)': '#b79af2', 'Vinyl (Wanted)': '#d3b8f5', 'CD': '#6fb1f2', 'Digital': '#6cc18f', 'Streaming': '#9aa3b8' }
 };
@@ -924,7 +1153,10 @@ const SNAP_ALBUMS = [
   { id: '1006', title: 'Dummy', artist: 'Portishead', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '1994', plan: 'Soon' },
   { id: '1007', title: 'Rumours', artist: 'Fleetwood Mac', rating: '9', status: 'Purchase', genre: 'Rock', format: 'Vinyl (Wanted)', year: '1977', buy: 'https://www.ebay.com.au/itm/1234567890' },
   { id: '1008', title: 'Kid A', artist: 'Radiohead', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '2000' },
-  { id: '1009', title: 'Untrue', artist: 'Burial', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '2007', plan: 'Someday', planned: '2025-01-01' }
+  { id: '1009', title: 'Untrue', artist: 'Burial', status: 'Listen', genre: 'Electronic', format: 'Streaming', year: '2007', plan: 'Someday', planned: '2025-01-01' },
+  { id: '1010', title: 'Hounds of Love', artist: 'Kate Bush', status: 'Coming Soon', genre: 'Pop', format: 'Vinyl (Wanted)', year: '1985' },
+  { id: '1011', title: 'Tomorrow Land', artist: 'Sample Band', status: 'Coming Soon', genre: 'Rock', format: 'Streaming', year: '2027' },
+  { id: '1012', title: 'Beige Machine', artist: 'Ordinary Hours', rating: '3', status: "Didn't like", genre: 'Pop', format: 'Streaming', year: '2019' }
 ];
 // Dates are relative to today so the sample always looks recent: [days ago, album id, plays]
 const SNAP_LOG = [[0, '1001', 1], [1, '1005', 1], [2, '1002', 2], [3, '1003', 1], [5, '1003', 1], [6, '1001', 1], [9, '1005', 1], [33, '1002', 1], [47, '1005', 2], [62, '1001', 1], [90, '1008', 1]];
@@ -937,6 +1169,10 @@ const SNAP_TRACKS = [
 function snapshotState() {
   const t = today();
   const albums = SNAP_ALBUMS.map((a, i) => ({ ...Object.fromEntries(FIELDS.map(f => [f.k, ''])), ...a, added: t, _row: i + 2 }));
+  // a couple of favourites, and one release a fortnight away so the sample shows a countdown
+  albums.find(a => a.id === '1001').favourite = addDays(t, -9);
+  albums.find(a => a.id === '1005').favourite = addDays(t, -2);
+  albums.find(a => a.id === '1011').release = addDays(t, 14);
   const log = SNAP_LOG.map(([ago, id, plays], i) => {
     const a = albums.find(x => x.id === id);
     return { date: addDays(t, -ago), albumId: id, title: a.title, artist: a.artist, plays, loggedAt: `${addDays(t, -ago)}T09:${pad(i)}:00.000Z`, source: 'app', note: '', _row: i + 2 };
@@ -950,9 +1186,10 @@ const snap = snapshotState();
 const state = {
   albums: snap.albums, log: snap.log, tracks: snap.tracks, tracksMissing: false,
   settings: { yearGoalAlbums: 52, rotationDays: 14, upNextSize: 10, albumOfDayMin: 8 },
-  mcp: null, google: false, live: false, busy: false, logMissing: false,
-  tab: 'log', logDate: null, pick: null, editingLog: null, ratePick: {},
-  lib: { q: '', status: 'All', genre: '', owned: false, want: false, copied: false, sort: 'title', dir: 1, limit: 100, open: null },
+  mcp: null, google: false, live: false, busy: false, logMissing: false, hasLabelled: false,
+  tab: 'home', logDate: null, pick: null, editingLog: null, ratePick: {},
+  showLog: lsGet('sg-showlog') === '1', colView: lsGet('sg-colview') === 'table' ? 'table' : 'shelves',
+  lib: { q: '', status: 'All', genre: '', owned: false, want: false, copied: false, fav: false, sort: 'title', dir: 1, limit: 100, open: null },
   ix: { byId: new Map(), plays: new Map(), tracks: new Map() }
 };
 
@@ -968,6 +1205,9 @@ function buildIndex() {
   state.ix = { byId, plays, tracks };
 }
 const albumOf = e => state.ix.byId.get(e.albumId) || null;
+// Shelf items are found by key: the album id, or the sheet row for an album that has no id yet
+const albumKey = a => toNum(a.id) ? String(toNum(a.id)) : 'r' + a._row;
+const albumByKey = k => state.ix.byId.get(k) || state.albums.find(a => albumKey(a) === k) || null;
 
 /* ---------- connection helpers (from the book tracker) ---------- */
 const isLive = () => !!state.mcp && !(state.google && !google_.valid());
@@ -1015,7 +1255,7 @@ async function refresh() {
   setStatus('loading', 'Loading from your sheet…');
   $('refreshBtn').disabled = true;
   try {
-    const albums = await readRange(`${qt(TAB)}!A1:P`);
+    const albums = await readRange(`${qt(TAB)}!A1:Z`);
     let log = [], settings = [], logMissing = false;
     try { log = await readRange(`${qt(TAB_LOG)}!A1:H`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; logMissing = true; }
     try { settings = await readRange(`${qt(TAB_SET)}!A1:B`); } catch (e) { if (e && e.code === 'google_signin') throw e; }
@@ -1026,6 +1266,7 @@ async function refresh() {
     const ah = (albums[0] || []).map(h => String(h).trim());
     const cols = Object.fromEntries(FIELDS.map(f => [f.k, colOf(ah, f)]));
     if (cols.title < 0) throw { code: 'tool_error', message: `the ${TAB} tab has no Title column` };
+    state.hasLabelled = cols.labelled >= 0;
     state.albums = albums.slice(1).map((r, i) => {
       const o = { _row: i + 2 };
       for (const f of FIELDS) o[f.k] = cols[f.k] >= 0 ? String(r[cols[f.k]] ?? '').trim() : '';
@@ -1080,7 +1321,7 @@ function cellValue(k, v) {
 async function findAlbumRow(id) {
   id = toNum(id);
   if (!id) throw { code: 'tool_error', message: 'This album has no id yet, so it can\'t be changed from the app' };
-  const header = ((await readRange(`${qt(TAB)}!A1:P1`))[0] || []).map(h => String(h).trim());
+  const header = ((await readRange(`${qt(TAB)}!A1:Z1`))[0] || []).map(h => String(h).trim());
   const idCol = colOf(header, FIELD.id);
   if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no id column` };
   const L = colLetter(idCol);
@@ -1096,7 +1337,7 @@ async function writeAlbumFields(id, fields) {
   for (const k of Object.keys(fields)) {
     if (k === 'id' || !FIELD[k]) continue;
     const c = colOf(header, FIELD[k]);
-    if (c < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no "${FIELD[k].h}" column` };
+    if (c < 0) { if (FIELD[k].optional) continue; throw { code: 'tool_error', message: `The ${TAB} tab has no "${FIELD[k].h}" column` }; }
     cols[k] = c;
   }
   for (const [k, c] of Object.entries(cols)) await putCell(TAB, colLetter(c), row, cellValue(k, fields[k]));
@@ -1104,7 +1345,7 @@ async function writeAlbumFields(id, fields) {
   if (a) for (const k of Object.keys(cols)) a[k] = String(fields[k] ?? '').trim();
 }
 async function addAlbum(fields) {
-  const header = ((await readRange(`${qt(TAB)}!A1:P1`))[0] || []).map(h => String(h).trim());
+  const header = ((await readRange(`${qt(TAB)}!A1:Z1`))[0] || []).map(h => String(h).trim());
   const idCol = colOf(header, FIELD.id);
   if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB} tab has no id column` };
   const L = colLetter(idCol);
@@ -1205,7 +1446,7 @@ async function rateAlbum(a, value, btn) {
   try {
     const f = { rating: String(value) };
     if (a.status === 'Listen') f.status = 'Listened';
-    await writeAlbumFields(a.id, f);
+    await writeAlbumFields(a.id, withLabelled(a, f));
     delete state.ratePick[a.id];
     notice('');
     setStatus('live', `Rated “${a.title}” ${value}/10`);
@@ -1355,7 +1596,7 @@ function renderLogForm() {
     if (q) {
       const hits = state.albums.filter(x => x.id && (norm(x.title).includes(q) || norm(x.artist).includes(q)))
         .sort((x, y) => (norm(y.title).startsWith(q) - norm(x.title).startsWith(q)) || x.title.localeCompare(y.title)).slice(0, 8);
-      if (!hits.length) res.innerHTML = '<li><div class="empty" style="padding:8px 12px">No match. Add it in the Library tab first.</div></li>';
+      if (!hits.length) res.innerHTML = '<li><div class="empty" style="padding:8px 12px">No match. Add it in the Collection tab first.</div></li>';
       for (const h of hits) {
         const li = document.createElement('li');
         li.innerHTML = '<button type="button"><span class="t"></span><span class="m"></span></button>';
@@ -1423,12 +1664,483 @@ function renderLogTab() {
   renderStats(); renderRotation(); renderFirst(); renderRecent(); renderLogForm();
 }
 
-/* ---------- Library tab ---------- */
+/* ---------- Labels ("stickers"): every album has exactly one, worked out from its row ---------- */
+// First match wins: Didn't like, Owned, Vinyl wish list, Upcoming, To hear, Heard. Favourite is NOT a label:
+// it is the Favourite date, so an album can sit on a label shelf and on the Favourites shelf.
+const LABELS = [
+  { k: 'owned', n: 'Owned', short: 'Owned', status: 'Owned' },
+  { k: 'wish', n: 'Vinyl wish list', short: 'Wish list', status: 'Purchase' },
+  { k: 'upcoming', n: 'Upcoming', short: 'Upcoming', status: 'Coming Soon' },
+  { k: 'hear', n: 'To hear', short: 'To hear', status: 'Listen' },
+  { k: 'heard', n: 'Heard', short: 'Heard', status: 'Listened' },
+  { k: 'nope', n: "Didn't like", short: "Didn't like", status: "Didn't like" }
+];
+const LAB = Object.fromEntries(LABELS.map(l => [l.k, l]));
+const SHELVES = [{ k: 'fav', head: 'Favourites' }, ...LABELS.map(l => ({ k: l.k, head: l.n }))];
+function labelOf(a) {
+  if (a.status === "Didn't like") return 'nope';
+  if (a.status === 'Owned' || a.format === 'Vinyl (Owned)') return 'owned';
+  if (a.status === 'Purchase' || a.format === 'Vinyl (Wanted)') return 'wish';
+  if (a.status === 'Coming Soon') return 'upcoming';
+  if (a.status === 'Listen') return 'hear';
+  if (a.status === 'Listened' || toNum(a.rating) > 0) return 'heard';
+  return 'hear';
+}
+const favOf = a => String(a.favourite ?? '').trim() !== '';
+// An album that is Vinyl (Owned) is on the Owned shelf by its Format, so labels that would contradict that are locked
+const OWNED_LOCK = ['hear', 'heard', 'upcoming'];
+const LOCK_MSG = 'Still owned on vinyl. Change Format in the album details first.';
+const labelBlock = (a, to) => a.format === 'Vinyl (Owned)' && OWNED_LOCK.includes(to) ? LOCK_MSG : '';
+// What moving an album to a label writes: always Status, plus the Format pairing (Labelled is added by relabel)
+function labelPlan(a, to) {
+  const f = { status: LAB[to].status };
+  if (to === 'owned') { if (a.format === 'Vinyl (Wanted)') f.format = 'Vinyl (Owned)'; }
+  else if (to === 'wish') { if (a.format === 'Vinyl (Owned)') f.format = 'Vinyl (Wanted)'; }
+  else if (a.format === 'Vinyl (Wanted)') f.format = '';
+  return f;
+}
+// A row's change also stamps Labelled (when the sheet has that column) if it moves the album to another label
+function withLabelled(a, fields) {
+  if (!state.hasLabelled) return fields;
+  return labelOf({ ...a, ...fields }) !== labelOf(a) ? { ...fields, labelled: today() } : fields;
+}
+// "in 12 days" for a real future Release Date, otherwise the Year
+function releaseInfo(a) {
+  const d = toDate(a.release), t = today(), y = toNum(a.year);
+  // Sort order: releases with a real date first (soonest first), then year-only ones for this year or later,
+  // then year-only ones whose year has already passed, then those with nothing at all
+  if (d && d >= t) { const n = daysBetween(t, d); return { dated: true, text: n === 0 ? 'today' : n === 1 ? 'in 1 day' : `in ${n} days`, sort: `0 ${d}` }; }
+  const cy = Number(t.slice(0, 4));
+  return { dated: false, text: y ? String(y) : '', sort: !y ? '3' : y >= cy ? `1 ${y}` : `2 ${y}` };
+}
+const byRelease = (x, y) => releaseInfo(x).sort.localeCompare(releaseInfo(y).sort) || norm(x.title).localeCompare(norm(y.title));
+
+let movedSeq = 0;
+const FAV_SOURCES = [() => state.albums.filter(favOf).map(a => ({ kind: 'album', a, date: toDate(a.favourite) || '' }))];   // other kinds of favourite can join here later
+function favEntries() {
+  return FAV_SOURCES.flatMap(f => f()).sort((x, y) => y.date.localeCompare(x.date) || (y.a._fav || 0) - (x.a._fav || 0) || (y.a._row || 0) - (x.a._row || 0));
+}
+function labelEntries(k) {
+  const list = state.albums.filter(a => labelOf(a) === k);
+  list.sort(k === 'upcoming' ? byRelease : (x, y) => (y._moved || 0) - (x._moved || 0) || (toDate(y.labelled) || '').localeCompare(toDate(x.labelled) || '') || (toDate(y.added) || '').localeCompare(toDate(x.added) || '') || (y._row || 0) - (x._row || 0));
+  return list.map(a => ({ kind: 'album', a }));
+}
+const shelfEntries = k => k === 'fav' ? favEntries() : labelEntries(k);
+
+/* ---------- toasts, live region, focus ---------- */
+function toast(msg, o = {}) {
+  const box = $('toasts'), el = mk('div', 'toast'); let timer = null;
+  el.appendChild(mk('span', null, msg));
+  const close = () => { clearTimeout(timer); el.remove(); };
+  if (o.undo) el.appendChild(mkBtn('Undo', 'btn', () => { close(); o.undo(); }));
+  box.appendChild(el);
+  while (box.children.length > 3) box.firstChild.remove();
+  timer = setTimeout(close, o.ms || 6000);
+  return { close, el };
+}
+function say(msg) { const l = $('live'); l.textContent = ''; setTimeout(() => { l.textContent = msg; }, 30); }
+const activeFk = () => { const el = document.activeElement; const h = el && el.closest && el.closest('[data-fk]'); return h ? h.dataset.fk : ''; };
+function restoreFocus(fk) {
+  if (!fk) return;
+  const all = [...document.querySelectorAll('[data-fk]')], p = fk.split(':');
+  let el = all.find(e => e.dataset.fk === fk) || all.find(e => e.dataset.fk.split(':').slice(2).join(':') === p.slice(2).join(':'));
+  if (!el && p[1]) el = document.querySelector(`.shelf[data-key="${p[1]}"] [data-sa="all"]`) || document.querySelector(`.shelf[data-key="${p[1]}"] h2`);
+  if (el) el.focus({ preventScroll: true });
+}
+
+/* ---------- changing a label, toggling a favourite ---------- */
+function relabel(a, to, o = {}) {
+  if (!a || !LAB[to]) return false;
+  if (!liveGuard('Changing a label')) return false;
+  if (!toNum(a.id)) { notice('That album has no id yet, so it can\'t be changed from the app.', 'error'); return false; }
+  if (labelOf(a) === to) return false;
+  const why = labelBlock(a, to);
+  if (why) { toast(`Can’t move “${a.title}” to ${LAB[to].n}. ${why}`); return false; }
+  const f = Object.fromEntries(Object.entries(labelPlan(a, to)).filter(([k, v]) => !sameVal(k, a[k], v)));
+  if (!Object.keys(f).length) return false;
+  if (state.hasLabelled) f.labelled = today();
+  const key = albumKey(a), prevMoved = a._moved, prevSel = shelfUI.sel;
+  a._moved = ++movedSeq;
+  const res = saveAlbum(a, f, 'label');
+  if (!res) return false;
+  if (shelfUI.sel && shelfUI.sel.id === key && shelfUI.sel.shelf !== 'fav') shelfUI.sel = { ...shelfUI.sel, shelf: to };
+  shelfUI.arrive = { id: key, shelf: to };
+  const fk = String(o.fk || '').split(':');
+  if (fk[0] === 'c' && LAB[fk[1]]) fk[1] = to;   // the sleeve moves to the new shelf, so focus follows it
+  render(fk.join(':'));
+  const t = toast(`Moved ${a.title} to ${LAB[to].n}`, { undo: () => {
+    const cur = albumByKey(key); if (!cur) return;
+    cur._moved = prevMoved; if (prevSel) shelfUI.sel = prevSel;
+    saveAlbum(cur, res.prev, 'label');
+    render();
+  } });
+  res.done.then(ok => { if (!ok) t.close(); });
+  return true;
+}
+function toggleFav(a, force, fk) {
+  if (!a) return;
+  const want = force === undefined ? !favOf(a) : force;
+  if (want === favOf(a)) return;
+  if (!liveGuard('Picking favourites')) return;
+  if (!toNum(a.id)) { notice('That album has no id yet, so it can\'t be changed from the app.', 'error'); return; }
+  const key = albumKey(a);
+  a._fav = ++movedSeq;
+  const res = saveAlbum(a, { favourite: want ? today() : '' }, 'pick');
+  if (!res) return;
+  say(want ? `${a.title} added to Favourites` : `${a.title} removed from Favourites`);
+  if (!want && shelfUI.sel && shelfUI.sel.shelf === 'fav' && shelfUI.sel.id === key) shelfUI.sel = null;
+  shelfUI.arrive = want ? { id: key, shelf: 'fav' } : null;
+  render(fk);
+}
+
+/* ---------- placeholder sleeve art, drawn from the title ---------- */
+const PAL = [
+  { c: '#3bd1a0', d: '#0e7a5a', v: '#021a12' }, { c: '#f4cf2d', d: '#c99a0c', v: '#2b1f00' },
+  { c: '#5aa3f5', d: '#1f5aa6', v: '#050f1d' }, { c: '#ff8a2a', d: '#c4560a', v: '#3b1400' },
+  { c: '#e056dc', d: '#8a1f96', v: '#1f0626' }, { c: '#ff4357', d: '#b01227', v: '#2a0007' }
+];
+function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+const initials = s => String(s).replace(/&/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+function artSvg(title) {
+  title = String(title || '');
+  const h = hash(title), A = PAL[h % 6]; let B = PAL[(h >>> 3) % 6]; if (B === A) B = PAL[(h % 6 + 2) % 6];
+  const comp = (h >>> 6) % 5; let g = '';
+  if (comp === 0) g = `<rect width="100" height="100" fill="${A.d}"/><circle cx="50" cy="50" r="38" fill="${A.v}"/><circle cx="50" cy="50" r="31" fill="none" stroke="${A.c}" stroke-opacity=".35"/><circle cx="50" cy="50" r="25" fill="none" stroke="${A.c}" stroke-opacity=".3"/><circle cx="50" cy="50" r="13" fill="${B.c}"/><circle cx="50" cy="50" r="2.5" fill="${A.v}"/>`;
+  else if (comp === 1) { g = `<rect width="100" height="100" fill="${A.v}"/>`; for (let i = 0; i < 5; i++) g += `<rect x="0" y="${8 + i * 18}" width="100" height="11" fill="${i % 2 ? B.c : A.c}"/>`; }
+  else if (comp === 2) g = `<rect width="100" height="100" fill="${A.c}"/><polygon points="50,14 90,84 10,84" fill="${A.d}"/><circle cx="50" cy="62" r="10" fill="${B.c}"/>`;
+  else if (comp === 3) { g = `<rect width="100" height="100" fill="${A.d}"/>`; for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) g += `<circle cx="${20 + i * 15}" cy="${20 + j * 15}" r="${i === 2 && j === 2 ? 7 : 4.5}" fill="${(i + j) % 2 ? A.c : B.c}"/>`; }
+  else g = `<rect width="100" height="100" fill="${A.c}"/><rect x="50" width="50" height="100" fill="${A.d}"/><circle cx="50" cy="50" r="22" fill="${B.c}" stroke="${A.v}" stroke-width="3"/>`;
+  g += `<rect x="68" y="85" width="28" height="11" rx="3" fill="#000" fill-opacity=".62"/><text x="82" y="93.4" text-anchor="middle" font-size="8" fill="#fff">${esc(initials(title))}</text>`;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${g}</svg>`;
+}
+
+/* ---------- shelf component ---------- */
+const shelfUI = { expanded: {}, sel: null, arrive: null, fan: null, rove: {} };
+const mq = { narrow: matchMedia('(max-width: 560px)'), fine: matchMedia('(pointer: fine)') };
+const nStand = () => mq.narrow.matches ? 3 : 5;
+const gcols = () => mq.narrow.matches ? 4 : 6;
+const STACK_MAX = () => mq.narrow.matches ? 10 : 16;   // slices drawn in the packed stack; "Show all" opens the rest
+const INC_SLOTS = () => mq.narrow.matches ? 3 : 4;      // Didn't like: the newest few stand here, the older ones are "incinerated" (still in the sheet)
+const FAN_N = 4;                                          // cards in the hand when the stack fans out
+const INC_TIP = "Albums you didn't like. The oldest get fed to the furnace, but they stay in your sheet.";
+const INC_LABEL = "Incinerator: the oldest albums you didn't like get fed to it. They stay in your sheet.";
+const FLAME_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z" fill="currentColor"/></svg>';
+function furnaceHtml() {
+  const fl = (c, d, cls) => `<path class="fn-fl ${cls}" d="${d}" fill="${c}"/>`;
+  let teeth = '';
+  for (let i = 0; i < 7; i++) { const x = 52 + i * 14.2; teeth += `<path d="M${x} 122 L${x + 14.2} 122 L${x + 7.1} 141 Z" fill="#f5efe0" stroke="#000" stroke-width="2" stroke-linejoin="round"/>`; }
+  for (let i = 0; i < 6; i++) { const x = 59 + i * 14.2; teeth += `<path d="M${x} 180 L${x + 14.2} 180 L${x + 7.1} 164 Z" fill="#f5efe0" stroke="#000" stroke-width="2" stroke-linejoin="round"/>`; }
+  return `<div class="s-furnace"><svg class="furnace" viewBox="0 14 200 208" role="img" aria-label="${esc(INC_LABEL)}" focusable="false"><title>${esc(INC_LABEL)}</title>` +
+    `<defs><linearGradient id="fnBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2e2e3b"/><stop offset="1" stop-color="#101016"/></linearGradient>` +
+    `<linearGradient id="fnFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#ff8a2a"/><stop offset="1" stop-color="#d62a12"/></linearGradient>` +
+    `<clipPath id="fnMouthClip"><rect x="48" y="122" width="104" height="58" rx="12"/></clipPath></defs>` +
+    `<g class="fn-smoke"><circle class="fn-p p1" cx="150" cy="30" r="9"/><circle class="fn-p p2" cx="156" cy="26" r="12"/><circle class="fn-p p3" cx="146" cy="28" r="8"/></g>` +
+    `<circle class="fn-boom" cx="150" cy="28" r="16"/>` +
+    `<rect x="134" y="46" width="32" height="40" fill="url(#fnBody)" stroke="#4a4a60" stroke-width="3"/><rect x="127" y="38" width="46" height="12" rx="4" fill="#23232e" stroke="#4a4a60" stroke-width="3"/><rect x="134" y="60" width="32" height="6" fill="#ff8a2a" opacity=".55"/>` +
+    `<rect x="56" y="204" width="28" height="18" rx="6" fill="#0c0c11" stroke="#3a3a4c" stroke-width="2.5"/><rect x="116" y="204" width="28" height="18" rx="6" fill="#0c0c11" stroke="#3a3a4c" stroke-width="2.5"/>` +
+    `<path d="M32 130 Q8 126 8 98" fill="none" stroke="#23232e" stroke-width="11" stroke-linecap="round"/><circle cx="8" cy="92" r="10" fill="#2e2e3b" stroke="#4a4a60" stroke-width="2.5"/>` +
+    `<path d="M168 134 Q192 150 188 174" fill="none" stroke="#23232e" stroke-width="11" stroke-linecap="round"/><circle cx="188" cy="178" r="10" fill="#2e2e3b" stroke="#4a4a60" stroke-width="2.5"/>` +
+    `<rect x="28" y="76" width="144" height="136" rx="20" fill="url(#fnBody)" stroke="#4d4d64" stroke-width="3"/><rect x="38" y="82" width="124" height="5" rx="2.5" fill="#fff" opacity=".1"/>` +
+    `<circle cx="42" cy="96" r="2.6" fill="#6a6a82"/><circle cx="158" cy="96" r="2.6" fill="#6a6a82"/><circle cx="42" cy="198" r="2.6" fill="#6a6a82"/><circle cx="158" cy="198" r="2.6" fill="#6a6a82"/>` +
+    `<ellipse cx="78" cy="104" rx="12" ry="13" fill="#f6f1e4" stroke="#000" stroke-width="2.5"/><circle cx="72" cy="106" r="5.5" fill="#000"/><circle cx="70.5" cy="104" r="1.8" fill="#fff"/>` +
+    `<ellipse cx="122" cy="104" rx="12" ry="13" fill="#f6f1e4" stroke="#000" stroke-width="2.5"/><circle cx="116" cy="106" r="5.5" fill="#000"/><circle cx="114.5" cy="104" r="1.8" fill="#fff"/>` +
+    `<path d="M62 88 L92 95 M138 88 L108 95" stroke="#ff8a2a" stroke-width="4.5" stroke-linecap="round"/>` +
+    `<rect class="fn-mouth" x="48" y="122" width="104" height="58" rx="12" fill="#1a0604" stroke="#000" stroke-width="4"/>` +
+    `<g clip-path="url(#fnMouthClip)"><rect x="48" y="122" width="104" height="58" fill="url(#fnFire)" opacity=".92"/>` +
+    fl('#ffd24a', 'M54 182 C50 160 64 154 60 134 C76 148 82 164 78 182 Z', 'f1') + fl('#ff6a1a', 'M76 182 C72 156 90 150 88 128 C104 146 108 166 102 182 Z', 'f2') +
+    fl('#ffd24a', 'M100 182 C98 160 112 154 112 132 C126 148 130 166 126 182 Z', 'f3') + fl('#ff6a1a', 'M122 182 C120 164 134 160 134 142 C148 156 150 170 148 182 Z', 'f4') +
+    `</g>${teeth}` +
+    `<g class="fn-sign" transform="rotate(-3 100 198)"><title>${esc(INC_TIP)}</title><rect x="58" y="186" width="84" height="22" rx="4" fill="#d1ad72" stroke="#4b3516" stroke-width="2.5"/><text x="100" y="202" text-anchor="middle" font-size="14" font-weight="700" fill="#2a1a08">Feed me</text></g>` +
+    `</svg></div>`;
+}
+const PICK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg>';
+const ratingText = a => toNum(a.rating) ? `${a.rating}/10` : 'Not rated yet';
+
+// The small controls used wherever an album appears: the guitar pick and the label chip
+const pickPillHtml = (a, ctx) => `<button class="s-pickbtn" type="button" data-sa="pick" data-id="${albumKey(a)}" data-fk="${ctx}:pill:${albumKey(a)}:pick" aria-pressed="${favOf(a)}">${PICK_SVG}Favourite</button>`;
+const pickTinyHtml = (a, ctx) => `<button class="pickbtn-sm" type="button" data-sa="pick" data-id="${albumKey(a)}" data-fk="${ctx}:row:${albumKey(a)}:pick" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>`;
+const chipPillHtml = (a, ctx) => `<button class="lblchip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${albumKey(a)}" data-fk="${ctx}:pill:${albumKey(a)}:chip" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[labelOf(a)].n)}. Change label for ${esc(a.title)}">${esc(LAB[labelOf(a)].n)} ▾</button>`;
+
+function itemHtml(e, S, role, i, k, ctx, o = {}) {
+  const a = e.a, key = albumKey(a), lab = labelOf(a), ri = releaseInfo(a);
+  const sel = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S && shelfUI.sel.id === key;
+  const arrive = shelfUI.arrive && shelfUI.arrive.id === key && shelfUI.arrive.shelf === S;
+  const cls = ['s-it', 'album', role, sel ? 'sel' : '', arrive ? 'arrive' : '', o.warm ? 'warm' : '', o.ash ? 'ash' : ''].filter(Boolean).join(' ');
+  const fk = c => `${ctx}:${S}:${key}:${c}`;
+  const aria = `${a.title}${a.artist ? ' by ' + a.artist : ''}, album, label ${LAB[lab].n}${favOf(a) ? ', favourite' : ''}${o.ash ? ', incinerated, still in your sheet' : ''}`;
+  const slice = role === 'slice';
+  return `<div class="${cls}" style="--i:${i}${slice ? ';--ox:' + (hash(String(a.title || '')) % 38) : ''}" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}"${slice ? ` data-i="${i}"` : ''}${o.slot != null ? ` data-slot="${o.slot}"` : ''}${mq.fine.matches ? ' draggable="true"' : ''}><div class="s-lift">` +
+    `<button class="s-art" type="button"${slice ? ` tabindex="${o.rove ? 0 : -1}"` : ''} data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
+    `<button class="s-chip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${key}" data-fk="${fk('chip')}" aria-haspopup="menu" aria-expanded="false" aria-label="Label for ${esc(a.title)}: ${esc(LAB[lab].n)}. Change label">${esc(LAB[lab].short)} ▾</button>` +
+    `<button class="s-pick" type="button" data-sa="pick" data-id="${key}" data-fk="${fk('pick')}" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>` +
+    (o.ash ? `<span class="s-ash" aria-hidden="true" title="Incinerated (still in your sheet)">${FLAME_SVG}Ash</span>` : '') +
+    (lab === 'upcoming' && ri.text ? `<span class="s-cd" aria-hidden="true">${esc(mq.narrow.matches ? ri.text.replace(/ days?$/, 'd') : ri.text)}</span>` : '') +
+    `<span class="s-cap" aria-hidden="true"><b>${esc(a.title)}</b>${a.artist ? `<span>${esc(a.artist)}</span>` : ''}<span>${esc(ratingText(a))}${lab === 'upcoming' && ri.text ? ' · ' + esc(ri.text) : ''}</span><span class="k">${esc(LAB[lab].n)}</span>${o.ash ? '<span class="ash-note">Incinerated (still in your sheet)</span>' : ''}</span>` +
+    `</div></div>`;
+}
+function detailHtml(a, S, ctx) {
+  const key = albumKey(a), lab = labelOf(a), ri = releaseInfo(a), u = safeUrl(a.buy);
+  const fk = c => `${ctx}:detail:${key}:${c}`;
+  const tags = [`<span class="s-tag">${esc(ratingText(a))}</span>`];
+  if (lab === 'upcoming' && ri.text) tags.push(`<span class="s-tag hot">${esc(ri.text)}</span>`);
+  if (a.genre) tags.push(`<span class="s-tag">${esc(a.genre)}</span>`);
+  if (a.format) tags.push(`<span class="s-tag">${esc(a.format)}</span>`);
+  const acts = `<button class="lblchip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${key}" data-fk="${fk('chip')}" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[lab].n)}. Change label for ${esc(a.title)}">${esc(LAB[lab].n)} ▾</button>` +
+    `<button class="s-pickbtn" type="button" data-sa="pick" data-id="${key}" data-fk="${fk('pick')}" aria-pressed="${favOf(a)}">${PICK_SVG}Favourite</button>` +
+    (toNum(a.id) ? `<button class="s-act" type="button" data-sa="tracks" data-id="${key}">Tracks</button>` : '') +
+    `<button class="s-act" type="button" data-sa="edit" data-id="${key}">Edit</button>` +
+    (u ? `<a class="s-buy" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Buy ${esc(a.title)} at ${esc(shopName(u))}">Buy · ${esc(shopName(u))}</a>` : '');
+  return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover">${artSvg(a.title)}</div>` +
+    `<div class="s-dinfo"><h3>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div>` +
+    `<button class="s-x" type="button" data-sa="close" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" aria-label="Close details">×</button></div>`;
+}
+// One shelf's inner markup: header, board (standing sleeves + packed stack, or a wrapping grid) and the detail strip
+function shelfInner(S, ctx, all, o = {}) {
+  const compact = !!o.compact, n = all.length, inc = S.k === 'nope' && !compact;
+  const N = inc ? INC_SLOTS() : compact ? (mq.narrow.matches ? 3 : 4) : nStand();
+  const open = !compact && !!shelfUI.expanded[S.k], hid = `h-${ctx}-${S.k}`;
+  const icon = S.k === 'fav' ? PICK_SVG : '<span class="sh-dot"></span>';
+  let body;
+  if (!n) body = `<p class="s-empty">${S.k === 'fav' ? 'No favourites yet. Tap the guitar pick on an album.' : 'Nothing on this shelf. Drop an album here or change a label.'}</p><div class="s-row"><div class="s-standing"></div>${inc ? furnaceHtml() : ''}</div>`;
+  else if (open) {
+    const G = gcols();
+    body = `<div class="s-grid">${all.map((e, i) => `<div class="s-cell${i % G === 0 ? ' first' : ''}${i % G === G - 1 ? ' last' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx, inc ? { ash: i >= N } : {})}</div>`).join('')}</div>`;
+  } else if (inc) {
+    body = `<div class="s-row"><div class="s-standing inc n${N}">${all.slice(0, N).map((e, i) => `<div class="s-cell${i === 0 ? ' first' : ''}${i === N - 1 ? ' last' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx, { slot: i, warm: i === N - 1 })}</div>`).join('')}</div>${furnaceHtml()}</div>`;
+  } else {
+    const st = all.slice(0, N), rest = all.slice(N), k = Math.min(rest.length, STACK_MAX()), more = rest.length - k;
+    const key = `${ctx}:${S.k}`, rv = Math.min(Math.max(0, k - 1), shelfUI.rove[key] || 0);
+    body = `<div class="s-row"><div class="s-standing">${st.map((e, i) => `<div class="s-cell${i === 0 ? ' first' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx)}</div>`).join('')}</div>` +
+      (k ? `<div class="s-stack${more ? ' more' : ''}" role="group" tabindex="-1" aria-label="${rest.length} more album${rest.length === 1 ? '' : 's'} on this shelf. Arrow keys move along them" data-ctx="${ctx}" data-shelf="${S.k}" style="--k:${k}">` +
+        rest.slice(0, k).map((e, i) => itemHtml(e, S.k, 'slice', i, k, ctx, { rove: i === rv })).join('') +
+        (more ? `<span class="s-more" aria-hidden="true">+${more}</span>` : '') +
+        `<button class="s-chev prev" type="button" data-sa="fan" data-dir="-1" aria-label="Show earlier albums">‹</button><button class="s-chev next" type="button" data-sa="fan" data-dir="1" aria-label="Show later albums">›</button></div>` : '') + `</div>`;
+  }
+  const selA = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S.k ? all.find(e => albumKey(e.a) === shelfUI.sel.id) : null;
+  const more = compact ? (n ? `<button class="btn sh-btn" type="button" data-sa="seeall">See all on Collection</button>` : '')
+    : (n > N ? `<button class="btn sh-btn" type="button" data-sa="all" data-key="${S.k}" data-fk="${ctx}:${S.k}:all:btn" aria-expanded="${open}">${open ? 'Show fewer' : 'Show all ' + n}</button>` : '');
+  const burnt = inc && n > N ? `<span class="sh-note">${n - N} incinerated</span>` : '';
+  return `<div class="sh-head"><h2 id="${hid}" tabindex="-1"${inc ? ` title="${esc(INC_TIP)}"` : ''}>${icon}${esc(S.head)}</h2><div class="sh-right"><span class="sh-count" aria-label="${n} album${n === 1 ? '' : 's'}">${n}</span>${burnt}${more}</div></div>` +
+    `<div class="s-board${open ? ' open' : ''}${compact ? ' compact' : ''}">${body}<div class="s-ledge"></div></div>${selA ? detailHtml(selA.a, S.k, ctx) : ''}`;
+}
+
+/* ---------- the packed stack: hover / touch / keyboard fan it out like a hand of cards (display only) ---------- */
+// shelfUI.fan = { key: 'c:hear', idx, src: 'ptr' | 'kb' | 'touch', touch }; shelfUI.rove = which slice of each stack is the tab stop
+const stackKey = st => `${st.dataset.ctx}:${st.dataset.shelf}`;
+const fanRange = (k, idx) => { const m = Math.min(FAN_N, k); return [Math.max(0, Math.min(k - m, idx - 1)), m]; };
+function paintFan(st) {
+  const f = shelfUI.fan, key = stackKey(st), on = !!f && f.key === key;
+  const sl = [...st.querySelectorAll('.slice')], k = sl.length;
+  let s0 = 0, m = 0;
+  if (on) { f.idx = Math.max(0, Math.min(k - 1, f.idx)); [s0, m] = fanRange(k, f.idx); }
+  st.classList.toggle('fan', on); st.classList.toggle('touch', on && !!f.touch);
+  if (on) { st.style.setProperty('--f0', s0); st.style.setProperty('--m', m); st.style.setProperty('--ci', f.idx); } else { ['--f0', '--m', '--ci'].forEach(v => st.style.removeProperty(v)); }
+  const rv = Math.min(k - 1, shelfUI.rove[key] || 0);
+  sl.forEach((el, i) => {
+    const j = i - s0, inn = on && j >= 0 && j < m;
+    el.classList.toggle('fanned', inn); el.classList.toggle('cur', on && i === f.idx);
+    if (inn) el.style.setProperty('--j', j); else el.style.removeProperty('--j');
+    el.querySelector('.s-art').tabIndex = i === rv ? 0 : -1;
+  });
+}
+const paintStacks = root => root.querySelectorAll('.s-stack').forEach(paintFan);
+function setFan(st, idx, src) {
+  const key = stackKey(st);
+  if (src === 'kb') shelfUI.rove[key] = idx;
+  shelfUI.fan = { key, idx, src, touch: src === 'touch' };
+  document.querySelectorAll('.s-stack').forEach(paintFan);
+}
+function clearFan() { if (!shelfUI.fan) return; shelfUI.fan = null; document.querySelectorAll('.s-stack.fan').forEach(paintFan); }
+
+/* ---------- Didn't like: the incinerator. Sleeves shift a slot closer; the one pushed out is fed to the furnace ---------- */
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function nopeBoxes() {
+  const sh = document.querySelector('#shelves .shelf[data-key="nope"]'), st = sh && sh.querySelector('.s-standing.inc');
+  if (!st) return null;
+  const board = sh.querySelector('.s-board'), b = board.getBoundingClientRect();
+  if (!b.width) return null;
+  return { board, b, items: [...st.querySelectorAll('.s-it')].map(el => { const r = el.getBoundingClientRect(); return { id: el.dataset.id, el, x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height }; }) };
+}
+function incinerate(box, p) {
+  const fur = box.board.querySelector('.furnace'), mouth = fur && fur.querySelector('.fn-mouth'), art = p.el.querySelector('.s-art');
+  if (!mouth || !art) return;
+  const g = document.createElement('div'); g.className = 's-ghost'; g.setAttribute('aria-hidden', 'true');
+  g.innerHTML = `<div class="s-art">${art.innerHTML}</div>`;
+  Object.assign(g.style, { position: 'absolute', left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px', zIndex: 6, pointerEvents: 'none' });
+  box.board.appendChild(g);
+  const m = mouth.getBoundingClientRect(), dx = m.left + m.width / 2 - box.b.left - (p.x + p.w / 2), dy = m.top + m.height / 2 - box.b.top - (p.y + p.h / 2);
+  const run = g.animate([
+    { transform: 'translate(0,0) scale(1) rotate(0deg)', filter: 'brightness(1)', opacity: 1, offset: 0 },
+    { transform: `translate(${dx * .55}px,${dy * .55 - 14}px) scale(.8) rotate(-5deg)`, filter: 'brightness(.95) sepia(.7) saturate(1.7)', opacity: 1, offset: .45 },
+    { transform: `translate(${dx}px,${dy}px) scale(.12) rotate(16deg)`, filter: 'brightness(.2) sepia(1)', opacity: .1, offset: 1 }
+  ], { duration: 1000, easing: 'cubic-bezier(.5,0,.8,.6)', fill: 'forwards' });
+  run.finished.then(() => g.remove(), () => g.remove());
+  fur.querySelectorAll('.fn-fl').forEach(f => f.animate([{ transform: 'scale(1,1)' }, { transform: 'scale(1.4,1.9)' }, { transform: 'scale(1,1)' }], { duration: 800, delay: 600, easing: 'ease-out' }));
+  fur.querySelector('.fn-boom').animate([{ opacity: 0, transform: 'translate(0,0) scale(.4)' }, { opacity: .8, offset: .25 }, { opacity: 0, transform: 'translate(-14px,-44px) scale(1.8)' }], { duration: 1400, delay: 700, easing: 'ease-out' });
+}
+function nopeAnimate(prev) {
+  if (!prev || reducedMotion()) return;
+  const box = nopeBoxes(); if (!box) return;
+  const was = new Map(prev.items.map(p => [p.id, p])), ids = new Set(box.items.map(c => c.id));
+  const arr = shelfUI.arrive && shelfUI.arrive.shelf === 'nope' ? shelfUI.arrive.id : null;
+  for (const c of box.items) {
+    const p = was.get(c.id);
+    if (p) { const dx = p.x - c.x, dy = p.y - c.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) c.el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.3,.7,.3,1)' }); }
+    else if (c.id !== arr) c.el.querySelector('.s-lift').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-out' });
+  }
+  const last = prev.items[INC_SLOTS() - 1];
+  if (arr && last && !ids.has(last.id)) incinerate(box, last);
+}
+function renderShelves() {
+  const q = norm(state.lib.q), snap = nopeBoxes();
+  let html = '';
+  for (const S of SHELVES) {
+    const all = shelfEntries(S.k).filter(e => !q || [e.a.title, e.a.artist, e.a.genre].some(v => norm(v).includes(q)));
+    if (q && !all.length) continue;
+    html += `<section class="panel shelf" data-key="${S.k}" data-ctx="c" aria-labelledby="h-c-${S.k}">${shelfInner(S, 'c', all)}</section>`;
+  }
+  $('shelves').innerHTML = html || '<p class="empty">No albums match that search.</p>';
+  paintStacks($('shelves')); nopeAnimate(snap);
+}
+function renderHomeFav() { $('homeFav').innerHTML = shelfInner(SHELVES[0], 'h', favEntries(), { compact: true }); paintStacks($('homeFav')); }
+
+/* ---------- label popover (a menu: arrows, Home/End, Enter, Esc) ---------- */
+let menu = null, menuOpener = null, menuKey = null;
+function openMenu(btn) {
+  closeMenu(false);
+  const a = albumByKey(btn.dataset.id); if (!a) return;
+  menuOpener = btn; menuKey = btn.dataset.id; btn.setAttribute('aria-expanded', 'true');
+  menu = document.createElement('div'); menu.className = 's-menu'; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', `Label for ${a.title}`);
+  const cur = labelOf(a);
+  menu.innerHTML = LABELS.map(l => { const why = labelBlock(a, l.k); return `<button type="button" role="menuitemradio" aria-checked="${l.k === cur}"${why ? ` aria-disabled="true" title="${esc(why)}"` : ''} tabindex="-1" data-k="${l.k}"><i>${l.k === cur ? '✓' : ''}</i>${esc(l.n)}</button>`; }).join('');
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
+  let top = r.bottom + 6;
+  if (top + h > innerHeight - 8 && r.top - h - 6 > 8) top = r.top - h - 6;
+  menu.style.left = left + scrollX + 'px'; menu.style.top = top + scrollY + 'px';
+  (menu.querySelector('[aria-checked="true"]') || menu.firstChild).focus({ preventScroll: true });
+}
+function closeMenu(refocus) {
+  if (!menu) return;
+  const o = menuOpener, fk = o && o.dataset.fk; menu.remove(); menu = null; menuOpener = null;
+  if (o && o.isConnected) {
+    o.setAttribute('aria-expanded', 'false');
+    const sl = o.closest('.slice');   // the chip of a fanned stack card: keep that card fanned while focus is on it
+    if (refocus) { if (sl) setFan(sl.closest('.s-stack'), +sl.dataset.i, 'kb'); o.focus({ preventScroll: true }); }
+    else if (shelfUI.fan && shelfUI.fan.src === 'ptr') { const st = document.querySelector('.s-stack.fan'); if (st && !st.matches(':hover')) clearFan(); }
+  }
+  else if (refocus) restoreFocus(fk);
+}
+document.addEventListener('keydown', e => {
+  if (!menu) return;
+  const btns = [...menu.querySelectorAll('button')], i = btns.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+  else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); }
+  else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
+  else if (e.key === 'Tab') closeMenu(false);
+}, true);
+document.addEventListener('pointerdown', e => { if (menu && !menu.contains(e.target) && !(menuOpener && menuOpener.contains(e.target))) closeMenu(false); });
+addEventListener('resize', () => closeMenu(false));
+
+/* ---------- clicks on shelves, chips and picks (everything marked data-sa) ---------- */
+document.addEventListener('click', e => {
+  const m = e.target.closest('.s-menu button');
+  if (m && menu) {
+    const a = albumByKey(menuKey), k = m.dataset.k, fk = menuOpener && menuOpener.dataset.fk;
+    if (m.getAttribute('aria-disabled') === 'true') { toast(m.title || LOCK_MSG); return; }
+    closeMenu(false); relabel(a, k, { fk }); return;
+  }
+  if (shelfUI.fan && shelfUI.fan.touch && !e.target.closest('.s-stack')) clearFan();   // tap outside packs the stack again
+  const b = e.target.closest('[data-sa]'); if (!b) return;
+  const act = b.dataset.sa, a = b.dataset.id ? albumByKey(b.dataset.id) : null, fk = b.dataset.fk;
+  if (act === 'fan') { const st = b.closest('.s-stack'), f = shelfUI.fan; if (st && f && f.key === stackKey(st)) setFan(st, f.idx + 2 * Number(b.dataset.dir), 'touch'); return; }
+  if (act === 'sel') {
+    const sl = b.closest('.slice');
+    if (sl && !mq.fine.matches && !sl.classList.contains('fanned')) { setFan(sl.closest('.s-stack'), +sl.dataset.i, 'touch'); return; }   // touch: the first tap opens the fan
+    const same = shelfUI.sel && shelfUI.sel.id === b.dataset.id && shelfUI.sel.shelf === b.dataset.shelf && shelfUI.sel.ctx === b.dataset.ctx; shelfUI.sel = same ? null : { id: b.dataset.id, shelf: b.dataset.shelf, ctx: b.dataset.ctx }; render(fk); }
+  else if (act === 'close') { shelfUI.sel = null; render(`${b.dataset.ctx}:${b.dataset.shelf}:${b.dataset.id}:art`); }
+  else if (act === 'all') { shelfUI.expanded[b.dataset.key] = !shelfUI.expanded[b.dataset.key]; render(fk); }
+  else if (act === 'seeall') showTab('collection');
+  else if (act === 'pick') toggleFav(a, undefined, fk);
+  else if (act === 'chip') { if (menu && menuOpener === b) closeMenu(true); else openMenu(b); }
+  else if (act === 'tracks') openTracks(a);
+  else if (act === 'edit') openAlbumDialog(a);
+});
+
+/* ---------- the stack: pointer, focus and keys ---------- */
+const inFanZone = (st, e) => { const r = st.getBoundingClientRect(), h = r.height; return e.clientX >= r.left - h * .2 && e.clientX <= r.right + h * .3 && e.clientY >= r.top - h * .25 && e.clientY <= r.bottom + 8; };
+document.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch' || !e.target.closest) return;
+  let st = e.target.closest('.s-stack');
+  if (!st && shelfUI.fan && shelfUI.fan.src === 'ptr') {   // the fan is wider than the packed stack: stay open over the gap it leaves, pack when the pointer is really away
+    const open = document.querySelector('.s-stack.fan');
+    if (open && !e.target.closest('.s-it') && inFanZone(open, e)) st = open;
+    else if (open && !(menu && menuOpener && open.contains(menuOpener))) { clearFan(); return; }
+  }
+  if (!st || e.target.closest('.s-chip, .s-pick, .s-chev, .s-more')) return;   // on a card's own controls: hold still
+  const sl = e.target.closest('.slice:not(.fanned)'); let idx;
+  if (sl) idx = +sl.dataset.i;
+  else {   // over the raised card or the gap the fan left: work out which packed slice is under the pointer (the slices lean 10deg)
+    const r = st.getBoundingClientRect(), cs = getComputedStyle(st), pitch = parseFloat(cs.getPropertyValue('--pitch')), sw = parseFloat(cs.getPropertyValue('--sw'));
+    idx = Math.round((e.clientX - r.left - sw / 2 + (r.bottom - e.clientY) * 0.1736) / pitch);
+    idx = Math.max(0, Math.min(st.querySelectorAll('.slice').length - 1, idx));
+  }
+  const f = shelfUI.fan; if (f && f.key === stackKey(st) && f.idx === idx && f.src === 'ptr') return;
+  setFan(st, idx, 'ptr');
+});
+document.documentElement.addEventListener('mouseleave', () => { if (shelfUI.fan && shelfUI.fan.src === 'ptr' && !menu) clearFan(); });
+document.addEventListener('focusin', e => {
+  const sl = e.target.closest && e.target.closest('.slice');
+  if (sl && e.target.matches(':focus-visible')) setFan(sl.closest('.s-stack'), +sl.dataset.i, 'kb');
+});
+document.addEventListener('focusout', e => {
+  const st = e.target.closest && e.target.closest('.s-stack'); if (!st || (e.relatedTarget && st.contains(e.relatedTarget))) return;
+  const f = shelfUI.fan; if (f && f.key === stackKey(st) && f.src === 'kb') clearFan();
+});
+document.addEventListener('keydown', e => {
+  if (menu || !e.target.closest) return;
+  const st = e.target.closest('.s-stack'); if (!st) return;
+  if (e.key === 'Escape') { if (shelfUI.fan && shelfUI.fan.key === stackKey(st)) { e.preventDefault(); clearFan(); st.focus({ preventScroll: true }); } return; }
+  const sl = e.target.closest('.slice'); if (!sl || !e.target.classList.contains('s-art')) return;
+  const all = [...st.querySelectorAll('.slice')], i = +sl.dataset.i;
+  const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: all.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  const j = Math.max(0, Math.min(all.length - 1, to));
+  setFan(st, j, 'kb'); all[j].querySelector('.s-art').focus({ preventScroll: true });
+});
+
+/* ---------- drag and drop between shelves (mouse and trackpad) ---------- */
+let dragKey = null;
+const shelfOf = t => t.closest && t.closest('.shelf[data-key]');
+document.addEventListener('dragstart', e => {
+  const it = e.target.closest && e.target.closest('.s-it[draggable]'); if (!it) return;
+  dragKey = it.dataset.id; e.dataTransfer.setData('text/plain', dragKey); e.dataTransfer.effectAllowed = 'move'; closeMenu(false); it.classList.add('dragging');
+});
+document.addEventListener('dragend', () => { dragKey = null; clearFan(); document.querySelectorAll('.dragging,.drop').forEach(x => x.classList.remove('dragging', 'drop')); });
+document.addEventListener('dragover', e => {
+  const s = shelfOf(e.target); if (!dragKey || !s) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.shelf.drop').forEach(x => x !== s && x.classList.remove('drop')); s.classList.add('drop');
+});
+document.addEventListener('drop', e => {
+  const s = shelfOf(e.target); if (!dragKey || !s) return;
+  e.preventDefault();
+  const a = albumByKey(dragKey), k = s.dataset.key; dragKey = null; s.classList.remove('drop');
+  if (k === 'fav') toggleFav(a, true); else relabel(a, k);
+});
+if (mq.narrow.addEventListener) { mq.narrow.addEventListener('change', () => { closeMenu(false); render(); }); mq.fine.addEventListener('change', () => render()); }
+
+/* ---------- Collection: Table view (the old Library) ---------- */
 const STATUS_ORDER = Object.fromEntries(STATUSES.map((s, i) => [s, i]));
 const LIB_COLS = [
   { k: 'title', label: 'Title', cls: 'c-title', sort: 'title' }, { k: 'artist', label: 'Artist', cls: 'c-artist', sort: 'artist' },
   { k: 'rating', label: 'Rating', cls: 'c-rating num', sort: 'rating' }, { k: 'status', label: 'Status', cls: 'c-status', sort: 'status' },
-  { k: 'genre', label: 'Genre', cls: 'c-genre' }, { k: 'format', label: 'Format', cls: 'c-format' }, { k: 'year', label: 'Year', cls: 'c-year num', sort: 'year' }
+  { k: 'genre', label: 'Genre', cls: 'c-genre' }, { k: 'format', label: 'Format', cls: 'c-format' }, { k: 'year', label: 'Year', cls: 'c-year num', sort: 'year' },
+  { k: 'fav', label: '<span class="sr">Favourite</span><svg class="pickico" viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg>', cls: 'c-pick' }
 ];
 const NUMERIC_FIRST_DESC = ['year', 'rating', 'added'];
 function sortKey(a, k) {
@@ -1441,12 +2153,19 @@ function libFiltered() {
   const L = state.lib, q = norm(L.q);
   return state.albums.filter(a =>
     (L.status === 'All' || a.status === L.status) && (!L.genre || a.genre === L.genre) &&
-    (!L.owned || owned(a)) && (!L.want || wantVinyl(a)) && (!L.copied || trkStat(a).copied > 0) &&
+    (!L.owned || owned(a)) && (!L.want || wantVinyl(a)) && (!L.copied || trkStat(a).copied > 0) && (!L.fav || favOf(a)) &&
     (!q || [a.title, a.artist, a.genre, a.notes].some(v => norm(v).includes(q))));
 }
 function chipGroup(el, label, items, isOn, attr) {
   el.innerHTML = `<span class="flabel">${label}</span>` + items.map(([v, text, n]) =>
     `<button class="chip" type="button" data-f="${attr}" data-v="${esc(v)}" aria-pressed="${isOn(v)}">${esc(text)}${n == null ? '' : `<span class="n">${fmt(n)}</span>`}</button>`).join('');
+}
+function renderCollection() {
+  const table = state.colView === 'table';
+  $('colShelves').hidden = table; $('colTable').hidden = !table;
+  $('colView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.colView)));
+  $('libSearch').placeholder = table ? 'Search title, artist, genre or notes' : 'Search title, artist or genre';
+  if (table) renderLibrary(); else renderShelves();
 }
 function renderLibrary() {
   const L = state.lib;
@@ -1458,9 +2177,9 @@ function renderLibrary() {
   const genres = [...new Set([...GENRES, ...state.albums.map(a => a.genre).filter(Boolean)])];
   const gc = {}; for (const a of state.albums) gc[a.genre] = (gc[a.genre] || 0) + 1;
   chipGroup($('fGenre'), 'Genre', [['', 'All', null], ...genres.map(g => [g, g, gc[g] || 0])], v => L.genre === v, 'genre');
-  chipGroup($('fColl'), 'Show', [['owned', 'Owned', state.albums.filter(owned).length], ['want', 'Want on vinyl', state.albums.filter(wantVinyl).length], ['copied', 'Copied', state.albums.filter(a => trkStat(a).copied > 0).length]], v => L[v], 'coll');
+  chipGroup($('fColl'), 'Show', [['owned', 'Owned', state.albums.filter(owned).length], ['want', 'Want on vinyl', state.albums.filter(wantVinyl).length], ['copied', 'Copied', state.albums.filter(a => trkStat(a).copied > 0).length], ['fav', 'Favourites', state.albums.filter(favOf).length]], v => L[v], 'coll');
 
-  $('libHead').innerHTML = LIB_COLS.map(c => `<th scope="col" ${c.sort ? `data-k="${c.sort}"` : ''} class="${c.cls.includes('num') ? 'num' : ''}" ${c.sort && L.sort === c.sort ? `aria-sort="${L.dir > 0 ? 'ascending' : 'descending'}"` : ''}>${c.label}</th>`).join('');
+  $('libHead').innerHTML = LIB_COLS.map(c => `<th scope="col" ${c.sort ? `data-k="${c.sort}"` : ''} class="${[c.cls.includes('num') ? 'num' : '', c.cls.includes('c-pick') ? 'c-pick' : ''].join(' ').trim()}" ${c.sort && L.sort === c.sort ? `aria-sort="${L.dir > 0 ? 'ascending' : 'descending'}"` : ''}>${c.label}</th>`).join('');
   const rows = libFiltered().sort((a, b) => { const x = sortKey(a, L.sort), y = sortKey(b, L.sort); return (x < y ? -1 : x > y ? 1 : 0) * L.dir || norm(a.title).localeCompare(norm(b.title)); });
   const body = $('libBody'); body.textContent = '';
   if (!rows.length) body.innerHTML = `<tr><td colspan="${LIB_COLS.length}" class="muted" style="padding:18px">No albums match.</td></tr>`;
@@ -1471,7 +2190,7 @@ function renderLibrary() {
     const r = toNum(a.rating);
     const cells = {
       title: '', artist: '', rating: r ? `<span class="rating tnum">${esc(a.rating)}<small>/10</small></span>` : '',
-      status: pill('status', a.status), genre: pill('genre', a.genre), format: pill('format', a.format), year: esc(a.year)
+      status: pill('status', a.status), genre: pill('genre', a.genre), format: pill('format', a.format), year: esc(a.year), fav: pickTinyHtml(a, 't')
     };
     tr.innerHTML = LIB_COLS.map(c => `<td class="${c.cls}${c.num ? ' tnum' : ''}">${cells[c.k]}</td>`).join('');
     tr.querySelector('.c-title').innerHTML = '<span class="t"></span>';
@@ -1498,9 +2217,11 @@ function detailRow(a) {
     ['Plan', a.plan ? a.plan + (a.plan === 'Up next' && a.upNext ? ' #' + a.upNext : '') : ''], ['Why', a.why],
     ['Tracks copied', ts.total ? `${ts.copied}/${ts.total} copied` : ''],
     ['Plays logged', p ? String(p.plays) : '0'], ['Last played', p && p.last ? (daysBetween(p.last, today()) < 7 ? `${dayLabel(p.last)} · ${fmtDate(p.last)}` : fmtDate(p.last)) : 'Never'],
+    ['Favourite', fmtDate(a.favourite)], ['Labelled', fmtDate(a.labelled)],
     ['Added', fmtDate(a.added)], ['Planned', fmtDate(a.planned)], ['id', a.id]
   ].filter(([, v]) => v);
-  td.innerHTML = '<dl class="kv"></dl><div class="acts"><button class="btn btn-primary" type="button" data-edit>Edit album</button><button class="btn" type="button" data-log>Log a listen</button><button class="btn" type="button" data-tracks>Tracks</button></div>';
+  td.innerHTML = '<dl class="kv"></dl><div class="acts"><button class="btn btn-primary" type="button" data-edit>Edit album</button>' + (state.showLog ? '<button class="btn" type="button" data-log>Log a listen</button>' : '') +
+    '<button class="btn" type="button" data-tracks>Tracks</button>' + chipPillHtml(a, 't') + pickPillHtml(a, 't') + '</div>';
   const dl = td.querySelector('.kv');
   for (const [k, v] of kv) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; if (v instanceof Node) dd.appendChild(v); else dd.textContent = v; dl.append(dt, dd); }
   tr.appendChild(td);
@@ -1570,12 +2291,13 @@ async function saveAlbumDialog(e) {
         else if (editing.upNext) changed.upNext = '';
       }
       const n = Object.keys(changed).length;
-      if (n) await writeAlbumFields(editing.id, changed);
+      if (n) await writeAlbumFields(editing.id, withLabelled(editing, changed));
       notice('');
       setStatus('live', n ? `Saved ${n} change${n > 1 ? 's' : ''} to “${data.title}”` : 'No changes to save');
     } else {
       const a = await addAlbum(data);
       state.lib.open = a.id;
+      a._moved = ++movedSeq; shelfUI.sel = { ctx: 'c', shelf: labelOf(a), id: albumKey(a) }; shelfUI.arrive = { id: albumKey(a), shelf: labelOf(a) };
       setStatus('live', `Added “${a.title}” with id ${a.id}`);
     }
     $('albumDlg').close();
@@ -1589,31 +2311,41 @@ async function saveAlbumDialog(e) {
 const soonList = () => state.albums.filter(a => a.plan === 'Soon');
 const planUI = { whyOpen: null, deckSkipped: new Set(), deckDone: 0, filter: '', limit: 50 };
 
-// Plan writes go through a queue so rapid taps can't interleave. The screen updates first; every write
-// still finds its row by id (exactly one match) and only sends cells whose value actually changed.
-const planQ = { chain: Promise.resolve(), pending: 0, failed: '' };
-function planStatus() { setStatus('live', planQ.pending ? `Saving plan… (${planQ.pending})` : 'Plan saved'); }
+// Plan, label and favourite writes all go through one queue so rapid taps can't interleave. The screen updates first;
+// every write still finds its row by id (exactly one match) and only sends cells whose value actually changed.
+// If a write fails the screen goes back to what it was and the sheet is read again.
+const planQ = { chain: Promise.resolve(), pending: 0, failed: '', kind: 'plan' };
+const SAVED = { plan: 'Plan saved', label: 'Label saved', pick: 'Favourite saved' };
+function planStatus() { setStatus('live', planQ.pending ? (planQ.kind === 'plan' ? `Saving plan… (${planQ.pending})` : `Saving… (${planQ.pending})`) : SAVED[planQ.kind]); }
 const sameVal = (k, a, b) => FIELD[k].t === 'num' ? toNum(a) === toNum(b) : FIELD[k].t === 'date' ? (toDate(a) || '') === (toDate(b) || '') : String(a ?? '').trim() === String(b ?? '').trim();
-function savePlan(a, fields) {
+// Returns null when nothing changes (nothing is written); otherwise { prev: the old values of the changed cells, done: Promise<boolean> }
+function saveAlbum(a, fields, kind = 'plan') {
   fields = Object.fromEntries(Object.entries(fields).filter(([k, v]) => !sameVal(k, a[k], v)));
-  if (!Object.keys(fields).length) return;
+  if (!Object.keys(fields).length) return null;
   const prev = Object.fromEntries(Object.keys(fields).map(k => [k, a[k]]));
   Object.assign(a, Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, String(v ?? '')])));
-  planQ.pending++; planStatus();
-  planQ.chain = planQ.chain.then(() => writeAlbumFields(a.id, fields)).catch(err => {
+  planQ.pending++; planQ.kind = kind; planStatus();
+  const what = kind === 'plan' ? 'the plan change for' : kind === 'pick' ? 'the favourite for' : 'the label for';
+  const done = planQ.chain.then(() => writeAlbumFields(a.id, fields)).then(() => { if (kind !== 'plan') spinMark(); return true; }, err => {
     Object.assign(a, prev);
-    planQ.failed = `Couldn't save the plan change for “${a.title}”: ${(err && err.code === 'tool_error' && err.message) || explain(err)}`;
-    renderPlan();
-  }).finally(async () => {
+    planQ.failed = `Couldn't save ${what} “${a.title}”: ${(err && err.code === 'tool_error' && err.message) || explain(err)}`;
+    render();
+    return false;
+  }).then(async ok => {
     planQ.pending--; planStatus();
     if (!planQ.pending && planQ.failed) { const m = planQ.failed; planQ.failed = ''; await refresh(); notice(m, 'error'); }
+    return ok;
   });
+  planQ.chain = done;
+  return { prev, done };
 }
-function planGuard() {
+const savePlan = (a, fields) => { saveAlbum(a, fields, 'plan'); };
+function liveGuard(what) {
   if (isLive()) return true;
-  notice('Planning needs the live connection. ' + connectHint(), 'error');
+  notice(`${what} needs the live connection. ` + connectHint(), 'error');
   return false;
 }
+const planGuard = () => liveGuard('Planning');
 // Keep Up next numbered 1..n, writing only the albums whose number changed
 function renumberUpNext() { upNextList().forEach((a, i) => savePlan(a, { upNext: i + 1 })); }
 function setTier(a, tier) {
@@ -1911,7 +2643,22 @@ function renderDashboard() {
   const artistsHeard = new Set(heardAlbums.map(a => artistKey(a.artist)).filter(Boolean));
   const avg = avgOf(heardAlbums);
   const tile = (key, eb, num, sub) => `<div class="stat" data-tile="${key}"><span class="eyebrow">${eb}</span><span class="num tnum">${num}</span><span class="sub">${sub}</span></div>`;
-  $('dashTiles').innerHTML =
+  const showLog = state.showLog, byLabel = k => albums.filter(a => labelOf(a) === k);
+  $('dashPeriods').hidden = !showLog; $('monthPanel').hidden = !showLog; $('heatPanel').hidden = !showLog;
+  $('artPlaysCol').hidden = !showLog; $('artCols').classList.toggle('one', !showLog);
+  $('fmtPanel').classList.toggle('full', showLog);   // without the two log panels, Decades and Formats sit side by side
+  const upcoming = byLabel('upcoming').sort(byRelease), nextUp = upcoming.length && releaseInfo(upcoming[0]);
+  if (!showLog) $('dashTiles').innerHTML =
+    tile('heard', 'Albums heard', fmt(heardAlbums.length), `of ${fmt(albums.length)} in the collection`) +
+    tile('favs', 'Favourites', fmt(albums.filter(favOf).length), 'picked with the guitar pick') +
+    tile('avg', 'Average rating', avg ? avg.toFixed(1) : '–', plural(rated.length, 'rated album')) +
+    tile('owned', 'Owned', fmt(byLabel('owned').length), `${fmt(vinyl.length)} on vinyl`) +
+    tile('wish', 'Vinyl wish list', fmt(byLabel('wish').length), 'still to buy') +
+    tile('backlog', 'Listening backlog', fmt(byLabel('hear').length), 'still to hear') +
+    tile('upcoming', 'Upcoming', fmt(upcoming.length), nextUp && nextUp.text ? (nextUp.dated ? `next ${nextUp.text}` : `next ${nextUp.text}`) : 'coming soon') +
+    tile('artists', 'Artists heard', fmt(artistsHeard.size), 'different artists') +
+    tile('copied', 'Copied to MP3', fmt(state.tracks.filter(t => t.copied).length), `${plural(trkComplete(), 'album')} complete`);
+  else $('dashTiles').innerHTML =
     tile('heard', 'Albums heard', fmt(heardAlbums.length), `of ${fmt(albums.length)} in the library`) +
     tile('plays', dash.period === 'all' ? 'Listens, all time' : `Listens in ${label}`, fmt(plays), days.size ? `on ${plural(days.size, 'day')}` : 'plays logged') +
     tile('logged', dash.period === 'all' ? 'Albums logged' : `Albums logged in ${label}`, fmt(logged.size), 'different albums') +
@@ -1922,8 +2669,8 @@ function renderDashboard() {
     tile('artists', 'Artists heard', fmt(artistsHeard.size), 'different artists') +
     tile('copied', 'Copied to MP3', fmt(state.tracks.filter(t => t.copied).length), `${plural(trkComplete(), 'album')} complete`);
 
-  renderMonthly(dashYear());
-  renderHeat(dashYear());
+  if (showLog) { renderMonthly(dashYear()); renderHeat(dashYear()); }
+  else if (monthChart) { monthChart.destroy(); monthChart = null; }
 
   // Ratings, 10 down to 1
   const rc = new Map();
@@ -1966,6 +2713,7 @@ function renderDashboard() {
   const topHeard = [...am].filter(([, x]) => x.heard.length).map(([k, x]) => ({ k, name: x.name, n: x.heard.length, avg: avgOf(x.heard) }))
     .sort((p, q) => q.n - p.n || q.avg - p.avg || p.name.localeCompare(q.name)).slice(0, 10);
   artistList($('artHeard'), topHeard.map(x => ({ ...x, open: () => openArtist(x.k) })), x => `${plural(x.n, 'album')}${x.avg ? ' · ' + x.avg.toFixed(1) : ''}`);
+  if (!showLog) return;
   const pm = new Map();
   for (const e of ents) {
     const a = albumOf(e), name = (a && a.artist) || e.artist, k = artistKey(name); if (!k) continue;
@@ -2117,7 +2865,7 @@ function renderDip() {
   const acts = mk('div', 'acts');
   acts.append(
     mkBtn('Another', 'btn btn-primary', () => { d.last = d.id; d.id = null; renderDip(); }, { disabled: pool.length < 2 }),
-    mkBtn('Log a listen today', 'btn', b => logToday(a, b)),
+    ...(state.showLog ? [mkBtn('Log a listen today', 'btn', b => logToday(a, b))] : []),
     upNextBtn(a));
   card.append(line, acts, mk('div', 'muted small', `${fmt(pool.length)} album${pool.length === 1 ? '' : 's'} fit “${d.mood}”`));
   card.lastChild.style.marginTop = '8px';
@@ -2347,13 +3095,17 @@ function renderYear() {
 
 /* Recommendations from my ratings */
 const RECS = {
-  best: 'Nothing in your backlog to recommend. Add albums in the Library tab.',
+  best: 'Nothing in your backlog to recommend. Add albums in the Collection tab.',
   artists: 'No backlog albums by artists you rate highly (7 or more on average) yet.',
   change: 'No backlog albums in genres you rarely rate.',
   revisit: 'No favourites waiting. Every album you rated 9 or 10 has been played in the last 180 days.'
 };
 function recPicks(mode) {
   const P = buildProfile(), t = today();
+  if (mode === 'revisit' && !state.showLog) {   // without the log there is no "last played": just the albums you rated highest
+    return state.albums.filter(a => a.id && heard(a) && rOf(a) >= 9 && labelOf(a) !== 'nope').sort((p, q) => rOf(q) - rOf(p) || norm(p.title).localeCompare(norm(q.title))).slice(0, 5)
+      .map(a => ({ a, why: [`Rated ${a.rating}/10`] }));
+  }
   if (mode === 'revisit') {
     return state.albums.filter(a => a.id && heard(a) && rOf(a) >= 9).map(a => { const p = playedOf(a); return { a, last: p ? p.last : '', gap: p ? daysBetween(p.last, t) : 1e9 }; })
       .filter(x => x.gap > 180).sort((p, q) => rOf(q.a) - rOf(p.a) || q.gap - p.gap || norm(p.a.title).localeCompare(norm(q.a.title))).slice(0, 5)
@@ -2393,13 +3145,13 @@ function renderRecs() {
     for (const w of why) el.querySelector('.rec-why').appendChild(mk('span', 'why-chip', w));
     const acts = el.querySelector('.rec-actions');
     acts.append(mkBtn('Open', 'btn', () => openDlg(a), { aria: 'Open ' + a.title }));
-    if (mode === 'revisit') { const b = mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)); b.dataset.act = 'log'; acts.appendChild(b); }
+    if (mode === 'revisit') { if (state.showLog) { const b = mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)); b.dataset.act = 'log'; acts.appendChild(b); } }
     else { const b = mkBtn('Up next', 'btn btn-primary', () => queueUp(a), { aria: 'Add to Up next: ' + a.title }); b.dataset.act = 'up'; acts.appendChild(b); }
     box.appendChild(el);
   }
 }
 
-function renderTools() { renderDip(); renderOwn(); renderNudges(); renderGoal(); renderYear(); renderRecs(); }
+function renderTools() { renderDip(); renderOwn(); if (state.showLog) { renderNudges(); renderGoal(); renderYear(); } renderRecs(); }
 
 /* ---------- Discover tab ---------- */
 // Seeded shuffle: the same date always gives the same album, and a pool of n albums doesn't repeat for n days
@@ -2409,7 +3161,7 @@ function mulberry32(seed) {
 }
 function aotdFor(dateIso) {
   const min = state.settings.albumOfDayMin || 8;
-  const pool = state.albums.filter(a => heard(a) && rOf(a) >= min).sort((x, y) => (toNum(x.id) || 1e9 + x._row) - (toNum(y.id) || 1e9 + y._row));
+  const pool = state.albums.filter(a => heard(a) && rOf(a) >= min && labelOf(a) !== 'nope').sort((x, y) => (toNum(x.id) || 1e9 + x._row) - (toNum(y.id) || 1e9 + y._row));
   if (!pool.length) return null;
   const y = +dateIso.slice(0, 4), rnd = mulberry32(y * 7919 + 17);
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
@@ -2431,8 +3183,9 @@ function renderAotd() {
   card.appendChild(mk('p', 'own-line', [a.genre, a.format, info.text].filter(Boolean).join(' · ')));
   if (a.notes) card.appendChild(mk('p', 'notes', a.notes));
   const line = mk('div', 'dip-line');
-  line.appendChild(mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)));
+  if (state.showLog) line.appendChild(mkBtn('Log a listen today', 'btn btn-primary', b => logToday(a, b)));
   line.appendChild(mkBtn('Tracks', 'btn', () => openTracks(a), { aria: 'Tracks for ' + a.title }));
+  line.insertAdjacentHTML('beforeend', pickPillHtml(a, 'a'));
   if (a.buy) line.appendChild(buyEl(a.buy));
   card.appendChild(line);
   box.appendChild(card);
@@ -2450,7 +3203,8 @@ function renderOnDay() {
   const ul = $('onDayList'), t = today(), md = t.slice(5), y = curYear();
   ul.textContent = '';
   const groups = new Map();
-  for (const e of state.log) {
+  $('odNote').textContent = state.showLog ? 'Plays and releases on today\'s date in earlier years' : 'Releases on today\'s date in earlier years';
+  for (const e of state.showLog ? state.log : []) {
     const ey = +e.date.slice(0, 4);
     if (e.date.slice(5) !== md || ey >= y) continue;
     const k = ey + '|' + entryKey(e);
@@ -2464,7 +3218,7 @@ function renderOnDay() {
     rows.push({ ago, main: ago === 0 ? `${a.title} is out today` : `${a.title} was released ${yearsAgo(ago)} today`, right: a.artist || '', a });
   }
   rows.sort((p, q) => p.ago - q.ago);
-  if (!rows.length) { ul.appendChild(mk('li', 'empty', 'Nothing on this date in earlier years: no plays logged and no release dates match.')); return; }
+  if (!rows.length) { ul.appendChild(mk('li', 'empty', `Nothing on this date in earlier years: ${state.showLog ? 'no plays logged and ' : ''}no release dates match.`)); return; }
   for (const r of rows) miniRow(ul, r.main, r.right, r.a ? () => openDlg(r.a) : null);
 }
 const MILESTONES = [10, 20, 25, 30, 40, 50, 60];
@@ -2487,14 +3241,48 @@ function renderAnniv() {
   }
   if (!total) box.appendChild(mk('p', 'empty', `No albums in your library turn 10, 20, 25, 30, 40, 50 or 60 in ${y}.`));
 }
-function renderSoon() {
-  const ul = $('soonList2'), soon = state.albums.filter(a => a.status === 'Coming Soon').sort((p, q) => (toNum(p.year) || 9999) - (toNum(q.year) || 9999) || norm(p.title).localeCompare(norm(q.title)));
+const home = { hearId: null, upcomingAll: false };
+function renderUpcoming() {
+  const ul = $('upcomingList'), list = state.albums.filter(a => labelOf(a) === 'upcoming').sort(byRelease);
   ul.textContent = '';
-  $('soonNote2').textContent = soon.length ? plural(soon.length, 'album') : '';
-  if (!soon.length) { ul.appendChild(mk('li', 'empty', 'Nothing marked Coming Soon.')); return; }
-  for (const a of soon) miniRow(ul, a.artist ? `${a.title} · ${a.artist}` : a.title, toNum(a.year) ? String(toNum(a.year)) : 'Year to come', () => openDlg(a));
+  $('upcomingNote').textContent = list.length ? plural(list.length, 'album') : '';
+  if (!list.length) { ul.appendChild(mk('li', 'empty', 'Nothing upcoming. Albums marked Coming Soon show up here with a countdown.')); return; }
+  for (const a of home.upcomingAll ? list : list.slice(0, 6)) {
+    const ri = releaseInfo(a);
+    miniRow(ul, a.artist ? `${a.title} · ${a.artist}` : a.title, ri.text || 'Date to come', () => openDlg(a));
+    ul.lastChild.dataset.id = albumKey(a);
+    if (ri.dated) ul.lastChild.querySelector('.r').classList.add('cd-text');
+  }
+  if (list.length > 6) {
+    const li = mk('li'); li.appendChild(mkBtn(home.upcomingAll ? 'Show fewer' : `Show all ${list.length}`, 'linkbtn', () => { home.upcomingAll = !home.upcomingAll; renderUpcoming(); }));
+    ul.appendChild(li);
+  }
 }
-function renderDiscover() { renderAotd(); renderOnDay(); renderSoon(); renderAnniv(); }
+// Something to hear: a random To hear album, never the same one twice running
+function renderHear() {
+  const pool = state.albums.filter(a => a.id && labelOf(a) === 'hear'), box = $('hearBox');
+  $('hearNote').textContent = `${plural(pool.length, 'album')} waiting`;
+  $('hearPick').disabled = !pool.length;
+  box.textContent = '';
+  const a = home.hearId && albumByKey(home.hearId);
+  if (!a) { box.appendChild(mk('p', 'empty', pool.length ? 'Not sure what to play? Tap Pick for me.' : 'Nothing waiting to be heard.')); return; }
+  const card = mk('div', 'dip');
+  card.append(mk('h3', null, a.title), mk('div', 'm muted small', albumLine(a) || 'Unknown artist'));
+  const line = mk('div', 'dip-line');
+  line.insertAdjacentHTML('beforeend', chipPillHtml(a, 'hr'));
+  if (a.buy) line.appendChild(buyEl(a.buy));
+  const acts = mk('div', 'acts'); acts.appendChild(upNextBtn(a));
+  card.append(line, acts);
+  box.appendChild(card);
+}
+$('hearPick').addEventListener('click', () => {
+  const pool = state.albums.filter(a => a.id && labelOf(a) === 'hear');
+  const others = pool.filter(a => albumKey(a) !== home.hearId), from = others.length ? others : pool;
+  if (!from.length) return;
+  home.hearId = albumKey(from[Math.floor(Math.random() * from.length)]);
+  renderHear();
+});
+function renderHome() { renderAotd(); renderHomeFav(); renderUpcoming(); renderHear(); renderOnDay(); renderAnniv(); }
 
 $('dipMoods').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; tools.dip.last = tools.dip.id; tools.dip.mood = c.dataset.m; tools.dip.id = null; renderDip(); });
 $('ownQ').addEventListener('input', e => { tools.ownQ = e.target.value; renderOwn(); });
@@ -2857,24 +3645,38 @@ $('tracksDlg').addEventListener('close', () => { trkUI.editing = trkUI.deleting 
 /* ---------- tabs and rendering ---------- */
 // A tab needs an entry here, a tab button #tab-<name> and a panel #view-<name>.
 const TABS = {
+  home: { render: renderHome },
+  collection: { render: renderCollection },
   log: { render: renderLogTab },
   plan: { render: renderPlan },
-  library: { render: renderLibrary },
   dashboard: { render: renderDashboard },
-  tools: { render: renderTools },
-  discover: { render: renderDiscover }
+  tools: { render: renderTools }
 };
-function render() { buildIndex(); (TABS[state.tab] || TABS.log).render(); if ($('tracksDlg').open) renderTracksDlg(); }
+// fk: the control to put focus back on after the screen is redrawn (defaults to the one focused now)
+function render(fk) {
+  const keep = fk !== undefined ? fk : activeFk();
+  buildIndex(); (TABS[state.tab] || TABS.home).render(); if ($('tracksDlg').open) renderTracksDlg();
+  shelfUI.arrive = null;
+  if (keep) restoreFocus(keep);
+}
 function renderAll() { applyTheme(); render(); }
+// The listening log (its tab and everything built on it) is hidden unless switched on in Tools > Look
+function applyLogVisibility() {
+  const on = state.showLog;
+  $('tab-log').hidden = !on;
+  for (const id of ['nudPanel', 'goalPanel', 'yirPanel']) $(id).hidden = !on;
+  $('lookLog').checked = on;
+  if (!on && state.tab === 'log') showTab('home');
+}
 function showTab(name) {
-  if (!TABS[name]) name = 'log';
+  if (!TABS[name] || (name === 'log' && !state.showLog)) name = 'home';
   state.tab = name;
   for (const t of Object.keys(TABS)) {
     $('tab-' + t).setAttribute('aria-selected', String(t === name));
     $('view-' + t).hidden = t !== name;
   }
   render();
-  // Six pills don't fit a phone: the bar scrolls inside itself, so keep the chosen one in view
+  // Pills can outgrow a phone: the bar scrolls inside itself, so keep the chosen one in view
   try { $('tab-' + name).scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
   lsSet('sg-tab', name);
 }
@@ -2889,7 +3691,11 @@ $('lgSave').addEventListener('click', saveListen);
 $('lgNote').addEventListener('keydown', e => { if (e.key === 'Enter') saveListen(); });
 
 let searchT;
-$('libSearch').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { state.lib.q = e.target.value; state.lib.limit = 100; renderLibrary(); }, 150); });
+$('libSearch').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { state.lib.q = e.target.value; state.lib.limit = 100; renderCollection(); }, 150); });
+$('colView').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  state.colView = b.dataset.v === 'table' ? 'table' : 'shelves'; lsSet('sg-colview', state.colView); renderCollection();
+});
 $('libSort').addEventListener('change', e => { state.lib.sort = e.target.value; state.lib.dir = NUMERIC_FIRST_DESC.includes(e.target.value) ? -1 : 1; renderLibrary(); });
 $('libDir').addEventListener('click', () => { state.lib.dir *= -1; renderLibrary(); });
 $('libHead').addEventListener('click', e => {
@@ -2897,7 +3703,7 @@ $('libHead').addEventListener('click', e => {
   if (L.sort === k) L.dir *= -1; else { L.sort = k; L.dir = NUMERIC_FIRST_DESC.includes(k) ? -1 : 1; }
   renderLibrary();
 });
-$('view-library').addEventListener('click', e => {
+$('colTable').addEventListener('click', e => {
   const c = e.target.closest('.chip[data-f]'); if (!c) return;
   const L = state.lib, v = c.dataset.v;
   if (c.dataset.f === 'status') L.status = v;
@@ -2906,6 +3712,7 @@ $('view-library').addEventListener('click', e => {
   L.limit = 100; renderLibrary();
 });
 function libRowClick(e) {
+  if (e.target.closest('[data-sa]')) return;   // the label chip and the guitar pick have their own handler
   const ed = e.target.closest('[data-edit]');
   const tr = e.target.closest('tr');
   const id = tr && (tr.dataset.id || (tr.previousElementSibling && tr.previousElementSibling.dataset.id));
@@ -3021,8 +3828,13 @@ $('gForm').addEventListener('submit', e => {
 window.__sg = { state, render: renderAll };
 setLogDay(null);
 initLook();
+applyLogVisibility();
 renderAll();
-{ const t = lsGet('sg-tab'); if (t && TABS[t] && t !== 'log') showTab(t); }
+{
+  let t = lsGet('sg-tab');
+  if (t === 'library') { state.colView = 'table'; t = 'collection'; } else if (t === 'discover') t = 'home';   // the old tab names
+  if (t && TABS[t] && t !== 'home' && (t !== 'log' || state.showLog)) showTab(t);
+}
 setStatus('loading', 'Connecting to your sheet…');
 (async () => {
   try {

@@ -1,0 +1,620 @@
+<title>Music Collection Shelves</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Lexend:wght@400;500;600&display=swap">
+<style>
+/* Mockup: how labels ("stickers") could work on one big collection, drawn as real shelves.
+   Look: dark ground with a marbled record at the edge, solid panels on top. Nothing here is saved. */
+:root {
+  color-scheme: dark;
+  --bg: #0e0f16; --panel: #171824; --panel-2: #1f2130; --line: rgba(255,255,255,.10);
+  --fg: #f3f1fb; --muted: #aaa7c0; --ink: #0b0f18;
+  --c: #4f9cf0; --deep: #1f5aa6; --vein: #050f1d;
+  --display: 'Bricolage Grotesque', system-ui, sans-serif; --body: 'Lexend', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --r: 18px; --d: max(90vw, 70vh);
+  --wall-1: color-mix(in srgb, var(--vein) 40%, #0b0c12);
+  --wall-2: color-mix(in srgb, var(--deep) 12%, #14151f);
+  --wood-top: color-mix(in srgb, var(--c) 14%, #54485a);
+  --wood: color-mix(in srgb, var(--deep) 14%, #2e2535);
+  --wood-lo: color-mix(in srgb, var(--deep) 10%, #1a1520);
+  --shadow: rgba(0,0,0,.6);
+}
+[data-p="canary"]    { --c: #f4cf2d; --deep: #c99a0c; --vein: #2b1f00; --ink: #1a1400; }
+[data-p="tangerine"] { --c: #ff8a2a; --deep: #c4560a; --vein: #3b1400; --ink: #1f0e00; }
+[data-p="crimson"]   { --c: #ff4357; --deep: #b01227; --vein: #2a0007; --ink: #1c0004; }
+[data-p="magenta"]   { --c: #e056dc; --deep: #8a1f96; --vein: #1f0626; --ink: #170019; }
+[data-p="midnight"]  { --c: #5aa3f5; --deep: #1f5aa6; --vein: #050f1d; --ink: #07101c; }
+[data-p="emerald"]   { --c: #3bd1a0; --deep: #0e7a5a; --vein: #021a12; --ink: #031610; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--body);
+  padding-block: 16px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3, p { margin: 0; text-wrap: balance; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---- the ground: a marbled record cropped by the screen edge ---- */
+.ground { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg); }
+.disc { position: absolute; width: var(--d); height: var(--d); right: calc(var(--d) * -.58); top: calc(var(--d) * -.14); border-radius: 50%; overflow: hidden; }
+.disc > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.grooves { background:
+  repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,.34) 0 1px, transparent 1px 4px),
+  repeating-radial-gradient(circle at 50% 50%, transparent 0 78px, rgba(0,0,0,.45) 78px 83px); }
+.sheen { background: conic-gradient(from 205deg at 50% 50%, transparent 0 16%, rgba(255,255,255,.20) 22%, transparent 30%, transparent 58%, rgba(255,255,255,.12) 64%, transparent 72%); }
+.ground::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,15,22,.05), rgba(14,15,22,.30) 55%, rgba(14,15,22,.70)); }
+[data-bg="plain"] .disc { display: none; }
+
+.page { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+
+/* ---- preview controls (not part of the app) ---- */
+.lab { border: 1px dashed var(--line); border-radius: var(--r); padding: 14px 16px; background: rgba(14,15,22,.82); display: grid; gap: 12px; }
+.lab-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.lab-row > b { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: 92px; }
+.chip { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 6px 13px; font-size: 14px; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--c); color: var(--ink); border-color: transparent; }
+.sw { display: inline-flex; align-items: center; gap: 8px; }
+.sw i { width: 14px; height: 14px; border-radius: 50%; background: var(--sc); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+.muted { color: var(--muted); font-size: 14px; }
+
+/* ---- header + tabs ---- */
+.top { display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.mark { width: 60px; height: 60px; flex: none; filter: drop-shadow(0 4px 14px rgba(0,0,0,.5)); }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--c); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 6vw, 40px); line-height: 1.05; letter-spacing: -.01em; }
+.tabs { display: flex; gap: 4px; padding: 5px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; overflow-x: auto; width: max-content; max-width: 100%; scrollbar-width: none; }
+.tab { border: 0; background: transparent; border-radius: 999px; padding: 8px 18px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--c); color: var(--ink); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; min-width: 0; }
+.explain p { font-size: 17px; line-height: 1.5; }
+.explain .hint { margin-top: 8px; color: var(--c); font-weight: 500; font-size: 15px; }
+.note { color: var(--muted); font-size: 13px; margin-top: -8px; padding-inline: 4px; }
+
+/* ---- shelf panel ---- */
+.shelves { display: grid; gap: 20px; }
+.shelf { transition: box-shadow .15s, border-color .15s; }
+.shelf.drop { border-color: var(--c); box-shadow: 0 0 0 2px var(--c); }
+.ph { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; min-height: 36px; }
+.ph h2 { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.2; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ph h2 svg { width: 22px; height: 22px; flex: none; color: var(--c); --pf: var(--c); }
+.ph h2 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); opacity: .55; flex: none; }
+.ph .right { display: flex; align-items: center; gap: 10px; flex: none; }
+.count { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 6px 14px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.btn:hover { border-color: var(--c); }
+
+/* the shelf itself: back wall + ledge. --s is the sleeve size, driven by the shelf width. */
+.board { container-type: inline-size; position: relative; padding: 78px 12px 0; border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, var(--wall-1), var(--wall-2)); box-shadow: inset 0 10px 24px rgba(0,0,0,.45); --n: 5; --gc: 6; }
+.row { --s: clamp(52px, 12.2cqw, 132px); --lw: calc(var(--s) * 1.6); --free: calc(var(--lw) - var(--s));
+  position: relative; z-index: 2; display: flex; align-items: flex-end; min-height: var(--s); }
+.standing { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); align-items: end; }
+.cell { display: flex; justify-content: center; align-items: flex-end; }
+.leanz { --step: min(calc(var(--s) * .17), calc(var(--free) / max(1, var(--k) - 1)));
+  position: relative; flex: none; width: var(--lw); height: var(--s); margin-left: calc(var(--s) * .2); clip-path: inset(-300px -80px 0 -80px); }
+.grid { --s: clamp(52px, 12.2cqw, 132px); position: relative; z-index: 2; display: grid; grid-template-columns: repeat(var(--gc), minmax(0, 1fr)); row-gap: 78px; align-items: end; }
+.grid .cell { display: flex; justify-content: center; }
+.board.open { padding-top: 78px; }
+.ledge { position: relative; z-index: 1; height: 20px; margin: -5px -8px 0; border-radius: 3px 3px 8px 8px;
+  background: linear-gradient(180deg, var(--wood-top) 0 6px, rgba(255,255,255,.34) 6px 7px, var(--wood) 7px, var(--wood-lo));
+  box-shadow: 0 14px 16px -8px var(--shadow), 0 2px 0 rgba(0,0,0,.35); }
+.empty { position: relative; z-index: 2; color: var(--muted); font-size: 14px; padding: 0 0 20px; text-align: center; }
+
+/* ---- an item on a shelf ---- */
+.it { position: relative; width: var(--s); display: flex; align-items: flex-end; }
+.it::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: -4px; height: 10px; z-index: -1;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.6), transparent 70%); }
+.lift { position: relative; width: 100%; display: flex; justify-content: center; align-items: flex-end; transition: transform .2s ease, opacity .18s ease; }
+.it.stand:hover .lift, .it.stand:focus-within .lift { transform: translateY(-5px); }
+.it:hover, .it:focus-within { z-index: 80; }
+.art { position: relative; display: block; padding: 0; border: 0; background: none; overflow: hidden; width: var(--s); height: var(--s); border-radius: 4px; }
+.it.sel .art { outline: 2px solid var(--c); outline-offset: 2px; }
+.album .art { box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset, 0 6px 10px -2px var(--shadow); }
+.album .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,.22), rgba(255,255,255,0) 7%, rgba(0,0,0,0) 90%, rgba(0,0,0,.25)); pointer-events: none; }
+.art svg { display: block; width: 100%; height: 100%; }
+.art svg text { font-family: var(--body); font-weight: 600; }
+.artist .art { border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--ac), var(--ad)); display: grid; place-items: center; box-shadow: 0 0 0 3px rgba(255,255,255,.16) inset, 0 6px 10px -2px var(--shadow); }
+.artist .art b { font-family: var(--display); font-size: calc(var(--s) * .32); color: var(--av); letter-spacing: .02em; }
+.song .art { width: calc(var(--s) * .84); height: calc(var(--s) * .84); border-radius: 50%; box-shadow: 0 6px 10px -2px var(--shadow); }
+.show .art { width: var(--s); height: calc(var(--s) * .8); border-radius: 6px; color: var(--av); text-align: left; padding: 6px 9px 6px 12px;
+  background: linear-gradient(135deg, var(--ac), var(--ad)); display: flex; flex-direction: column; justify-content: center; gap: 0; line-height: 1.15;
+  -webkit-mask: radial-gradient(circle at 0 50%, transparent 6px, #000 6.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent 6px, #000 6.5px) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle at 0 50%, transparent 6px, #000 6.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent 6px, #000 6.5px) right / 51% 100% no-repeat; }
+.show .art b { font-family: var(--display); font-size: clamp(11px, calc(var(--s) * .13), 17px); text-transform: uppercase; letter-spacing: .02em; }
+.show .art span { font-size: clamp(9px, calc(var(--s) * .085), 12px); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.show .art .v { font-weight: 400; opacity: .8; }
+.show .art::after { content: ""; position: absolute; top: 8%; bottom: 8%; right: 22%; border-left: 1.5px dashed color-mix(in srgb, var(--av) 45%, transparent); }
+.show .art > * { max-width: 72%; }
+
+/* hover-only controls */
+.chipl, .pick { position: absolute; opacity: 0; transition: opacity .15s; }
+.it:hover .chipl, .it:hover .pick, .it:focus-within .chipl, .it:focus-within .pick, .it.sel .chipl, .it.sel .pick,
+.chipl[aria-expanded="true"] { opacity: 1; }
+@media (hover: none) { .album .chipl, .album .pick { opacity: 1; } }
+.chipl { left: 50%; bottom: 5px; transform: translateX(-50%); max-width: calc(100% - 8px); border: 1px solid rgba(255,255,255,.28); background: rgba(14,15,22,.9); color: var(--fg);
+  border-radius: 999px; padding: 2px 8px; font-size: clamp(9px, calc(var(--s) * .085), 12px); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+.chipl:hover { border-color: var(--c); }
+.pick { top: 4px; right: 4px; width: clamp(22px, calc(var(--s) * .22), 30px); height: clamp(22px, calc(var(--s) * .22), 30px); padding: 0; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: rgba(14,15,22,.9); color: var(--fg); }
+.pick svg { width: 68%; height: 68%; }
+.pick[aria-pressed="true"] { --pf: var(--c); color: var(--c); border-color: var(--c); opacity: 1; }
+.pick:hover { border-color: var(--c); }
+.cd { position: absolute; top: 4px; left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--c); color: var(--ink); font-size: clamp(9px, calc(var(--s) * .08), 11px); font-weight: 700; white-space: nowrap; pointer-events: none; }
+.fav-mark { position: absolute; top: 4px; right: 4px; width: clamp(18px, calc(var(--s) * .18), 24px); height: clamp(18px, calc(var(--s) * .18), 24px); color: var(--c); --pf: var(--c); pointer-events: none; filter: drop-shadow(0 1px 2px #000); }
+
+/* caption */
+.cap { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(4px); width: max-content; max-width: 190px; z-index: 5;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; display: grid; gap: 1px; text-align: left;
+  font-size: 12px; line-height: 1.35; color: var(--muted); opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; box-shadow: 0 8px 18px -6px var(--shadow); }
+.cap b { color: var(--fg); font-size: 13px; font-weight: 600; }
+.cap .k { display: inline-block; justify-self: start; margin-top: 3px; padding: 0 7px; border-radius: 999px; background: var(--c); color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.it:hover .cap, .it:focus-within .cap { opacity: 1; transform: translateX(-50%); }
+.cell.first .cap { left: 0; transform: translateY(4px); }
+.cell.first .it:hover .cap, .cell.first .it:focus-within .cap { transform: none; }
+.cell.last .cap, .leanz .cap { left: auto; right: 0; transform: translateY(4px); }
+.cell.last .it:hover .cap, .cell.last .it:focus-within .cap, .leanz .it:hover .cap, .leanz .it:focus-within .cap { transform: none; }
+
+/* leaning items: pivot on the bottom right corner, fanned out, front one least tilted */
+.leanz .it { position: absolute; bottom: 0; left: calc(var(--i) * var(--step)); z-index: calc(var(--k) - var(--i)); transform-origin: 100% 100%;
+  transform: rotate(calc(-8deg - var(--i) * 10deg / max(1, var(--k) - 1))); transition: transform .28s cubic-bezier(.3,.7,.3,1); }
+.leanz .it::before { display: none; }
+.leanz .it .art { box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset, -5px 0 10px -3px var(--shadow); }
+.leanz .it:hover, .leanz .it:focus-within, .leanz .it.sel, .leanz .it:has([aria-expanded="true"]) {
+  transform: translateX(calc(var(--free) - var(--i) * var(--step))) rotate(0deg); z-index: 90; }
+.leanz .it .lift { transform: none !important; }
+
+/* moves */
+.it.leaving .lift { opacity: 0; transform: translateY(16px) scale(.92) !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .it.arrive .lift { animation: arrive .5s cubic-bezier(.2,.8,.3,1) 1; }
+  @keyframes arrive { from { opacity: 0; transform: translateY(-34px) scale(.9); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) { .lift, .leanz .it, .cap, .chipl { transition: none !important; } }
+.it.dragging { opacity: .4; }
+
+/* ---- detail strip ---- */
+.detail { margin-top: 26px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: start; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+.dcover { width: 96px; height: 96px; border-radius: 6px; overflow: hidden; box-shadow: 0 6px 12px -3px var(--shadow); }
+.dcover.round { border-radius: 50%; }
+.dcover svg { display: block; width: 100%; height: 100%; }
+.dcover svg text { font-family: var(--body); font-weight: 600; }
+.dinfo { min-width: 0; display: grid; gap: 6px; }
+.dinfo h3 { font-family: var(--display); font-size: 20px; line-height: 1.2; }
+.dmeta, .dact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tag { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel); color: var(--muted); white-space: nowrap; border: 1px solid var(--line); }
+.tag.hot { background: var(--c); color: var(--ink); border-color: transparent; }
+.dact .chipl { position: static; transform: none; opacity: 1; max-width: none; font-size: 13px; padding: 5px 12px; background: var(--panel); }
+.dact .pickbtn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.28); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; }
+.dact .pickbtn svg { width: 16px; height: 16px; }
+.dact .pickbtn[aria-pressed="true"] { --pf: var(--c); color: var(--c); border-color: var(--c); }
+.pill { display: inline-block; padding: 5px 16px; border-radius: 999px; background: var(--c); color: var(--ink); font-weight: 700; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.xbtn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); font-size: 18px; line-height: 1; padding: 0; }
+
+/* ---- label popover ---- */
+.menu { position: absolute; z-index: 200; width: 204px; background: var(--panel-2); border: 1px solid rgba(255,255,255,.2); border-radius: 14px; padding: 6px; box-shadow: 0 16px 34px -8px rgba(0,0,0,.8); }
+.menu button { display: flex; width: 100%; align-items: center; gap: 10px; text-align: left; border: 0; background: none; border-radius: 9px; padding: 9px 10px; font-size: 14px; font-weight: 500; }
+.menu button:hover, .menu button:focus-visible { background: color-mix(in srgb, var(--c) 22%, var(--panel-2)); outline-offset: -2px; }
+.menu button i { width: 16px; font-style: normal; color: var(--c); font-weight: 700; }
+
+/* ---- sheet log ---- */
+.log h2 { font-family: var(--display); font-weight: 700; font-size: 21px; margin-bottom: 4px; }
+.log ol { list-style: none; margin: 12px 0; padding: 12px 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; font: 13px/1.6 var(--mono); display: grid; gap: 4px; min-height: 48px; }
+.log li { overflow-wrap: anywhere; }
+.log li:first-child { color: var(--c); }
+.log li.none { color: var(--muted); }
+
+@media (max-width: 560px) {
+  .panel { padding: 16px; }
+  .board { --n: 3; --gc: 4; padding: 76px 10px 0; }
+  .row, .grid { --s: clamp(48px, 18cqw, 80px); }
+  .ledge { margin-inline: -6px; }
+  .ph h2 { font-size: 19px; }
+  .detail { grid-template-columns: auto minmax(0, 1fr); padding: 14px; }
+  .detail .xbtn { position: absolute; top: 10px; right: 10px; }
+  .detail { position: relative; }
+  .dcover { width: 76px; height: 76px; }
+  .lab-row > b { min-width: 100%; }
+  .brand .mark { width: 52px; height: 52px; }
+  .explain p { font-size: 16px; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true">
+  <defs>
+    <clipPath id="clipDisc"><circle cx="50" cy="50" r="48"/></clipPath>
+    <symbol id="rec" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" style="fill:var(--deep)"/>
+      <g clip-path="url(#clipDisc)" fill="none">
+        <path d="M-5 52 C25 38 45 68 75 52 S100 44 108 50" style="stroke:var(--c)" stroke-width="7" opacity=".38"/>
+        <path d="M-5 32 C18 18 32 48 54 40 S88 22 106 36" style="stroke:var(--vein)" stroke-width="2.6" opacity=".8"/>
+        <path d="M-5 74 C22 86 40 58 66 68 S94 80 106 64" style="stroke:var(--vein)" stroke-width="2.2" opacity=".8"/>
+        <path d="M24 -5 C34 20 14 38 34 58 S46 90 38 106" style="stroke:var(--vein)" stroke-width="1.8" opacity=".7"/>
+        <path d="M72 -5 C60 22 84 40 72 60 S88 88 78 106" style="stroke:var(--vein)" stroke-width="1.5" opacity=".7"/>
+        <circle cx="50" cy="50" r="42" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+        <circle cx="50" cy="50" r="37" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+        <circle cx="50" cy="50" r="32" stroke="#000" stroke-opacity=".34" stroke-width=".8"/>
+        <circle cx="50" cy="50" r="27" stroke="#000" stroke-opacity=".28" stroke-width=".5"/>
+        <path d="M50 50 L96 22 A48 48 0 0 1 99 38 Z" fill="#fff" fill-opacity=".16" stroke="none"/>
+        <path d="M50 50 L4 78 A48 48 0 0 1 1 62 Z" fill="#fff" fill-opacity=".10" stroke="none"/>
+      </g>
+      <circle cx="50" cy="50" r="15.5" fill="#12131c"/>
+      <circle cx="50" cy="50" r="15.5" fill="none" style="stroke:var(--c)" stroke-width="1.4"/>
+      <circle cx="50" cy="50" r="2.3" fill="#0e0f16"/>
+    </symbol>
+    <!-- guitar pick: a rounded triangle, wide at the top and pointing down -->
+    <symbol id="pickico" viewBox="0 0 24 24">
+      <path d="M12 2.6c-5.4 0-8.6 2.7-8.1 7.4.6 5.6 4.6 9.7 7.2 11.2.5.3 1.3.3 1.8 0 2.6-1.5 6.6-5.6 7.2-11.2.5-4.7-2.7-7.4-8.1-7.4z" style="fill:var(--pf,none)" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="ground" aria-hidden="true">
+  <div class="disc">
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="nv" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0018" numOctaves="2" seed="3" result="warp"/>
+          <feTurbulence type="turbulence" baseFrequency="0.0035 0.011" numOctaves="3" seed="9" result="v"/>
+          <feDisplacementMap in="v" in2="warp" scale="260" xChannelSelector="R" yChannelSelector="G"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  -11 0 0 0 1.7"/>
+        </filter>
+        <filter id="ns" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.0018" numOctaves="2" seed="3" result="warp"/>
+          <feTurbulence type="fractalNoise" baseFrequency="0.0025 0.0075" numOctaves="3" seed="4" result="v"/>
+          <feDisplacementMap in="v" in2="warp" scale="200" xChannelSelector="G" yChannelSelector="R"/>
+          <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  7 0 0 0 -3.1"/>
+        </filter>
+        <mask id="mv"><rect width="1000" height="1000" filter="url(#nv)"/></mask>
+        <mask id="ms"><rect width="1000" height="1000" filter="url(#ns)"/></mask>
+      </defs>
+      <rect width="1000" height="1000" style="fill:var(--deep)"/>
+      <rect width="1000" height="1000" style="fill:var(--c)" mask="url(#ms)" opacity=".95"/>
+      <rect width="1000" height="1000" style="fill:var(--vein)" mask="url(#mv)" opacity=".85"/>
+    </svg>
+    <div class="grooves"></div>
+    <div class="sheen"></div>
+  </div>
+</div>
+
+<main class="page">
+  <section class="lab" aria-label="Preview controls">
+    <div class="lab-row"><b>Pressing</b><span id="pressings" class="lab-row"></span></div>
+    <div class="lab-row"><b>Background</b>
+      <button class="chip" type="button" data-bg="marble" aria-pressed="true">Marble record</button>
+      <button class="chip" type="button" data-bg="plain" aria-pressed="false">Plain dark</button>
+    </div>
+    <p class="muted">Preview controls. Example data only; every album, band and venue is made up.</p>
+  </section>
+
+  <header class="top">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 100 100" role="img" aria-label="Record"><use href="#rec"/></svg>
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1>Music Collection</h1>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" aria-selected="false">Home</button>
+    <button class="tab" role="tab" aria-selected="true">Collection</button>
+    <button class="tab" role="tab" aria-selected="false">Artists</button>
+    <button class="tab" role="tab" aria-selected="false">Classical</button>
+    <button class="tab" role="tab" aria-selected="false">Tools</button>
+  </nav>
+
+  <section class="panel explain" aria-label="How labels work">
+    <p>Every album lives in one box. A label decides which shelf it shows on. Change the label and the album hops to another shelf; nothing is copied or moved in the sheet.</p>
+    <p class="hint">Try it: hover a sleeve, tap its label, or tap the guitar pick.</p>
+  </section>
+  <p class="note">Placeholder art. Real covers would come from your Google Drive on the GitHub Pages version later.</p>
+
+  <section class="shelves" id="shelves" aria-label="Shelves"></section>
+
+  <section class="panel log" aria-labelledby="logH">
+    <h2 id="logH">What would change in the sheet</h2>
+    <p class="muted">Each action edits exactly one cell in one row. Newest first.</p>
+    <ol id="log" aria-label="Pending sheet changes"></ol>
+    <p class="muted">Preview only: nothing here is saved.</p>
+  </section>
+
+  <div class="sr" id="live" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+(() => {
+const P = [
+  { k: 'emerald',   n: 'Emerald',       c: '#3bd1a0', months: [0, 1] },
+  { k: 'canary',    n: 'Canary',        c: '#f4cf2d', months: [2, 3] },
+  { k: 'midnight',  n: 'Midnight blue', c: '#5aa3f5', months: [4, 5] },
+  { k: 'tangerine', n: 'Tangerine',     c: '#ff8a2a', months: [6, 7] },
+  { k: 'magenta',   n: 'Magenta',       c: '#e056dc', months: [8, 9] },
+  { k: 'crimson',   n: 'Crimson',       c: '#ff4357', months: [10, 11] }
+];
+const PAL = [
+  { c: '#3bd1a0', d: '#0e7a5a', v: '#021a12' }, { c: '#f4cf2d', d: '#c99a0c', v: '#2b1f00' },
+  { c: '#5aa3f5', d: '#1f5aa6', v: '#050f1d' }, { c: '#ff8a2a', d: '#c4560a', v: '#3b1400' },
+  { c: '#e056dc', d: '#8a1f96', v: '#1f0626' }, { c: '#ff4357', d: '#b01227', v: '#2a0007' }
+];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const LABELS = [
+  { k: 'owned',    n: 'Owned',           short: 'Owned',     head: 'Owned (vinyl)' },
+  { k: 'wish',     n: 'Vinyl wish list', short: 'Wish list', head: 'Vinyl wish list' },
+  { k: 'hear',     n: 'To hear',         short: 'To hear',   head: 'To hear' },
+  { k: 'upcoming', n: 'Upcoming',        short: 'Upcoming',  head: 'Upcoming' },
+  { k: 'nope',     n: "Didn't like",     short: "Didn't like", head: "Didn't like" }
+];
+const LAB = Object.fromEntries(LABELS.map(l => [l.k, l]));
+const KIND = { album: 'Album', artist: 'Band', song: 'Song', show: 'Show' };
+
+/* ---------- made-up data ---------- */
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const items = [];
+const add = (label, rows) => rows.forEach(r => items.push({ kind: 'album', id: slug(r[0]), title: r[0], artist: r[1], year: r[2], rating: r[3] ?? null, label, days: r[4] ?? 20 + (r[0].length * 3) % 40, fav: null }));
+add('owned', [['Neon Harbour','The Static Choir',2024,4.5],['Paper Satellites','Lowtide',2023,4],['Velvet Engines','Aurora Ten',2021,4.5],['Glass Orchard','Mina Vale',2025,4],['Night Shift Radio','The Hollow Kites',2019,3.5],['Copper Skies','Juno & the Tide',2022,4],['Salt Flats','Marrow Park',2020,4.5],['Slow Lanterns','Odessa Rowe',2018,5],['Tin Cathedral','The Static Choir',2021,3.5],['Midnight Arcade','Pale Meridian',2017,4],['Harbour Lights','Lowtide',2020,3.5],['Orbit Garden','Aurora Ten',2023,4]]);
+add('wish', [['Tidal Letters','Mina Vale',2024],['Quiet Engines','Odessa Rowe',2022],['Fog Signals','Juno & the Tide',2019],['Cobalt Parade','The Hollow Kites',2023],['Ember Season','Marrow Park',2025],['Low Orbit Lullaby','Pale Meridian',2020],['Wire & Honey','Lowtide',2018],['Dust Choir','The Static Choir',2026],['Satin Static','Aurora Ten',2016],['Rooftop Weather','Mina Vale',2021]]);
+add('hear', [['Lantern Maps','Odessa Rowe',2025],['Hush Protocol','Pale Meridian',2024],['Saltwater Radio','Juno & the Tide',2023],['Gold Hour Static','Marrow Park',2022],['Backroom Choir','The Hollow Kites',2024],['Cinder Parade','Aurora Ten',2021],['Pocket Galaxy','Lowtide',2025],['The Long Dial','Mina Vale',2023],['Paper Moons','Odessa Rowe',2019],['Violet Tapes','Pale Meridian',2018],['Afterglow Club','Marrow Park',2026]]);
+add('upcoming', [['Winter Signals','Lowtide',2026,null,12],['Glass Weather','Mina Vale',2026,null,3],['Tidepool Hymns','Juno & the Tide',2026,null,27],['Static Bloom','The Static Choir',2026,null,45],['Amber Frequency','Aurora Ten',2026,null,8],['Night Orchard','Odessa Rowe',2026,null,60],['Hollow Neon','The Hollow Kites',2026,null,19],['Deep Field Radio','Pale Meridian',2026,null,33],['Salt & Smoke','Marrow Park',2026,null,90]]);
+add('nope', [['Beige Machine','Ordinary Hours',2022,2],['Soft Reboot','Cleanroom',2021,2],['Plastic Sunrise','Daydream Co',2020,1.5]]);
+const byId = id => items.find(i => i.id === id);
+const preFav = { 'neon-harbour': '2026-09-14', 'slow-lanterns': '2026-08-02', 'glass-orchard': '2026-10-03', 'cobalt-parade': '2026-10-11' };
+Object.entries(preFav).forEach(([id, d]) => { byId(id).fav = d; });
+const favs = [
+  { k: 'album', id: 'neon-harbour' },
+  { k: 'artist', id: 'b-lowtide', name: 'Lowtide', sub: 'Band · 3 albums on the shelf', pal: 2 },
+  { k: 'song', id: 's-paper-moon', title: 'Paper Moon', artist: 'Odessa Rowe', pal: 4 },
+  { k: 'show', id: 'g-rust-hall', date: 'Nov 14', band: 'The Static Choir', venue: 'The Rust Hall', pal: 3 },
+  { k: 'album', id: 'slow-lanterns' },
+  { k: 'artist', id: 'b-mina-vale', name: 'Mina Vale', sub: 'Band · 3 albums on the shelf', pal: 5 },
+  { k: 'show', id: 'g-lantern-room', date: 'Dec 2', band: 'Lowtide', venue: 'Lantern Room', pal: 0 },
+  { k: 'album', id: 'glass-orchard' },
+  { k: 'song', id: 's-night-drive', title: 'Night Drive', artist: 'Pale Meridian', pal: 1 },
+  { k: 'album', id: 'cobalt-parade' }
+];
+
+/* ---------- placeholder art, drawn from the title ---------- */
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+const initials = s => s.replace(/&/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+function art(title) {
+  const h = hash(title), A = PAL[h % 6]; let B = PAL[(h >>> 3) % 6]; if (B === A) B = PAL[(h % 6 + 2) % 6];
+  const comp = (h >>> 6) % 5; let g = '';
+  if (comp === 0) g = `<rect width="100" height="100" fill="${A.d}"/><circle cx="50" cy="50" r="38" fill="${A.v}"/><circle cx="50" cy="50" r="31" fill="none" stroke="${A.c}" stroke-opacity=".35"/><circle cx="50" cy="50" r="25" fill="none" stroke="${A.c}" stroke-opacity=".3"/><circle cx="50" cy="50" r="13" fill="${B.c}"/><circle cx="50" cy="50" r="2.5" fill="${A.v}"/>`;
+  else if (comp === 1) { g = `<rect width="100" height="100" fill="${A.v}"/>`; for (let i = 0; i < 5; i++) g += `<rect x="0" y="${8 + i * 18}" width="100" height="11" fill="${i % 2 ? B.c : A.c}"/>`; }
+  else if (comp === 2) g = `<rect width="100" height="100" fill="${A.c}"/><polygon points="50,14 90,84 10,84" fill="${A.d}"/><circle cx="50" cy="62" r="10" fill="${B.c}"/>`;
+  else if (comp === 3) { g = `<rect width="100" height="100" fill="${A.d}"/>`; for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) g += `<circle cx="${20 + i * 15}" cy="${20 + j * 15}" r="${i === 2 && j === 2 ? 7 : 4.5}" fill="${(i + j) % 2 ? A.c : B.c}"/>`; }
+  else g = `<rect width="100" height="100" fill="${A.c}"/><rect x="50" width="50" height="100" fill="${A.d}"/><circle cx="50" cy="50" r="22" fill="${B.c}" stroke="${A.v}" stroke-width="3"/>`;
+  g += `<rect x="68" y="85" width="28" height="11" rx="3" fill="#000" fill-opacity=".62"/><text x="82" y="93.4" text-anchor="middle" font-size="8" fill="#fff">${esc(initials(title))}</text>`;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${g}</svg>`;
+}
+function singleSvg(title, p) {
+  const A = PAL[p], w = title.split(' '); const l1 = w.slice(0, Math.ceil(w.length / 2)).join(' '), l2 = w.slice(Math.ceil(w.length / 2)).join(' ');
+  let g = `<circle cx="50" cy="50" r="48" fill="#11121a"/>`;
+  [44, 40, 36, 32].forEach(r => g += `<circle cx="50" cy="50" r="${r}" fill="none" stroke="#fff" stroke-opacity=".09"/>`);
+  g += `<path d="M50 50 L92 24 A48 48 0 0 1 97 38 Z" fill="#fff" fill-opacity=".12"/><circle cx="50" cy="50" r="23" fill="${A.c}"/>`;
+  g += l2 ? `<text x="50" y="47" text-anchor="middle" font-size="7.5" fill="${A.v}">${esc(l1)}</text><text x="50" y="57" text-anchor="middle" font-size="7.5" fill="${A.v}">${esc(l2)}</text>` : `<text x="50" y="52.5" text-anchor="middle" font-size="8" fill="${A.v}">${esc(l1)}</text>`;
+  g += `<circle cx="50" cy="50" r="2.2" fill="#0e0f16"/>`;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${g}</svg>`;
+}
+
+/* ---------- state ---------- */
+const root = document.documentElement, $ = id => document.getElementById(id);
+const now = new Date();
+const pad = n => String(n).padStart(2, '0');
+const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+const state = { p: (P.find(x => x.months.includes(now.getMonth())) || P[4]).k, bg: 'marble' };
+const expanded = {}; let sel = null; let log = []; let arrive = null;
+const mq = { narrow: matchMedia('(max-width: 560px)'), fine: matchMedia('(pointer: fine)'), rm: matchMedia('(prefers-reduced-motion: reduce)') };
+const nStand = () => mq.narrow.matches ? 3 : 5;
+const gcols = () => mq.narrow.matches ? 4 : 6;
+const SHELVES = [{ k: 'fav', head: 'Favourites' }, ...LABELS.map(l => ({ k: l.k, head: l.head }))];
+const shelfEntries = k => k === 'fav' ? favs.map(f => f.k === 'album' ? byId(f.id) : f) : items.filter(i => i.label === k);
+
+/* ---------- html builders ---------- */
+const stars = i => i.rating ? `★ ${i.rating}` : 'Not rated yet';
+function ariaFor(e) {
+  if (e.kind === 'album') return `${e.title} by ${e.artist}, album, label ${LAB[e.label].n}${e.fav ? ', favourite' : ''}`;
+  if (e.k === 'artist') return `${e.name}, band, favourite`;
+  if (e.k === 'song') return `${e.title} by ${e.artist}, song, favourite`;
+  return `${e.band} at ${e.venue} on ${e.date}, show, favourite`;
+}
+function itemHtml(e, shelf, role, i, k) {
+  const kind = e.kind === 'album' ? 'album' : e.k, isA = kind === 'album', pal = isA ? null : PAL[e.pal];
+  const cls = ['it', kind, role, sel && sel.id === e.id && sel.shelf === shelf ? 'sel' : '', arrive && arrive.id === e.id && arrive.shelf === shelf ? 'arrive' : ''].join(' ');
+  const style = [`--i:${i}`, pal ? `--ac:${pal.c};--ad:${pal.d};--av:${pal.v}` : ''].join(';');
+  const drag = isA && mq.fine.matches ? ' draggable="true"' : '';
+  let face;
+  if (isA) face = art(e.title);
+  else if (kind === 'artist') face = `<b>${esc(initials(e.name))}</b>`;
+  else if (kind === 'song') face = singleSvg(e.title, e.pal);
+  else face = `<b>${esc(e.date)}</b><span>${esc(e.band)}</span><span class="v">${esc(e.venue)}</span>`;
+  const id = isA ? e.id : e.id;
+  let extra = '';
+  if (isA) {
+    extra += `<button class="chipl" type="button" data-act="chip" data-ctx="item" data-id="${id}" aria-haspopup="menu" aria-expanded="false" aria-label="Label for ${esc(e.title)}: ${esc(LAB[e.label].n)}. Change label">${esc(LAB[e.label].short)} ▾</button>`;
+    extra += `<button class="pick" type="button" data-act="pick" data-id="${id}" aria-pressed="${!!e.fav}" aria-label="Favourite: ${esc(e.title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg></button>`;
+    if (e.label === 'upcoming') extra += `<span class="cd" aria-hidden="true">${countdown(e.days)}</span>`;
+  } else {
+    extra += `<svg class="fav-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg>`;
+  }
+  const cap = isA
+    ? `<b>${esc(e.title)}</b><span>${esc(e.artist)}</span><span>${stars(e)}${e.label === 'upcoming' ? ' · ' + countdown(e.days) : ''}</span><span class="k">Album</span>`
+    : kind === 'artist' ? `<b>${esc(e.name)}</b><span>${esc(e.sub)}</span><span class="k">Band</span>`
+    : kind === 'song' ? `<b>${esc(e.title)}</b><span>${esc(e.artist)}</span><span class="k">Song</span>`
+    : `<b>${esc(e.band)}</b><span>${esc(e.date)} · ${esc(e.venue)}</span><span class="k">Show</span>`;
+  return `<div class="${cls}" style="${style}" data-id="${id}" data-shelf="${shelf}"${drag}><div class="lift">` +
+    `<button class="art" type="button" data-act="sel" data-id="${id}" data-shelf="${shelf}" aria-pressed="${cls.includes(' sel')}" aria-label="${esc(ariaFor(e))}">${face}</button>` +
+    `${extra}<span class="cap" aria-hidden="true">${cap}</span></div></div>`;
+}
+const countdown = d => d <= 0 ? 'today' : d === 1 ? 'in 1 day' : `in ${d} days`;
+
+function detailHtml(e, shelf) {
+  const isA = e.kind === 'album', kind = isA ? 'album' : e.k;
+  let cover, title, sub, meta = '', act = '';
+  if (isA) {
+    cover = art(e.title); title = e.title; sub = `${e.artist} · ${e.year}`;
+    meta = `<span class="tag">${stars(e)}</span>` + (e.label === 'upcoming' ? `<span class="tag hot">${countdown(e.days)}</span>` : '');
+    act = `<button class="chipl" type="button" data-act="chip" data-ctx="detail" data-id="${e.id}" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[e.label].n)}. Change label">${esc(LAB[e.label].n)} ▾</button>` +
+      `<button class="pickbtn" type="button" data-act="pick" data-id="${e.id}" aria-pressed="${!!e.fav}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg>Favourite</button>` +
+      (e.label === 'wish' ? `<a class="pill" href="#" data-act="buy">Buy</a>` : '');
+  } else if (kind === 'artist') { cover = `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="${PAL[e.pal].c}"/><text x="50" y="62" text-anchor="middle" font-size="34" fill="${PAL[e.pal].v}">${esc(initials(e.name))}</text></svg>`; title = e.name; sub = e.sub; meta = `<span class="tag">Favourite band</span>`; }
+  else if (kind === 'song') { cover = singleSvg(e.title, e.pal); title = e.title; sub = e.artist; meta = `<span class="tag">Favourite song</span>`; }
+  else { cover = `<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" fill="${PAL[e.pal].c}"/><text x="50" y="46" text-anchor="middle" font-size="20" fill="${PAL[e.pal].v}">${esc(e.date)}</text><text x="50" y="66" text-anchor="middle" font-size="10" fill="${PAL[e.pal].v}">${esc(e.band)}</text></svg>`; title = `${e.band} at ${e.venue}`; sub = e.date; meta = `<span class="tag hot">Upcoming show</span>`; }
+  return `<div class="detail" role="region" aria-label="Selected: ${esc(title)}"><div class="dcover${kind === 'artist' || kind === 'song' ? ' round' : ''}">${cover}</div>` +
+    `<div class="dinfo"><h3>${esc(title)}</h3><p class="muted">${esc(sub)}</p><div class="dmeta"><span class="tag">${KIND[kind]}</span>${meta}</div><div class="dact">${act}</div></div>` +
+    `<button class="xbtn" type="button" data-act="close" aria-label="Close details">×</button></div>`;
+}
+
+function shelfHtml(S) {
+  const list = shelfEntries(S.k), n = list.length, N = nStand(), open = !!expanded[S.k];
+  const icon = S.k === 'fav' ? `<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg>` : `<span class="dot"></span>`;
+  const hasLean = n > N;
+  let body;
+  if (!n) body = `<p class="empty">Nothing on this shelf. Drop an album here or change a label.</p><div class="row"><div class="standing"></div></div>`;
+  else if (open) {
+    const G = gcols();
+    body = `<div class="grid">${list.map((e, i) => `<div class="cell${i % G === 0 ? ' first' : ''}${i % G === G - 1 ? ' last' : ''}">${itemHtml(e, S.k, 'stand', i, n)}</div>`).join('')}</div>`;
+  } else {
+    const st = list.slice(0, N), ln = list.slice(N);
+    body = `<div class="row"><div class="standing">${st.map((e, i) => `<div class="cell${i === 0 ? ' first' : ''}">${itemHtml(e, S.k, 'stand', i, n)}</div>`).join('')}</div>` +
+      `<div class="leanz" style="--k:${ln.length}">${ln.map((e, i) => itemHtml(e, S.k, 'lean', i, ln.length)).join('')}</div></div>`;
+  }
+  const selEntry = sel && sel.shelf === S.k ? list.find(e => e.id === sel.id) : null;
+  return `<section class="panel shelf" data-key="${S.k}" aria-labelledby="h-${S.k}"><div class="ph"><h2 id="h-${S.k}">${icon}${esc(S.head)}</h2>` +
+    `<div class="right"><span class="count" aria-label="${n} items">${n}</span>${hasLean ? `<button class="btn" type="button" data-act="all" data-key="${S.k}" aria-expanded="${open}">${open ? 'Show fewer' : 'Show all ' + n}</button>` : ''}</div></div>` +
+    `<div class="board${open ? ' open' : ''}">${body}<div class="ledge"></div></div>${selEntry ? detailHtml(selEntry, S.k) : ''}</section>`;
+}
+
+/* ---------- render ---------- */
+function snapshot() {
+  const a = document.activeElement; if (!a || !a.closest) return null;
+  const it = a.closest('.it'); if (it) return { shelf: it.dataset.shelf, id: it.dataset.id, cls: a.classList.contains('pick') ? 'pick' : a.classList.contains('chipl') ? 'chipl' : 'art' };
+  const d = a.closest('.detail'); if (d) return { detail: true, id: sel && sel.id, cls: a.classList.contains('pickbtn') ? 'pickbtn' : a.classList.contains('chipl') ? 'chipl' : null };
+  const al = a.closest('[data-act="all"]'); if (al) return { all: al.dataset.key };
+  return null;
+}
+function restore(s) {
+  if (!s) return; let el = null;
+  if (s.all) el = document.querySelector(`[data-act="all"][data-key="${s.all}"]`);
+  else if (s.detail) el = s.cls && document.querySelector(`.detail .${s.cls}`);
+  else el = document.querySelector(`.shelf[data-key="${s.shelf}"] .it[data-id="${s.id}"] .${s.cls}`) || document.querySelector(`.it[data-id="${s.id}"] .${s.cls}`);
+  if (el) el.focus({ preventScroll: true });
+}
+function render(focusOverride) {
+  const snap = focusOverride || snapshot();
+  $('shelves').innerHTML = SHELVES.map(shelfHtml).join('');
+  arrive = null; restore(snap); renderLog();
+}
+function renderLog() {
+  $('log').innerHTML = log.length ? log.map(l => `<li>${esc(l)}</li>`).join('') : '<li class="none">Nothing yet. Relabel an album or tap a guitar pick.</li>';
+}
+function say(msg) { const l = $('live'); l.textContent = ''; setTimeout(() => { l.textContent = msg; }, 30); }
+function logAdd(t) { log.unshift(t); log = log.slice(0, 6); }
+
+/* ---------- actions ---------- */
+function relabel(id, to, opts = {}) {
+  const it = byId(id); if (!it || it.label === to) return;
+  const from = it.label, fromEls = [...document.querySelectorAll(`.shelf[data-key="${from}"] .it[data-id="${id}"]`)];
+  const commit = () => {
+    it.label = to; items.splice(items.indexOf(it), 1); items.unshift(it);
+    if (sel && sel.id === id && sel.shelf !== 'fav') sel.shelf = to;
+    logAdd(`🎸 row for "${it.title}" · Status: ${LAB[from].n} → ${LAB[to].n} (1 cell)`);
+    arrive = { id, shelf: to };
+    say(`Moved ${it.title} to ${LAB[to].n}`);
+    render(opts.focus ? (opts.ctx === 'detail' ? { detail: true, id, cls: 'chipl' } : { shelf: to, id, cls: 'chipl' }) : null);
+  };
+  if (mq.rm.matches || !fromEls.length) return commit();
+  fromEls.forEach(e => e.classList.add('leaving'));
+  setTimeout(commit, 180);
+}
+function toggleFav(id, force) {
+  const it = byId(id); if (!it) return;
+  const want = force === undefined ? !it.fav : force; if (want === !!it.fav) return;
+  if (want) { logAdd(`🎸 row for "${it.title}" · Favourite: (blank) → ${today} (1 cell)`); it.fav = today; favs.unshift({ k: 'album', id }); arrive = { id, shelf: 'fav' }; say(`${it.title} added to Favourites`); }
+  else { logAdd(`🎸 row for "${it.title}" · Favourite: ${it.fav} → (blank) (1 cell)`); it.fav = null; const x = favs.findIndex(f => f.k === 'album' && f.id === id); if (x > -1) favs.splice(x, 1); if (sel && sel.shelf === 'fav' && sel.id === id) sel = null; say(`${it.title} removed from Favourites`); }
+  render();
+}
+
+/* ---------- label popover ---------- */
+let menu = null, menuOpener = null, menuId = null;
+function openMenu(btn) {
+  closeMenu(false);
+  const it = byId(btn.dataset.id); if (!it) return;
+  menuOpener = btn; menuId = it.id; btn.setAttribute('aria-expanded', 'true');
+  menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', `Label for ${it.title}`);
+  menu.innerHTML = LABELS.map(l => `<button type="button" role="menuitemradio" aria-checked="${l.k === it.label}" tabindex="-1" data-k="${l.k}"><i>${l.k === it.label ? '✓' : ''}</i>${esc(l.n)}</button>`).join('');
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+  let left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8), top = r.bottom + 6;
+  if (top + h > innerHeight - 8 && r.top - h - 6 > 8) top = r.top - h - 6;
+  menu.style.left = left + scrollX + 'px'; menu.style.top = top + scrollY + 'px';
+  (menu.querySelector('[aria-checked="true"]') || menu.firstChild).focus({ preventScroll: true });
+}
+function closeMenu(refocus) {
+  if (!menu) return;
+  const o = menuOpener, id = menuId; menu.remove(); menu = null; menuOpener = null;
+  if (o && o.isConnected) { o.setAttribute('aria-expanded', 'false'); if (refocus) o.focus({ preventScroll: true }); }
+  else if (refocus) restore({ shelf: byId(id).label, id, cls: 'chipl' });
+}
+document.addEventListener('keydown', e => {
+  if (!menu) return;
+  const btns = [...menu.querySelectorAll('button')], i = btns.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+  else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); }
+  else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
+  else if (e.key === 'Tab') closeMenu(false);
+});
+document.addEventListener('pointerdown', e => { if (menu && !menu.contains(e.target) && !(menuOpener && menuOpener.contains(e.target))) closeMenu(false); });
+addEventListener('resize', () => closeMenu(false));
+
+/* ---------- clicks ---------- */
+document.addEventListener('click', e => {
+  const m = e.target.closest('.menu button');
+  if (m && menu) { const id = menuId, ctx = menuOpener && menuOpener.dataset.ctx, k = m.dataset.k; closeMenu(false); relabel(id, k, { focus: true, ctx }); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'buy') e.preventDefault();
+  else if (act === 'sel') { sel = sel && sel.id === b.dataset.id && sel.shelf === b.dataset.shelf ? null : { id: b.dataset.id, shelf: b.dataset.shelf }; render(); }
+  else if (act === 'close') { sel = null; render({ shelf: null }); }
+  else if (act === 'all') { expanded[b.dataset.key] = !expanded[b.dataset.key]; render(); }
+  else if (act === 'pick') toggleFav(b.dataset.id);
+  else if (act === 'chip') { if (menu && menuOpener === b) closeMenu(true); else openMenu(b); }
+});
+
+/* ---------- drag and drop (laptop) ---------- */
+let dragId = null;
+const shelfOf = t => t.closest && t.closest('.shelf');
+document.addEventListener('dragstart', e => { const a = e.target.closest && e.target.closest('.it[draggable]'); if (!a) return; dragId = a.dataset.id; e.dataTransfer.setData('text/plain', dragId); e.dataTransfer.effectAllowed = 'move'; closeMenu(false); a.classList.add('dragging'); });
+document.addEventListener('dragend', () => { dragId = null; document.querySelectorAll('.dragging,.drop').forEach(x => x.classList.remove('dragging', 'drop')); });
+document.addEventListener('dragover', e => { const s = shelfOf(e.target); if (!dragId || !s) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; document.querySelectorAll('.shelf.drop').forEach(x => x !== s && x.classList.remove('drop')); s.classList.add('drop'); });
+document.addEventListener('drop', e => {
+  const s = shelfOf(e.target); if (!dragId || !s) return; e.preventDefault();
+  const id = dragId, k = s.dataset.key; dragId = null; s.classList.remove('drop');
+  if (k === 'fav') toggleFav(id, true); else relabel(id, k);
+});
+
+/* ---------- preview controls ---------- */
+function apply() {
+  root.dataset.p = state.p; root.dataset.bg = state.bg;
+  const p = P.find(x => x.k === state.p);
+  $('eyebrow').textContent = now.getDate() + ' ' + MONTHS[now.getMonth()] + ' · ' + p.n + ' pressing';
+  document.querySelectorAll('[data-pk]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pk === state.p));
+  document.querySelectorAll('[data-bg]').forEach(b => b.setAttribute('aria-pressed', b.dataset.bg === state.bg));
+}
+$('pressings').innerHTML = P.map(p => `<button class="chip sw" type="button" data-pk="${p.k}" style="--sc:${p.c}"><i></i>${p.n}</button>`).join('');
+document.querySelector('.lab').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.pk) state.p = b.dataset.pk; else if (b.dataset.bg) state.bg = b.dataset.bg; else return; apply();
+});
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t))));
+mq.narrow.addEventListener('change', () => { closeMenu(false); render(); });
+mq.fine.addEventListener('change', () => render());
+apply(); render();
+})();
+</script>

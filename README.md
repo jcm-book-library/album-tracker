@@ -23,6 +23,22 @@ See [ROADMAP.md](ROADMAP.md).
   file to the existing artifact URL. Never commit that output.
 - Tests use made-up albums (`tests/fixture-albums.json`) and a fake sheet id.
 
+## What's in the app
+
+- Tabs: Home, Collection, Plan, Dashboard, Tools. The listening log is hidden unless "Show listening log" is switched on in Tools
+  (this browser only); its code and the `🎸 Log` tab are kept for the later MP3 player.
+- **Collection** shows the albums as shelves. A shelf is a label; the label is worked out from the album's row, first match wins:
+  Didn't like (Status) → Owned (Status Owned, or Format Vinyl (Owned)) → Vinyl wish list (Status Purchase, or Format Vinyl (Wanted))
+  → Upcoming (Coming Soon) → To hear (Listen) → Heard (Listened, or any rating).
+- Changing a label (the chip, or dragging to another shelf) writes `Status`, plus `Format` when it pairs with the move
+  (Vinyl (Wanted) ↔ Vinyl (Owned); cleared when a wanted vinyl moves to a non-vinyl label), plus `Labelled` (today) when that column exists.
+  An album whose Format is Vinyl (Owned) can't quick-move to To hear, Heard or Upcoming. Each change has an Undo.
+- **Favourites** are a guitar pick that writes the `Favourite` date (or clears it), independent of the label and the rating.
+- The Didn't like shelf has an incinerator: the newest four albums stand in a row, and older ones are "incinerated" on screen only.
+  They keep their label and stay in the sheet; "Show all" lists them as ash tiles and they can be moved back.
+- Shelves show the first five albums standing and the rest as a packed stack that fans open on hover (tap on a phone).
+- Tests: `cd tests && npm test`. Test data is dated from the run (`RUN_START=2026-12-31T23:57:00 npm test` checks another day).
+
 ## Sheet rules
 
 - The app only touches the 🎸 tab and tabs whose names start with 🎸.
@@ -64,6 +80,20 @@ See [ROADMAP.md](ROADMAP.md).
     stays, empty, so no other row moves; the app skips empty rows.
   - New tracks (and albums) are appended below the last used row, so a cleared row is never refilled or overwritten.
 - 🎸 itself is unchanged.
+
+### 2026-10-25 (Favourites)
+
+- Backup: full copy of 🎸 kept as `🎸 backup 2026-10-25`.
+- 🎸 gained column Q, `Favourite`: a date (yyyy-mm-dd). A date means favourited that day; blank means not a favourite.
+  Tapping the guitar pick writes today's date or clears the cell, so one cell changes. It doesn't depend on the rating.
+  Every kind of thing gets its own `Favourite` column in its own tab (albums now; artists, tracks and shows when those tabs exist),
+  and the Home page gathers them all.
+- Status dropdown: "Didn't like" added (chip style kept).
+- 🎸 gained column R, `Labelled`: the date of the album's last label change (the Status shelf it was moved to).
+  Optional: the app works without it, and writes it only when the header exists. It orders the Didn't like shelf,
+  so the newest albums sit at the far end and the oldest are closest to the incinerator.
+  Backup before this change: `🎸 backup 2026-10-25 (before Labelled)`.
+- Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact; later A–Q identical to the second backup and Labelled empty.
 
 ## Look
 
