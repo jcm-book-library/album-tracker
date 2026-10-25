@@ -3112,7 +3112,7 @@ async function coverTests(browser, vp, seed, seedC, url) {
   const plain = await freshPage(browser, vp, seed, url, 'collection');
   const sameSleeves = (await page.evaluate(() => [...document.querySelectorAll('#shelves .s-art')].map(e => e.innerHTML).join('|'))) === (await plain.page.evaluate(() => [...document.querySelectorAll('#shelves .s-art')].map(e => e.innerHTML).join('|')));
   record(n, 'Covers: when the Drive connector refuses, the sleeves are exactly the generated ones and no cover is drawn', na.imgs === 0 && na.svgs > 0 && sameSleeves, JSON.stringify(na));
-  record(n, 'Covers: the refusal shows "Allow Google Drive for this page, then press Refresh." and no Connect button', na.text === 'Allow Google Drive for this page, then press Refresh.' && na.btn, na.text);
+  record(n, 'Covers: the refusal shows "Allow Google Drive for this page, then press Refresh." and no Connect button', na.text === 'Folder saved. Allow Google Drive for this page, then press Refresh.' && na.btn, na.text);
   const rejCalls = await page.evaluate(() => window.__driveCalls.map(c => c.tool));
   record(n, 'Covers: a refusing connector is asked to list once and never to download', rejCalls.every(t => t === 'search_files') && rejCalls.length >= 1, rejCalls.join());
   record(n, 'Covers: no console errors when Drive is not allowed', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
@@ -3306,9 +3306,17 @@ function sheetsRest(seedC, log) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ updatedRange: seg }) });
   };
 }
+// What Google can answer when Drive refuses, and what the Look panel should then say
+const DRIVE_DENY = {
+  deny: { status: 403, msg: 'Request had insufficient authentication scopes.', btn: true, text: "Folder saved. This sign-in didn't include Google Drive. Press Connect again and tick the Google Drive box on Google's permission screen." },
+  apioff: { status: 403, msg: 'Google Drive API has not been used in project 123456789 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=123456789 then retry.', btn: false,
+    text: "Folder saved. Google Drive isn't switched on for your Google Cloud project yet (project 123456789). In the Google Cloud console go to APIs & Services, then Library, find “Google Drive API” and press Enable. Then press Refresh." },
+  expired: { status: 401, msg: 'Invalid Credentials', btn: true, text: 'Folder saved. Your Google sign-in has expired. Press Connect again.' },
+  other: { status: 403, msg: 'The caller does not have permission', btn: true, text: 'Folder saved. Google said no to Drive: The caller does not have permission. Press Connect again, and if it keeps happening tell me what this says.' }
+};
 async function coverPagesTests(browser, vp, seedC, url, imgs) {
   const n = vp.name, want = expectedCovers(seedC);
-  for (const mode of ['ok', 'deny']) {
+  for (const mode of ['ok', ...Object.keys(DRIVE_DENY)]) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
     await ctx.clock.install({ time: RUN_START });
     const sheetLog = [], driveReqs = [], sheet = sheetsRest(seedC, sheetLog), files = seedC.__drive.files, problems = [];
@@ -3319,7 +3327,7 @@ async function coverPagesTests(browser, vp, seedC, url, imgs) {
       if (u.startsWith('https://www.googleapis.com/drive/v3/files')) {
         const x = new URL(u), auth = req.headers().authorization;
         driveReqs.push({ method: req.method(), path: x.pathname, q: x.searchParams.get('q'), fields: x.searchParams.get('fields'), token: x.searchParams.get('pageToken'), alt: x.searchParams.get('alt'), auth });
-        if (mode === 'deny') return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: { message: 'insufficient scope' } }) });
+        if (DRIVE_DENY[mode]) return route.fulfill({ status: DRIVE_DENY[mode].status, contentType: 'application/json', body: JSON.stringify({ error: { message: DRIVE_DENY[mode].msg } }) });
         if (x.pathname === '/drive/v3/files') {   // listing, 7 a page whatever pageSize says
           const at = x.searchParams.get('pageToken') ? +x.searchParams.get('pageToken').replace('pg', '') : 0;
           return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ files: files.slice(at, at + 7).map(f => ({ id: f.id, name: f.title, modifiedTime: f.modifiedTime, mimeType: f.mimeType })), ...(at + 7 < files.length ? { nextPageToken: 'pg' + (at + 7) } : {}) }) });
@@ -3367,15 +3375,25 @@ async function coverPagesTests(browser, vp, seedC, url, imgs) {
       await page.locator('#coverLink').fill('https://drive.google.com/drive/folders/PAGES_FOLDER_ID_0123456789abc');
       await page.locator('#coverSave').click(); await page.waitForTimeout(600);
       record(n, 'Pages: saving a folder link makes one Sheets write, the coverFolder value cell', sheetLog.length === 1 && sheetLog[0].method === 'PUT' && sheetLog[0].tab === '🎸 Settings' && JSON.stringify(sheetLog[0].values) === JSON.stringify([["'PAGES_FOLDER_ID_0123456789abc"]]), JSON.stringify(sheetLog));
+      await page.waitForTimeout(300);
+      record(n, 'Pages: after saving, the box says the folder is saved (it empties on purpose)', (await page.locator('#coverLink').inputValue()) === '' && /^Folder saved/.test(await page.locator('#coverLink').getAttribute('placeholder')), await page.locator('#coverLink').getAttribute('placeholder'));
     } else {
       await openLook(page);
       const na = { imgs: await page.locator('img.cvimg').count(), text: await lookText(page), btn: await page.locator('#coverConnect').isVisible(), dl: driveReqs.filter(r => r.alt === 'media').length };
-      record(n, `${L}: a 403 from Drive is "no Drive access yet": sleeves stay generated, no download is tried`, na.imgs === 0 && na.dl === 0, JSON.stringify(na));
-      record(n, `${L}: the Covers row says "Press Connect again to allow read-only access to Google Drive." with a button`, na.text === 'Press Connect again to allow read-only access to Google Drive.' && na.btn, JSON.stringify(na));
-      await openLook(page);
-      await page.locator('#coverConnect').click();
-      const tok = await page.evaluate(() => ({ scope: window.__tokCfg && window.__tokCfg.scope, req: !!window.__tokReq }));
-      record(n, `${L}: the button re-runs the Connect flow asking for the read-only Drive scope too`, /auth\/spreadsheets/.test(tok.scope || '') && /auth\/drive\.readonly/.test(tok.scope || '') && tok.req, JSON.stringify(tok));
+      const D = DRIVE_DENY[mode];
+      record(n, `${L}: Drive saying no (${D.status}) is "no Drive access yet": sleeves stay generated, no download is tried`, na.imgs === 0 && na.dl === 0, JSON.stringify(na));
+      record(n, `${L}: the Covers row explains it in plain words${D.btn ? ' and offers Connect again' : ' (no button: Connect again would not help)'}`, na.text === D.text && na.btn === D.btn, JSON.stringify(na));
+      if (D.btn) {
+        await openLook(page);
+        await page.locator('#coverConnect').click();
+        const tok = await page.evaluate(() => ({ scope: window.__tokCfg && window.__tokCfg.scope, req: !!window.__tokReq, prompt: window.__tokReq && window.__tokReq.prompt }));
+        record(n, `${L}: the button re-runs the Connect flow asking for the read-only Drive scope too, with a fresh permission screen`, /auth\/spreadsheets/.test(tok.scope || '') && /auth\/drive\.readonly/.test(tok.scope || '') && tok.req && tok.prompt === 'consent', JSON.stringify(tok));
+        if (mode === 'deny') {
+          await page.evaluate(() => { google.accounts.oauth2.hasGrantedAllScopes = () => false; window.__tokCfg.callback({ access_token: 'unticked', expires_in: 3599 }); });
+          const t2 = await page.evaluate(() => JSON.parse(localStorage.getItem('sg-token')));
+          record(n, `${L}: if Google says the Drive box was left unticked, the new sign-in remembers it`, t2 && t2.t === 'unticked' && t2.drive === false, JSON.stringify(t2));
+        }
+      }
       const ov = await page.evaluate(overflow);
       record(n, `${L}: no sideways scroll`, ov.sw <= ov.iw);
     }

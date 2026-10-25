@@ -4995,9 +4995,21 @@ async function coverInit() {
     if (gen !== cov.gen) return;
     cov.files = null;
     cov.st = state.google ? (err && (err.code === 'drive_access' || err.code === 'google_signin') ? 'noaccess' : 'error') : 'noaccess';
+    cov.why = cov.st === 'noaccess' && state.google ? (err && err.code === 'drive_access' ? driveWhy(err) : { k: 'expired', text: 'Your Google sign-in has expired. Press Connect again.' }) : null;
     if (cov.st === 'error') cov.msg = "Couldn't read the cover folder. Check that it is shared and the link is right, then press Refresh.";
   }
   cov.epoch++; covScan(); renderCovers();
+}
+// What Google said when Drive refused, in words the owner can act on
+function driveWhy(err) {
+  const msg = String((err && err.message) || ''), st = err && err.status, tok = google_.tok();
+  const proj = (msg.match(/project (\d+)/) || [])[1];
+  if (/has not been used|is disabled|accessNotConfigured|SERVICE_DISABLED/i.test(msg))
+    return { k: 'api', text: `Google Drive isn't switched on for your Google Cloud project yet${proj ? ' (project ' + proj + ')' : ''}. In the Google Cloud console go to APIs & Services, then Library, find “Google Drive API” and press Enable. Then press Refresh.` };
+  if (/insufficient|scope/i.test(msg) || (tok && tok.drive === false))
+    return { k: 'scope', text: "This sign-in didn't include Google Drive. Press Connect again and tick the Google Drive box on Google's permission screen." };
+  if (st === 401) return { k: 'expired', text: 'Your Google sign-in has expired. Press Connect again.' };
+  return { k: 'other', text: `Google said no to Drive${msg ? ': ' + msg : ''}. Press Connect again, and if it keeps happening tell me what this says.` };
 }
 function renderCovers() {
   const stat = document.getElementById('coverStat'), btn = document.getElementById('coverConnect');
@@ -5008,8 +5020,15 @@ function renderCovers() {
   else if (cov.st === 'ok') {
     const ids = state.albums.filter(a => toNum(a.id)).map(a => String(toNum(a.id)));
     t = `${ids.filter(i => cov.files && cov.files.has(i)).length} of ${ids.length} albums have a cover in the folder · ${ids.filter(i => cov.mem.has(i)).length} loaded`;
-  } else if (cov.st === 'noaccess') { t = state.google ? 'Press Connect again to allow read-only access to Google Drive.' : 'Allow Google Drive for this page, then press Refresh.'; hint = state.google; }
+  } else if (cov.st === 'noaccess') {
+    if (state.google) { const w = cov.why || { k: 'scope', text: 'Press Connect again to allow read-only access to Google Drive.' }; t = w.text; hint = w.k !== 'api'; }
+    else t = 'Allow Google Drive for this page, then press Refresh.';
+  }
   else t = cov.msg;
+  // Once a folder is saved the box empties (the id is never shown), so say so instead of looking as if nothing was saved
+  const saved = String(state.settings.coverFolder || '').trim() !== '', inp = document.getElementById('coverLink');
+  if (inp) inp.placeholder = saved ? 'Folder saved. Paste a new link to change it' : 'Cover folder link';
+  if (saved && (cov.st === 'noaccess' || cov.st === 'error')) t = 'Folder saved. ' + t;
   stat.textContent = cover.msg || t;
   btn.hidden = !(hint && !cover.msg);
 }
@@ -5036,7 +5055,7 @@ $('coverSave').addEventListener('click', () => saveCover(false));
 $('coverClear').addEventListener('click', () => saveCover(true));
 $('coverLink').addEventListener('keydown', e => { if (e.key === 'Enter') saveCover(false); });
 $('coverLink').addEventListener('input', () => { if (cover.msg) { cover.msg = ''; renderCovers(); } });
-$('coverConnect').addEventListener('click', () => googleConnect());
+$('coverConnect').addEventListener('click', () => googleConnect({ consent: true }));
 // Sleeves are drawn all over the place and redrawn often: pick up new ones as they appear, before they are painted
 try { new MutationObserver(() => covScan()).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
 
@@ -5073,7 +5092,10 @@ const google_ = {
   async drive(path, asBlob) {
     if (!this.valid()) throw { code: 'google_signin' };
     const res = await fetch('https://www.googleapis.com/drive/v3/' + path, { headers: { Authorization: 'Bearer ' + this.tok().t } });
-    if (res.status === 401 || res.status === 403) throw { code: 'drive_access' };
+    if (res.status === 401 || res.status === 403) {
+      const b = await res.json().catch(() => ({}));
+      throw { code: 'drive_access', status: res.status, message: String((b && b.error && b.error.message) || '') };
+    }
     if (!res.ok) throw { code: 'tool_error', message: 'Drive HTTP ' + res.status };
     return asBlob ? res.blob() : res.json();
   }
@@ -5092,22 +5114,26 @@ function loadGis() {
   });
 }
 // Runs from a click, and stays synchronous once Google's script has loaded, so the sign-in popup isn't blocked
-function googleConnect() {
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+function googleConnect(opts) {
+  const consent = !!(opts && opts.consent);
   const id = google_.clientId();
   if (!id || !sheetId()) { openSetup(); return; }
-  if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().then(googleConnect, err => notice(err.message, 'error')); return; }
+  if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().then(() => googleConnect(opts), err => notice(err.message, 'error')); return; }
   try {
     if (!google_.client) google_.client = google.accounts.oauth2.initTokenClient({
       client_id: id, scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
       callback: r => {
         if (r.error) { notice('Google sign-in failed: ' + r.error, 'error'); return; }
-        lsSet(google_.tokKey, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in - 120) * 1000 }));
+        // Google lets people untick individual permissions: remember whether the Drive box was left ticked
+        let drive = true; try { drive = google.accounts.oauth2.hasGrantedAllScopes ? !!google.accounts.oauth2.hasGrantedAllScopes(r, DRIVE_SCOPE) : true; } catch (e) {}
+        lsSet(google_.tokKey, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in - 120) * 1000, drive }));
         $('refreshBtn').textContent = 'Refresh';
         refresh();
       },
       error_callback: e => notice('Google sign-in was closed or blocked' + (e && e.type ? ' (' + e.type + ')' : '') + '. Press Connect to try again.', 'error')
     });
-    google_.client.requestAccessToken({ prompt: '' });
+    google_.client.requestAccessToken({ prompt: consent ? 'consent' : '' });
   } catch (err) { notice(err.message, 'error'); }
 }
 function googleBoot() {
