@@ -95,6 +95,15 @@ See [ROADMAP.md](ROADMAP.md).
   Backup before this change: `🎸 backup 2026-10-25 (before Labelled)`.
 - Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact; later A–Q identical to the second backup and Labelled empty.
 
+### 2026-10-25 (Playlists)
+
+- New tab `🎸 Playlists`, one row per saved playlist: `id | name | purpose | source | created | tracks | minutes | rules | trackIds | notes`.
+  - `id`: permanent number from 7001, highest + 1; duplicates highlighted red.
+  - `trackIds`: the playlist's Spotify track ids in order, comma-separated text. `rules` is the rule set as compact JSON text.
+  - Deleting a playlist in the app clears that row's cells (found by id first); the row stays, empty, and new rows go below the last used row.
+- The app also **reads** (never writes) the `Classical` tab, and any sheet link and tab the owner pastes into the Playlists tab, as the pool of tracks.
+  The only writes in this feature go to `🎸 Playlists`.
+
 ## Look
 
 - Dark, with a marbled coloured record behind solid panels. Approved preview: `design/music-collection-preview.html`.
