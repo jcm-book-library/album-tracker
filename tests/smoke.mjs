@@ -630,8 +630,8 @@ const FIVE = ['Home', 'Collection', 'Plan', 'Dashboard', 'Tools'];
 const SIX = ['Home', 'Collection', 'Log', 'Plan', 'Dashboard', 'Tools'];   // with the listening log switched on
 
 // A fresh page on the live stub, already on the given tab
-async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion, showLog } = {}) {
-  const ctx = await openContext(browser, vp, seed, { reducedMotion, showLog });
+async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion, showLog, touch } = {}) {
+  const ctx = await openContext(browser, vp, seed, { reducedMotion, showLog, touch });
   if (clockTo) await ctx.context.clock.setFixedTime(clockTo);
   await ctx.page.goto(url);
   await ctx.page.waitForLoadState('load');
@@ -1412,7 +1412,7 @@ async function collectionTests(browser, vp, seed, url) {
   const nStand = await page.evaluate(() => document.querySelectorAll('#shelves .shelf[data-key="heard"] .s-grid .s-it').length);
   record(n, 'Collection: "Show all" opens a wrapping grid in place, "Show fewer" closes it', nStand === want.heard.length && (await page.locator(`${shelfSel('heard')} [data-sa="all"]`).textContent()) === 'Show fewer', String(nStand));
   await page.locator(`${shelfSel('heard')} [data-sa="all"]`).click();
-  record(n, 'Collection: after Show fewer the shelf is standing sleeves plus a leaning fan', (await page.locator(`${shelfSel('heard')} .s-grid`).count()) === 0 && (await page.locator(`${shelfSel('heard')} .s-lean .s-it`).count()) > 0 && (await page.locator(`${shelfSel('heard')} .s-standing .s-it`).count()) === (vp.width < 560 ? 3 : 5));
+  record(n, 'Collection: after Show fewer the shelf is standing sleeves plus a packed stack', (await page.locator(`${shelfSel('heard')} .s-grid`).count()) === 0 && (await page.locator(`${shelfSel('heard')} .s-stack .s-it`).count()) > 0 && (await page.locator(`${shelfSel('heard')} .s-standing .s-it`).count()) === (vp.width < 560 ? 3 : 5));
   record(n, 'Collection: Show all / Show fewer write nothing', (await gw(page)).length === 0);
 
   // detail strip
@@ -1483,6 +1483,390 @@ async function collectionTests(browser, vp, seed, url) {
   record(n, 'Collection: browsing, searching, Show all and the table cause no sheet writes', (await gw(page)).length === 0 && (await allOnTab(page)));
   record(n, 'Collection: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
   await context.close();
+}
+
+
+// ----- the packed stack: the overflow of a shelf as narrow slices that fan out like a hand of cards
+const stackSel = k => `${shelfSel(k)} .s-stack`;
+const sliceInfo = (page, k) => page.evaluate(sel => [...document.querySelectorAll(sel)].map(e => ({ id: e.dataset.id, fanned: e.classList.contains('fanned') })), `${stackSel(k)} .slice`);
+const fannedIds = async (page, k) => (await sliceInfo(page, k)).filter(x => x.fanned).map(x => x.id);
+async function boxCenter(loc) { const b = await loc.boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, b }; }
+const sliceAt = (page, k, i) => page.locator(`${stackSel(k)} .slice`).nth(i);
+async function hoverSlice(page, k, i) {
+  await sliceAt(page, k, i).scrollIntoViewIfNeeded();
+  const c = await boxCenter(sliceAt(page, k, i));
+  await page.mouse.move(c.x, c.y, { steps: 3 });
+  await page.waitForTimeout(220);
+}
+// Point at slice i, then rest the pointer on the raised card under it (the fan re-centres by a slice or so as the pointer moves
+// up onto the card), until the same card stays under the pointer. Returns that card's album id.
+async function settleOnCard(page, k, i) {
+  await hoverSlice(page, k, i);
+  let id = null;
+  const cur = page.locator(`${stackSel(k)} .slice.cur`);
+  for (let t = 0; t < 6; t++) {
+    const now = await cur.getAttribute('data-id');
+    if (now === id) break;
+    id = now;
+    const c = await boxCenter(cur.locator('.s-art'));
+    await page.mouse.move(c.x, c.y, { steps: 2 }); await page.waitForTimeout(220);
+  }
+  return cur.getAttribute('data-id');
+}
+async function findCard(page, k, rowsById, pred, notIds = []) {
+  const n = (await sliceInfo(page, k)).length;
+  for (let i = 0; i < n; i++) {
+    await page.mouse.move(5, 5); await page.waitForTimeout(120);
+    const id = await settleOnCard(page, k, i);
+    if (id && !notIds.includes(id) && pred(rowsById(id))) return id;
+  }
+  return null;
+}
+const detailTitle = page => page.evaluate(() => { const e = document.querySelector('#shelves .s-detail h3'); return e ? e.textContent : null; });
+
+async function stackTests(browser, vp, seed, url) {
+  const n = vp.name, phone = vp.width < 560;
+  const N = phone ? 3 : 5, MAXS = phone ? 10 : 16;
+  const rows = fxSeedRows(seed), want = expectedShelves(seed), total = want.hear.length;
+  const k = Math.min(total - N, MAXS), more = total - N - k;
+  const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+  await cw(page);
+
+  // 1. the packed stack
+  const g = await page.evaluate(sel => {
+    const st = document.querySelector(sel), board = st.closest('.s-board').getBoundingClientRect(), r = st.getBoundingClientRect(), sl = [...st.querySelectorAll('.slice')];
+    const mr = st.querySelector('.s-more') ? st.querySelector('.s-more').getBoundingClientRect() : null;
+    const w = sl.map(e => e.getBoundingClientRect()); const cs = getComputedStyle(sl[0]);
+    return { k: sl.length, more: st.querySelector('.s-more') ? st.querySelector('.s-more').textContent : '', inside: r.left >= board.left && r.right <= board.right + 0.5 && (!mr || mr.right <= board.right + 0.5), sw: parseFloat(cs.width), role: st.getAttribute('role'), btns: sl.every(e => e.querySelector('button.s-art') && /album, label /.test(e.querySelector('.s-art').getAttribute('aria-label'))),
+      tall: Math.abs(sl[0].getBoundingClientRect().height - parseFloat(getComputedStyle(sl[0]).height)) < 40, lean: cs.transform !== 'none', standing: st.closest('.s-row').querySelectorAll('.s-standing .s-it').length, over: document.documentElement.scrollWidth <= innerWidth };
+  }, stackSel('hear'));
+  record(n, `Stack: To hear (${total} albums) shows ${N} standing and a packed stack of ${k} slices (max ${MAXS})`, g.k === k && g.standing === N, JSON.stringify(g));
+  record(n, `Stack: a "+${more}" chip sits at the end of the stack`, g.more === `+${more}`, g.more);
+  record(n, `Stack: slices are ${phone ? '8-10' : '10-14'}px wide, buttons with a full aria-label, leaning, in a labelled group`, g.sw >= (phone ? 8 : 10) && g.sw <= (phone ? 10 : 14) && g.btns && g.lean && g.role === 'group', JSON.stringify(g));
+  record(n, 'Stack: it sits inside the shelf and the page has no sideways scroll', g.inside && g.over, JSON.stringify(g));
+  record(n, 'Stack: no stack when a shelf fits its standing sleeves (Owned/Favourites in the seed)', (await page.locator(`${shelfSel('fav')} .s-stack`).count()) === 0 || want.fav.length > N);
+
+  // 2. hover fans 3 or 4 neighbours
+  await hoverSlice(page, 'hear', 2);
+  const f1 = await fannedIds(page, 'hear'), all = (await sliceInfo(page, 'hear')).map(x => x.id);
+  record(n, 'Stack hover: the 3 or 4 slices nearest the pointer fan out, the rest stay packed', (f1.length === 3 || f1.length === 4) && f1.includes(all[2]) && f1.every(id => Math.abs(all.indexOf(id) - 2) <= 2), f1.join());
+  const fan = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(e => { const r = e.getBoundingClientRect(), a = e.querySelector('.s-art').getBoundingClientRect(); return { w: a.width, h: a.height, t: getComputedStyle(e).transform }; }), `${stackSel('hear')} .slice.fanned`);
+  record(n, 'Stack hover: fanned cards are wider than packed slices (they show about half the sleeve) and rotated apart', fan.every(c => c.w > 25) && new Set(fan.map(c => c.t)).size === fan.length, JSON.stringify(fan));
+  // the card under the pointer: caption, chip and pick
+  const under = await page.evaluate(() => { const e = document.querySelector('.s-stack .slice.fanned.cur'); if (!e) return null; const cap = e.querySelector('.s-cap'), chip = e.querySelector('.s-chip'), pick = e.querySelector('.s-pick'), vis = x => getComputedStyle(x).display !== 'none' && +getComputedStyle(x).opacity > 0.9; return { id: e.dataset.id, cap: vis(cap) && cap.textContent, chip: vis(chip), pick: vis(pick) }; });
+  const urow = under && rows.find(r => r[COLS.id] === under.id);
+  record(n, 'Stack hover: the card under the pointer shows the same caption (title, artist, rating), plus the label chip and pick', !!under && under.cap.includes(urow[0]) && under.cap.includes(urow[2]) && /\/10|Not rated/.test(under.cap) && under.cap.includes('To hear') && under.chip && under.pick, JSON.stringify(under));
+  // move along the stack: a different set; leaving packs it
+  const farBefore = f1.join();
+  await page.mouse.move(5, 5); await page.waitForTimeout(200);
+  record(n, 'Stack hover: leaving the stack packs it again', (await fannedIds(page, 'hear')).length === 0);
+  await hoverSlice(page, 'hear', k - 1);
+  const f2 = await fannedIds(page, 'hear');
+  record(n, 'Stack hover: pointing further along fans a different set (the last slices)', (f2.length === 3 || f2.length === 4) && f2.includes(all[k - 1]) && f2.join() !== farBefore, f2.join());
+  // sliding along (not leaving) also moves the fan
+  await hoverSlice(page, 'hear', 0);
+  const f3 = await fannedIds(page, 'hear');
+  const bare = k - 1;
+  const bc = await boxCenter(sliceAt(page, 'hear', bare));
+  await page.mouse.move(bc.x, bc.y, { steps: 6 }); await page.waitForTimeout(220);
+  const f4 = await fannedIds(page, 'hear');
+  record(n, 'Stack hover: sliding the pointer onto a packed slice moves the fan to it', f3.join() !== f4.join() && f4.includes(all[bare]), `${f3.join()} -> ${f4.join()}`);
+  // click a fanned card: selects it, the detail strip shows that album
+  await page.screenshot({ path: join(OUT, `${n}-fan.png`) });
+  await page.mouse.move(5, 5); await page.waitForTimeout(150);
+  const card = page.locator(`${stackSel('hear')} .slice.cur`), cid = await settleOnCard(page, 'hear', 6);
+  const cc = await boxCenter(card.locator('.s-art'));
+  const cid2 = await card.getAttribute('data-id');
+  await page.mouse.click(cc.x, cc.y); await page.waitForTimeout(250);
+  const crow = rows.find(r => r[COLS.id] === cid);
+  record(n, 'Stack hover: clicking a fanned card selects it and the detail strip shows that album', cid === cid2 && (await detailTitle(page)) === crow[0] && (await page.locator(`${stackSel('hear')} .slice[data-id="${cid}"].sel`).count()) === 1, String(await detailTitle(page)));
+  await page.locator('#shelves .s-detail [data-sa="close"]').click();
+  record(n, 'Stack: browsing, hovering and selecting write nothing', (await gw(page)).length === 0);
+
+  // label chip and pick on a fanned card
+  const byId = id => rows.find(r => r[COLS.id] === id);
+  const pid = await findCard(page, 'hear', byId, r => !r[COLS.format] && !r[COLS.fav], [cid]);
+  const pcard = page.locator(`${stackSel('hear')} .slice.cur`);
+  const psr = await page.evaluate(sheetRow, pid);
+  await pcard.locator('.s-chip').click();
+  await page.locator('.s-menu').waitFor();
+  record(n, 'Stack chip: the label chip on a fanned card opens the label menu for that album', (await page.locator('.s-menu').getAttribute('aria-label')) === `Label for ${rows.find(r => r[COLS.id] === pid)[0]}`);
+  await page.locator('.s-menu button[data-k="heard"]').click();
+  await waitWrites(page, 1); await settle(page);
+  const w1 = await gw(page);
+  record(n, 'Stack chip: choosing Heard writes exactly the Status cell and moves the album to Heard', w1.length === 1 && w1[0].range === `'🎸'!D${psr}` && w1[0].v === 'Listened' && !(await shelfIds(page, 'hear')).includes(pid) && (await shelfIds(page, 'heard')).includes(pid), JSON.stringify(w1));
+  await cw(page);
+  const qid = await findCard(page, 'hear', byId, r => !r[COLS.format] && !r[COLS.fav]), qsr = await page.evaluate(sheetRow, qid);
+  const qcard = page.locator(`${stackSel('hear')} .slice.cur`);
+  await qcard.locator('.s-pick').click();
+  await waitWrites(page, 1); await settle(page);
+  const w2 = await gw(page);
+  record(n, 'Stack pick: the guitar pick on a fanned card writes only the Favourite cell and adds it to Favourites', w2.length === 1 && w2[0].range === `'🎸'!Q${qsr}` && (await shelfIds(page, 'fav')).includes(qid), JSON.stringify(w2));
+  record(n, 'Stack: no write outside the 🎸 tabs, no console errors', (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+
+  // Show all: the wrapping grid of full sleeves, no stack
+  await expandShelf(page, 'hear');
+  record(n, 'Stack: "Show all" opens the grid of full sleeves with no stack', (await page.locator(`${shelfSel('hear')} .s-grid .s-it`).count()) === (await shelfCounts(page)).hear && (await page.locator(`${stackSel('hear')}`).count()) === 0);
+  // Favourites uses the same stack for its overflow
+  await page.evaluate(() => { state.albums.filter(a => !favOf(a)).slice(0, 8).forEach(a => { a.favourite = today(); }); render(); });
+  const fs = await page.evaluate(() => ({ stack: document.querySelectorAll('#shelves .shelf[data-key="fav"] .s-stack .slice').length, stand: document.querySelectorAll('#shelves .shelf[data-key="fav"] .s-standing .s-it').length }));
+  record(n, 'Stack: the Favourites shelf (mixed kinds) uses the same stack for its overflow', fs.stack > 0 && fs.stand === N, JSON.stringify(fs));
+  const o = await page.evaluate(overflow);
+  record(n, 'Stack: still no sideways scroll', o.sw <= o.iw);
+  await context.close();
+
+  // 3. keyboard: roving focus (a fresh page so no mouse has been used)
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+    await cw(page);
+    const stop = page.locator(`${stackSel('hear')} .slice .s-art[tabindex="0"]`);
+    record(n, 'Stack keys: exactly one slice is a tab stop (roving focus)', (await stop.count()) === 1 && (await page.locator(`${stackSel('hear')} .slice .s-art`).count()) === k);
+    await page.locator(`${stackSel('hear')} .slice`).first().scrollIntoViewIfNeeded();
+    await page.keyboard.press('Tab');   // keyboard use, so that focus shows as :focus-visible
+    await stop.focus();
+    const ids = (await sliceInfo(page, 'hear')).map(x => x.id);
+    const act = () => page.evaluate(() => { const a = document.activeElement, sl = a.closest && a.closest('.slice'); return { id: sl && sl.dataset.id, stack: a.classList.contains('s-stack'), role: a.tagName }; });
+    const st0 = await fannedIds(page, 'hear');
+    record(n, 'Stack keys: focusing a slice fans it with its neighbours', st0.length >= 3 && st0.length <= 4 && st0.includes(ids[0]), st0.join());
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+    const a2 = await act(), st2 = await fannedIds(page, 'hear');
+    record(n, 'Stack keys: ArrowRight moves focus to the next slice and the fan follows', a2.id === ids[2] && st2.includes(ids[2]) && st2.join() !== st0.join(), `${a2.id} ${st2.join()}`);
+    await page.keyboard.press('ArrowLeft');
+    record(n, 'Stack keys: ArrowLeft moves back', (await act()).id === ids[1]);
+    await page.keyboard.press('End');
+    const aEnd = await act();
+    await page.keyboard.press('Home');
+    record(n, 'Stack keys: End and Home jump to the last and first slice', aEnd.id === ids[k - 1] && (await act()).id === ids[0]);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter'); await page.waitForTimeout(250);
+    const row1 = rows.find(r => r[COLS.id] === ids[1]);
+    const a3 = await act();
+    record(n, 'Stack keys: Enter selects the focused slice (detail strip shows it) and focus stays on it', (await detailTitle(page)) === row1[0] && a3.id === ids[1] && (await fannedIds(page, 'hear')).includes(ids[1]), `${await detailTitle(page)} ${JSON.stringify(a3)}`);
+    await page.keyboard.press('Escape');
+    const a4 = await act();
+    record(n, 'Stack keys: Esc packs the stack and returns focus to the stack', (await fannedIds(page, 'hear')).length === 0 && a4.stack, JSON.stringify(a4));
+    await page.keyboard.press('Tab');
+    const a5 = await act();
+    record(n, 'Stack keys: Tab goes back into the stack at its tab stop', !!a5.id && ids.includes(a5.id), JSON.stringify(a5));
+    record(n, 'Stack keys: the live region says nothing extra, no writes, no console errors', (await page.locator('#live').textContent()) === '' && (await gw(page)).length === 0 && problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+
+  // 4. touch: tap opens a 4-card fan with chevrons, tap a card selects, tap outside packs
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection', { touch: true });
+    await cw(page);
+    const fine = await page.evaluate(() => matchMedia('(pointer: fine)').matches);
+    await sliceAt(page, 'hear', 3).scrollIntoViewIfNeeded();
+    const t = await boxCenter(sliceAt(page, 'hear', 3));
+    const ids = (await sliceInfo(page, 'hear')).map(x => x.id);
+    await page.touchscreen.tap(t.x, t.y); await page.waitForTimeout(250);
+    const f = await fannedIds(page, 'hear');
+    const chev = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(b => { const r = b.getBoundingClientRect(); return r.width > 0 && getComputedStyle(b).display !== 'none'; }), `${stackSel('hear')} .s-chev`);
+    record(n, 'Stack touch: tapping a slice opens a 4-card fan with left and right chevrons (and does not select)', !fine && f.length === 4 && f.includes(ids[3]) && chev.length === 2 && chev.every(Boolean) && (await detailTitle(page)) === null, `${fine} ${f.join()} ${chev}`);
+    await page.screenshot({ path: join(OUT, `${n}-fan-touch.png`) });
+    await page.locator(`${stackSel('hear')} .s-chev.next`).tap(); await page.waitForTimeout(250);
+    const fn = await fannedIds(page, 'hear');
+    record(n, 'Stack touch: the right chevron moves the fan along the stack, the left chevron moves it back', fn.length === 4 && fn.join() !== f.join() && fn.includes(ids[5]), fn.join());
+    await page.locator(`${stackSel('hear')} .s-chev.prev`).tap(); await page.waitForTimeout(250);
+    record(n, 'Stack touch: ...and back again', (await fannedIds(page, 'hear')).join() === f.join());
+    // a card whose middle is not covered by its neighbours
+    const top = await page.evaluate(sel => { for (const e of document.querySelectorAll(sel)) { const r = e.querySelector('.s-art').getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, hit = document.elementFromPoint(x, y); if (hit && e.contains(hit) && !hit.closest('.s-chip,.s-pick')) return { id: e.dataset.id, x, y }; } return null; }, `${stackSel('hear')} .slice.fanned`);
+    const tid = top.id;
+    await page.touchscreen.tap(top.x, top.y); await page.waitForTimeout(250);
+    record(n, 'Stack touch: tapping a fanned card selects it', (await detailTitle(page)) === rows.find(r => r[COLS.id] === tid)[0], String(await detailTitle(page)));
+    await page.locator('#shelves .s-detail [data-sa="close"]').tap();
+    const h = await boxCenter(page.locator(`${shelfSel('hear')} h2`));
+    await page.touchscreen.tap(h.x, h.y); await page.waitForTimeout(250);
+    record(n, 'Stack touch: tapping outside packs the stack again', (await fannedIds(page, 'hear')).length === 0 && (await page.locator(`${stackSel('hear')}.touch`).count()) === 0);
+    const o2 = await page.evaluate(overflow);
+    record(n, 'Stack touch: no writes, no sideways scroll, no console errors', (await gw(page)).length === 0 && o2.sw <= o2.iw && problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+
+  // 5. dragging a slice onto another shelf relabels it (real mouse path, as in the drag tests)
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+    await cw(page);
+    await sliceAt(page, 'hear', 0).scrollIntoViewIfNeeded();
+    const tb0 = await page.locator(shelfSel('heard')).boundingBox();
+    if (tb0.y + 120 > vp.height) await page.evaluate(d => window.scrollBy(0, d), tb0.y + 120 - vp.height + 20);
+    const did = await findCard(page, 'hear', id => rows.find(r => r[COLS.id] === id), r => !r[COLS.format]), dsr = await page.evaluate(sheetRow, did);
+    const dcard = page.locator(`${stackSel('hear')} .slice.cur`);
+    const sb = await boxCenter(dcard.locator('.s-art')), tb = await page.locator(shelfSel('heard')).boundingBox();
+    await page.mouse.move(sb.x, sb.y); await page.mouse.down();
+    await page.mouse.move(sb.x + 12, sb.y + 12, { steps: 4 });
+    await page.mouse.move(tb.x + tb.width / 2, Math.min(tb.y + 100, vp.height - 30), { steps: 14 });
+    await page.mouse.up();
+    await waitWrites(page, 1); await settle(page);
+    const w = await gw(page);
+    record(n, 'Stack drag: dragging a slice onto the Heard shelf writes the Status cell only and moves it', w.length === 1 && w[0].range === `'🎸'!D${dsr}` && w[0].v === 'Listened' && (await shelfIds(page, 'heard')).includes(did) && !(await shelfIds(page, 'hear')).includes(did), JSON.stringify(w));
+    record(n, 'Stack drag: no write outside 🎸, no console errors', (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+
+  // 6. reduced motion: the fan simply snaps
+  {
+    const { context, page } = await freshPage(browser, vp, seed, url, 'collection', { reducedMotion: 'reduce' });
+    await hoverSlice(page, 'hear', 2);
+    const run = await page.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('.s-stack')).length);
+    const tr = await page.evaluate(sel => getComputedStyle(document.querySelector(sel)).transitionDuration, `${stackSel('hear')} .slice`);
+    record(n, 'Stack reduced motion: the fan snaps (no transitions or animations on the stack)', run === 0 && /^0s(, 0s)*$/.test(tr) && (await fannedIds(page, 'hear')).length >= 3, `${run} ${tr}`);
+    await context.close();
+  }
+}
+
+
+// ----- Didn't like: the cartoon incinerator (the oldest albums are "incinerated": off the shelf, still in the sheet)
+const INC_LABEL = "Incinerator: the oldest albums you didn't like get fed to it. They stay in your sheet.";
+const nopeShelfIds = page => page.evaluate(() => [...document.querySelectorAll('#shelves .shelf[data-key="nope"] .s-it[data-id]')].map(e => e.dataset.id));
+const nopeStanding = page => page.evaluate(() => [...document.querySelectorAll('#shelves .shelf[data-key="nope"] .s-standing .s-it')].map(e => { const r = e.getBoundingClientRect(); return { id: e.dataset.id, slot: e.dataset.slot, cx: r.left + r.width / 2, warm: e.classList.contains('warm') }; }));
+const nopeHead = page => page.evaluate(() => { const s = document.querySelector('#shelves .shelf[data-key="nope"]'), note = s.querySelector('.sh-note'); return { count: +s.querySelector('.sh-count').textContent, note: note ? note.textContent : '' }; });
+function nopeOrder(sd) {   // newest first: Labelled date (when the sheet has the column), then sheet row
+  const lab = sd['🎸'][0].includes('Labelled');
+  return fxSeedRows(sd).map((r, i) => ({ r, i })).filter(({ r }) => labelFor(r) === 'nope')
+    .sort((a, b) => (lab ? (b.r[COLS.labelled] || '').localeCompare(a.r[COLS.labelled] || '') : 0) || b.i - a.i).map(({ r }) => r[COLS.id]);
+}
+const motionAnims = page => page.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#shelves')).map(a => a.animationName || a.constructor.name));
+const fiveth = sd => fxSeedRows(sd).find(r => labelFor(r) === 'hear' && r[COLS.status] === 'Listen' && !r[COLS.format]);
+
+async function incTests(browser, vp, seed, seedL, url) {
+  const n = vp.name, SL = vp.width < 560 ? 3 : 4;
+  const order = nopeOrder(seed), rows = fxSeedRows(seed);
+  const waitGhostGone = page => page.waitForFunction(() => !document.querySelector('.s-ghost'), null, { timeout: 5000, polling: 100 });
+
+  // 1. the seed's four albums stand in slots, newest to oldest, towards the furnace
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+    await cw(page);
+    await page.locator(shelfSel('nope')).scrollIntoViewIfNeeded();
+    const st = await nopeStanding(page), head = await nopeHead(page);
+    record(n, `Incinerator: the newest ${SL} Didn't like albums stand in slots ${vp.width < 560 ? '(3 on a phone)' : '(4)'}, newest first, from the left`, st.map(x => x.id).join() === order.slice(0, SL).join() && st.map(x => x.slot).join() === [...Array(SL).keys()].join() && st.every((x, i) => !i || x.cx > st[i - 1].cx), `${st.map(x => x.id)} vs ${order.slice(0, SL)}`);
+    const fg = await page.evaluate(() => { const sh = document.querySelector('#shelves .shelf[data-key="nope"]'), m = sh.querySelector('.fn-mouth').getBoundingClientRect(), mx = m.left + m.width / 2, board = sh.querySelector('.s-board').getBoundingClientRect(), f = sh.querySelector('.furnace').getBoundingClientRect();
+      const it = [...sh.querySelectorAll('.s-standing .s-it')].map(e => { const r = e.getBoundingClientRect(); return { d: mx - (r.left + r.width / 2), right: r.right }; });
+      return { d: it.map(x => Math.round(x.d)), closer: it.every((x, i) => !i || x.d < it[i - 1].d), clear: it.every(x => x.right <= f.left + f.width * 0.2), inside: f.right <= board.right + 1 && f.left >= board.left, tall: f.height > 60, label: sh.querySelector('svg.furnace').getAttribute('aria-label'), role: sh.querySelector('svg.furnace').getAttribute('role'), tip: sh.querySelector('h2').title, flames: sh.querySelectorAll('.fn-fl').length }; });
+    record(n, 'Incinerator: each slot is visibly closer to the furnace mouth than the one before', fg.closer && fg.d.every((d, i) => !i || fg.d[i - 1] - d > 20), fg.d.join());
+    record(n, 'Incinerator: an inline SVG furnace (role=img) with the aria-label sits at the right end, inside the shelf, clear of the sleeves', fg.label === INC_LABEL && fg.role === 'img' && fg.inside && fg.clear && fg.tall && fg.flames >= 3, JSON.stringify(fg));
+    record(n, 'Incinerator: the shelf heading explains it in a tooltip', fg.tip === "Albums you didn't like. The oldest get fed to the furnace, but they stay in your sheet.", fg.tip);
+    record(n, `Incinerator: the header shows all 4 albums${SL < 4 ? ' and a muted "1 incinerated" note' : ' and no note while none are incinerated'}`, head.count === 4 && head.note === (SL < 4 ? '1 incinerated' : ''), JSON.stringify(head));
+    const warm = await page.evaluate(() => [...document.querySelectorAll('#shelves .shelf[data-key="nope"] .s-standing .s-it')].map(e => e.classList.contains('warm') && getComputedStyle(e.querySelector('.s-art'), '::before').content !== 'none'));
+    record(n, 'Incinerator: only the sleeve in the last slot gets the heat overlay (glow and scorched corner)', warm.length === SL && warm.slice(0, -1).every(x => !x) && warm[SL - 1] === true, warm.join());
+    const an = await motionAnims(page);
+    record(n, 'Incinerator: with motion allowed the flames flicker, smoke drifts and the last sleeve shakes (CSS animations)', an.filter(x => x === 'fnflick').length >= 3 && an.includes('fnpuff') && an.includes('nervous'), [...new Set(an)].join());
+    const o = await page.evaluate(overflow);
+    record(n, 'Incinerator: no sideways scroll, no writes, no console errors', o.sw <= o.iw && (await gw(page)).length === 0 && problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+
+  // 2. a fifth album arrives: slot 0, the oldest leaves the shelf; Show all lists everything; rescue the ash tile; Undo
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+    const row = fiveth(seed), id = row[COLS.id], sr = await page.evaluate(sheetRow, id);
+    await cw(page);
+    await relabelViaMenu(page, id, 'hear', 'nope');
+    const ghost = await page.locator('.s-ghost').count();
+    await waitWrites(page, 1); await settle(page);
+    const w = await gw(page);
+    record(n, 'Incinerator: relabelling an album to Didn\'t like writes exactly the Status cell (nothing extra)', w.length === 1 && w[0].range === `'🎸'!D${sr}` && w[0].v === "Didn't like" && w[0].tool === 'update_values', JSON.stringify(w));
+    await page.locator(shelfSel('nope')).scrollIntoViewIfNeeded();
+    const st = await nopeStanding(page), head = await nopeHead(page), dom = await nopeShelfIds(page);
+    record(n, 'Incinerator: the new album is in slot 0 and every other album is one slot closer', st.map(x => x.id).join() === [id, ...order.slice(0, SL - 1)].join(), st.map(x => x.id).join());
+    record(n, 'Incinerator: the oldest standing album has left the shelf (no sleeve for it in the shelf)', !dom.includes(order[SL - 1]) && dom.length === SL, dom.join());
+    record(n, `Incinerator: the header count goes up to 5 and the note says "${5 - SL} incinerated"`, head.count === 5 && head.note === `${5 - SL} incinerated`, JSON.stringify(head));
+    record(n, 'Incinerator: the pushed-out album slides into the furnace (a ghost sleeve animates, then is gone)', ghost === 1, String(ghost));
+    await waitGhostGone(page);
+    record(n, 'Incinerator: ...and nothing is left behind afterwards', (await page.locator('.s-ghost').count()) === 0);
+    // Show all: every album, the incinerated ones as ash tiles
+    await page.locator(`${shelfSel('nope')} [data-sa="all"]`).click();
+    const grid = await page.evaluate(() => [...document.querySelectorAll('#shelves .shelf[data-key="nope"] .s-grid .s-it')].map(e => ({ id: e.dataset.id, ash: e.classList.contains('ash'), badge: !!e.querySelector('.s-ash'), cap: e.querySelector('.s-cap').textContent, filter: getComputedStyle(e.querySelector('.s-art')).filter })));
+    const ids = [id, ...order];
+    record(n, 'Incinerator: Show all lists every Didn\'t like album, newest first', grid.map(x => x.id).join() === ids.join(), grid.map(x => x.id).join());
+    record(n, `Incinerator: the ${5 - SL} oldest are ash tiles (desaturated, flame badge, "Incinerated (still in your sheet)" caption), the rest are normal`, grid.every((x, i) => x.ash === (i >= SL) && x.badge === (i >= SL) && /Incinerated \(still in your sheet\)/.test(x.cap) === (i >= SL) && (i >= SL) === /grayscale/.test(x.filter)), JSON.stringify(grid.map(x => [x.ash, x.badge])));
+    record(n, 'Incinerator: Show all has no furnace in the grid', (await page.locator(`${shelfSel('nope')} .s-grid`).count()) === 1);
+    // rescue the oldest ash tile
+    const ash = order[3], asr = await page.evaluate(sheetRow, ash);
+    await cw(page);
+    await openChip(page, ash, 'nope');
+    record(n, 'Incinerator: an ash tile is still fully relabelable (its label chip opens the menu)', (await page.locator('.s-menu').getAttribute('aria-label')) === `Label for ${rows.find(r => r[COLS.id] === ash)[0]}`);
+    await page.locator('.s-menu button[data-k="heard"]').click();
+    await waitWrites(page, 1); await settle(page);
+    const w2 = await gw(page), after = await nopeShelfIds(page);
+    record(n, 'Incinerator: rescuing it (relabel to Heard) writes exactly the Status cell and moves it off the shelf', w2.length === 1 && w2[0].range === `'🎸'!D${asr}` && w2[0].v === 'Listened' && !after.includes(ash) && (await shelfIds(page, 'heard')).includes(ash), JSON.stringify(w2));
+    record(n, 'Incinerator: the header count drops back to 4', (await nopeHead(page)).count === 4);
+    // an ash tile can be selected too (detail strip)
+    await page.evaluate(() => { shelfUI.expanded.nope = true; render(); });
+    record(n, 'Incinerator: no write outside 🎸, no console errors', (await allOnTab(page)) && problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+  // 3. Undo puts everything back
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection');
+    const row = fiveth(seed), id = row[COLS.id], sr = await page.evaluate(sheetRow, id), before = await cellOf(page, id);
+    await relabelViaMenu(page, id, 'hear', 'nope');
+    await waitWrites(page, 1); await settle(page);
+    await cw(page);
+    await page.locator('#toasts .toast button', { hasText: 'Undo' }).click();
+    await waitWrites(page, 1); await settle(page);
+    await page.locator(shelfSel('nope')).scrollIntoViewIfNeeded();
+    const w = await gw(page), st = await nopeStanding(page), head = await nopeHead(page);
+    record(n, 'Incinerator Undo: writes back only the previous Status and the row is as it was', w.length === 1 && w[0].range === `'🎸'!D${sr}` && w[0].v === row[COLS.status] && (await cellOf(page, id)) === before, JSON.stringify(w));
+    record(n, 'Incinerator Undo: the previous slots are restored (the incinerated album is back, the others shifted back)', st.map(x => x.id).join() === order.slice(0, SL).join() && !(await nopeShelfIds(page)).includes(id), st.map(x => x.id).join());
+    record(n, 'Incinerator Undo: the header goes back to 4 and no fire animation is left running', head.count === 4 && (await page.locator('.s-ghost').count()) === 0);
+    record(n, 'Incinerator Undo: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+  // 4. a sheet with a Labelled column: the order follows the Labelled dates, and the move stamps it
+  {
+    const sd = JSON.parse(JSON.stringify(seedL)), rr = sd['🎸'].slice(1);
+    const dates = { '1092': isoDay(2), '1087': isoDay(3), '1095': isoDay(10), '1102': isoDay(30) };   // not the same as sheet row order
+    rr.forEach(r => { if (dates[r[COLS.id]]) r[COLS.labelled] = dates[r[COLS.id]]; });
+    const ord = nopeOrder(sd);
+    const { context, page, problems } = await freshPage(browser, vp, sd, url, 'collection');
+    const st = await nopeStanding(page);
+    record(n, 'Incinerator (Labelled column): the slots follow the Labelled dates, newest first', ord.join() === '1092,1087,1095,1102' && st.map(x => x.id).join() === ord.slice(0, SL).join(), `${st.map(x => x.id)} vs ${ord}`);
+    const row = fiveth(sd), id = row[COLS.id], sr = await page.evaluate(sheetRow, id), today = await page.evaluate(() => today());
+    await cw(page);
+    await relabelViaMenu(page, id, 'hear', 'nope');
+    await waitWrites(page, 2); await settle(page);
+    const w = await gw(page), st2 = await nopeStanding(page);
+    record(n, 'Incinerator (Labelled column): the move writes Status and Labelled only and lands in slot 0', w.map(x => `${x.range}=${x.v}`).sort().join('|') === [`'🎸'!D${sr}=Didn't like`, `'🎸'!R${sr}=${today}`].sort().join('|') && st2[0].id === id && st2.map(x => x.id).join() === [id, ...ord.slice(0, SL - 1)].join(), JSON.stringify(w));
+    record(n, 'Incinerator (Labelled column): no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+  // 5. reduced motion: nothing runs, everything snaps, the shelf still behaves
+  {
+    const { context, page, problems } = await freshPage(browser, vp, seed, url, 'collection', { reducedMotion: 'reduce' });
+    await page.locator(shelfSel('nope')).scrollIntoViewIfNeeded();
+    const idle = await motionAnims(page);
+    record(n, 'Incinerator reduced motion: no running animations on the furnace, flames, smoke or sleeves', idle.length === 0, idle.join());
+    const fl = await page.evaluate(() => ({ flames: document.querySelectorAll('#shelves .fn-fl').length, anim: getComputedStyle(document.querySelector('#shelves .fn-fl')).animationName }));
+    record(n, 'Incinerator reduced motion: the flames are still drawn, just static', fl.flames >= 3 && fl.anim === 'none', JSON.stringify(fl));
+    const row = fiveth(seed), id = row[COLS.id];
+    await relabelViaMenu(page, id, 'hear', 'nope');
+    const ghost = await page.locator('.s-ghost').count(), st = await nopeStanding(page), after = await motionAnims(page);
+    record(n, 'Incinerator reduced motion: relabelling to Didn\'t like just snaps (no ghost sleeve, slot 0, oldest gone, no animations)', ghost === 0 && st[0].id === id && !(await nopeShelfIds(page)).includes(order[SL - 1]) && after.length === 0, `${ghost} ${after.join()}`);
+    record(n, 'Incinerator reduced motion: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+    await context.close();
+  }
+  // 6. screenshots: Didn't like with six albums (some incinerated), plus one frame of the feeding animation
+  {
+    const sd = JSON.parse(JSON.stringify(seed)), more = sd['🎸'].slice(1).filter(r => r[COLS.status] === 'Listen' && !r[COLS.format]).slice(0, 2);
+    more.forEach(r => { r[COLS.status] = "Didn't like"; });
+    const { context, page } = await freshPage(browser, vp, sd, url, 'collection');
+    await page.locator(shelfSel('nope')).scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    await page.locator(shelfSel('nope')).screenshot({ path: join(OUT, `${n}-incinerator.png`) });
+    const hid = fiveth(sd)[COLS.id];
+    await relabelViaMenu(page, hid, 'hear', 'nope');
+    await page.locator(shelfSel('nope')).scrollIntoViewIfNeeded();
+    await page.waitForTimeout(620);
+    await page.locator(shelfSel('nope')).screenshot({ path: join(OUT, `${n}-incinerator-feeding.png`) });
+    await page.locator(`${shelfSel('nope')} [data-sa="all"]`).click();
+    await page.waitForTimeout(300);
+    await page.locator(shelfSel('nope')).screenshot({ path: join(OUT, `${n}-incinerator-ash.png`) });
+    record(n, 'Incinerator: screenshots written (six albums, feeding frame, ash tiles)', true);
+    await context.close();
+  }
 }
 
 // ----- relabel table: exactly which cells each move writes
@@ -1970,8 +2354,8 @@ const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.u
 const CHART_LOCAL = join(here, 'node_modules', 'chart.js', 'dist', 'chart.umd.js');
 const HAVE_CHART = existsSync(CHART_LOCAL);
 
-async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false } = {}) {
-  const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}) });
+async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false, touch = false } = {}) {
+  const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}), ...(touch ? { hasTouch: true, isMobile: vp.width < 560 } : {}) });
   await context.clock.install({ time: RUN_START });
   let externalBlocked = 0;
   await context.route('**/*', route => {
@@ -2085,6 +2469,8 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl) {
   await run('pick', () => pickTests(browser, vp, seed, seedL, wrapperUrl));
   await run('menu', () => menuKeyboardTests(browser, vp, seed, wrapperUrl));
   await run('dnd', () => dragTests(browser, vp, seed, wrapperUrl));
+  await run('stack', () => stackTests(browser, vp, seed, wrapperUrl));
+  await run('inc', () => incTests(browser, vp, seed, seedL, wrapperUrl));
   await run('log', () => logSwitchTests(browser, vp, seed, wrapperUrl));
   await run('tracks', () => tracksTests(browser, vp, seed, wrapperUrl));
   await run('look', () => lookTests(browser, vp, seed, wrapperUrl));

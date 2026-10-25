@@ -373,7 +373,9 @@ div.hbar{padding:3px 6px}
 .s-board.compact .s-row{--s:clamp(52px,13cqw,100px)}
 .s-standing{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));align-items:end}
 .s-cell{display:flex;justify-content:center;align-items:flex-end}
-.s-lean{--step:min(calc(var(--s) * .17),calc(var(--free) / max(1,var(--k) - 1)));position:relative;flex:none;width:var(--lw);height:var(--s);margin-left:calc(var(--s) * .2);clip-path:inset(-300px -80px 0 -80px)}
+.s-stack{--sw:12px;--pitch:9.5px;--ang:12deg;--w0:calc(var(--s) * .6);--R:calc(var(--s) * .5);--stw:calc((var(--k) - 1) * var(--pitch) + var(--sw));position:relative;z-index:3;flex:none;width:var(--stw);height:var(--s);margin-left:calc(var(--s) * .24);outline:none}
+.s-stack.more{margin-right:var(--morew,44px)}
+.s-more{position:absolute;left:calc(100% + 8px);bottom:6px;min-width:34px;padding:2px 8px;border-radius:999px;background:rgba(14,15,22,.92);border:1px solid rgba(255,255,255,.22);color:var(--muted);font-size:12px;font-weight:700;line-height:1.5;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
 .s-grid{--s:clamp(52px,12.2cqw,132px);position:relative;z-index:2;display:grid;grid-template-columns:repeat(var(--gc),minmax(0,1fr));row-gap:78px;align-items:end}
 .s-ledge{position:relative;z-index:1;height:20px;margin:-5px -8px 0;border-radius:3px 3px 8px 8px;background:linear-gradient(180deg,var(--wood-top) 0 6px,rgba(255,255,255,.34) 6px 7px,var(--wood) 7px,var(--wood-lo));box-shadow:0 14px 16px -8px var(--shadow),0 2px 0 rgba(0,0,0,.35)}
 .s-empty{position:relative;z-index:2;color:var(--muted);font-size:14px;padding:0 0 20px;text-align:center;margin:0}
@@ -407,17 +409,70 @@ div.hbar{padding:3px 6px}
 .s-it:hover .s-cap,.s-it:focus-within .s-cap{opacity:1;transform:translateX(-50%)}
 .s-cell.first .s-cap{left:0;transform:translateY(4px)}
 .s-cell.first .s-it:hover .s-cap,.s-cell.first .s-it:focus-within .s-cap{transform:none}
-.s-cell.last .s-cap,.s-lean .s-cap{left:auto;right:0;transform:translateY(4px)}
-.s-cell.last .s-it:hover .s-cap,.s-cell.last .s-it:focus-within .s-cap,.s-lean .s-it:hover .s-cap,.s-lean .s-it:focus-within .s-cap{transform:none}
+.s-cell.last .s-cap{left:auto;right:0;transform:translateY(4px)}
+.s-cell.last .s-it:hover .s-cap,.s-cell.last .s-it:focus-within .s-cap{transform:none}
 
-.s-lean .s-it{position:absolute;bottom:0;left:calc(var(--i) * var(--step));z-index:calc(var(--k) - var(--i));transform-origin:100% 100%;transform:rotate(calc(-8deg - var(--i) * 10deg / max(1,var(--k) - 1)));transition:transform .28s cubic-bezier(.3,.7,.3,1)}
-.s-lean .s-it::before{display:none}
-.s-lean .s-it .s-art{box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,-5px 0 10px -3px var(--shadow)}
-.s-lean .s-it:hover,.s-lean .s-it:focus-within,.s-lean .s-it.sel,.s-lean .s-it:has([aria-expanded="true"]){transform:translateX(calc(var(--free) - var(--i) * var(--step))) rotate(0deg);z-index:90}
-.s-lean .s-it .s-lift{transform:none!important}
-@media (prefers-reduced-motion:no-preference){.s-it.arrive .s-lift{animation:arrive .5s cubic-bezier(.2,.8,.3,1) 1}@keyframes arrive{from{opacity:0;transform:translateY(-34px) scale(.9)}to{opacity:1;transform:none}}}
-@media (prefers-reduced-motion:reduce){.s-lift,.s-lean .s-it,.s-cap,.s-chip{transition:none!important}}
+/* the packed stack: narrow slices of the remaining sleeves, leaning like records filed in a crate */
+.s-it.slice{position:absolute;bottom:0;left:var(--x);--x:calc(var(--i) * var(--pitch));width:var(--sw);height:var(--s);z-index:calc(var(--i) + 1);transform-origin:50% 100%;transform:translateX(0) rotate(-10deg);transition:transform .12s ease-out,width .12s ease-out}
+.s-it.slice::before{display:none}
+.s-it.slice:hover,.s-it.slice:focus-within{z-index:calc(var(--i) + 1)}
+.s-it.slice .s-lift{height:100%;transition:transform .12s ease-out}
+.s-it.slice .s-art{width:100%;height:100%;border-radius:1px;box-shadow:none;background:#000}
+.s-it.slice .s-art svg{position:absolute;top:0;left:calc(var(--s) * var(--ox) / -100);width:var(--s);height:var(--s);max-width:none}
+.s-it.slice .s-art::after{background:linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,0) 22%,rgba(0,0,0,0) 62%,rgba(0,0,0,.6))}
+.s-it.slice.sel .s-art{outline-offset:0}
+.s-it.slice .s-chip,.s-it.slice .s-pick,.s-it.slice .s-cap,.s-it.slice .s-cd{display:none}
+.s-it.slice .s-chip{font-size:9px;padding:2px 6px}
+.s-stack.fan{z-index:60;--ang:15deg;--hw:1.3;--ac:calc((var(--ci) - var(--f0) - (var(--m) - 1) / 2) * var(--ang));--px:min(calc(var(--ci) * var(--pitch) + var(--sw) / 2 - var(--s) * .087 - (var(--hw) - 1) * var(--w0) / 2 - (var(--R) + var(--s) / 2) * sin(var(--ac))),calc(var(--stw) - var(--s) * .6))}
+.s-stack.fan .s-it.slice.fanned{--a:calc((var(--j) - (var(--m) - 1) / 2) * var(--ang));width:var(--w0);z-index:calc(40 + var(--j));transform-origin:calc(var(--w0) / 2) calc(100% + var(--R));transform:translateX(calc(var(--px) - var(--w0) / 2 - var(--x))) rotate(var(--a))}
+.s-stack.fan:not(.touch) .s-it.slice.fanned:not(.cur){pointer-events:none}
+.s-stack.fan .s-it.slice.fanned .s-art{border-radius:4px;box-shadow:0 0 0 1px rgba(255,255,255,.14) inset,-4px 4px 9px -3px var(--shadow)}
+.s-stack.fan .s-it.slice.fanned .s-art::after{background:linear-gradient(90deg,rgba(255,255,255,.2),rgba(255,255,255,0) 8%,rgba(0,0,0,0) 85%,rgba(0,0,0,.3))}
+.s-stack.fan .s-it.slice.fanned.cur{z-index:90;width:calc(var(--w0) * var(--hw))}
+.s-stack.fan .s-it.slice.fanned.cur .s-lift{transform:translateY(-10px)}
+.s-stack.fan .s-it.slice.fanned.cur .s-chip{display:block;opacity:1}
+.s-stack.fan .s-it.slice.fanned.cur .s-pick{display:grid;opacity:1;left:50%;right:auto;margin-left:calc(clamp(22px,calc(var(--s) * .22),30px) / -2)}
+.s-stack.fan .s-it.slice.fanned.cur .s-cap{display:grid;left:auto;right:0;opacity:1;transform:rotate(calc(var(--a) * -1));transform-origin:100% 100%}
+.s-stack.touch.fan .s-it.slice.fanned.cur .s-cap{display:none}
+.s-chev{display:none;position:absolute;bottom:calc(100% + 12px);width:36px;height:36px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(14,15,22,.94);color:var(--fg);font-size:20px;line-height:1;z-index:95}
+.s-chev.prev{left:calc(var(--px, 0px) - var(--s) * .62 - 18px)}
+.s-chev.next{left:calc(var(--px, 0px) + var(--s) * .62 - 18px)}
+.s-stack.touch .s-chev{display:grid;place-items:center}
 .s-it.dragging{opacity:.4}
+
+/* Didn't like: a cartoon incinerator at the end of the shelf, the newest few albums standing in slots towards its mouth */
+.s-standing.inc{grid-template-columns:1.5fr 1.25fr 1fr .82fr}
+.s-standing.inc.n3{grid-template-columns:1.3fr 1fr .8fr}
+.s-furnace{position:relative;flex:none;align-self:flex-end;width:calc(var(--s) * 1.4);height:var(--s);margin-left:calc(var(--s) * .08);z-index:1}
+.s-furnace::before{content:"";position:absolute;left:-30%;right:-18%;bottom:-6px;height:90%;background:radial-gradient(ellipse at 50% 70%,rgba(255,122,26,.34),rgba(255,122,26,0) 68%);pointer-events:none}
+.furnace{position:absolute;left:0;bottom:-2px;width:100%;height:auto;overflow:visible;display:block;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
+.fn-p{transform-box:fill-box;transform-origin:50% 50%;fill:#c9c5d6;opacity:.34}
+.fn-boom{fill:#d8d3e2;opacity:0;transform-box:fill-box;transform-origin:50% 50%}
+.fn-fl{transform-box:fill-box;transform-origin:50% 100%}
+.fn-sign text{font-family:'Segoe Print','Bradley Hand','Marker Felt','Comic Sans MS','Chalkboard SE',cursive}
+.s-it.warm .s-art::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 100% 100%,rgba(12,5,2,.88) 0 18%,rgba(12,5,2,0) 52%),linear-gradient(270deg,rgba(255,150,40,.62),rgba(255,110,20,.22) 45%,rgba(255,110,20,0) 80%)}
+.s-it.warm .s-art{box-shadow:0 0 0 1px rgba(255,170,80,.35) inset,10px 0 22px -6px rgba(255,120,30,.55),0 6px 10px -2px var(--shadow)}
+.s-it.ash .s-art{filter:grayscale(.88) brightness(.62) contrast(1.05)}
+.s-it.ash .s-art::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 100% 100%,rgba(8,4,2,.92) 0 24%,rgba(8,4,2,0) 60%),radial-gradient(circle at 0 100%,rgba(8,4,2,.6),rgba(8,4,2,0) 42%),radial-gradient(circle at 80% 0,rgba(8,4,2,.5),rgba(8,4,2,0) 38%)}
+.s-ghost .s-art{position:relative;display:block;width:100%;height:100%;overflow:hidden;border-radius:4px;box-shadow:0 0 0 1px rgba(255,170,80,.35) inset,10px 0 22px -6px rgba(255,120,30,.55)}
+.s-ghost .s-art svg{display:block;width:100%;height:100%}
+.s-ghost .s-art::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 100% 100%,rgba(12,5,2,.88) 0 18%,rgba(12,5,2,0) 52%),linear-gradient(270deg,rgba(255,150,40,.62),rgba(255,110,20,.22) 45%,rgba(255,110,20,0) 80%)}
+.s-ash{position:absolute;top:4px;left:4px;z-index:2;display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 5px;border-radius:999px;background:rgba(14,15,22,.92);border:1px solid rgba(255,138,42,.55);color:#ffb067;font-size:clamp(9px,calc(var(--s) * .08),11px);font-weight:700;line-height:1.5;pointer-events:none}
+.s-ash svg{width:11px;height:11px;flex:none}
+.s-cap .ash-note{color:#ffb067;font-weight:600}
+.sh-note{color:var(--muted);font-size:12px;white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){
+  .fn-fl{animation:fnflick .46s ease-in-out infinite alternate}
+  .fn-fl.f2{animation-duration:.62s;animation-delay:-.2s}
+  .fn-fl.f3{animation-duration:.52s;animation-delay:-.35s}
+  .fn-fl.f4{animation-duration:.7s;animation-delay:-.1s}
+  @keyframes fnflick{from{transform:scaleY(.8) scaleX(1.08)}to{transform:scaleY(1.14) scaleX(.92)}}
+  .fn-p{animation:fnpuff 3.6s ease-out infinite}
+  .fn-p.p2{animation-delay:-1.2s}.fn-p.p3{animation-delay:-2.4s}
+  @keyframes fnpuff{0%{transform:translate(0,8px) scale(.45);opacity:0}18%{opacity:.5}100%{transform:translate(-10px,-26px) scale(1.5);opacity:0}}
+  .s-it.warm .s-art svg{animation:nervous .34s linear infinite}
+  @keyframes nervous{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-.7px,.3px) rotate(-.7deg)}45%{transform:translate(.6px,-.3px) rotate(.6deg)}70%{transform:translate(-.5px,0) rotate(-.4deg)}}
+}
 
 /* detail strip under a shelf */
 .s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -479,6 +534,11 @@ input[type="checkbox"][role="switch"]:checked::after{transform:translateX(18px);
   .s-board.compact{--n:3}
   .s-row,.s-grid,.s-board.compact .s-row{--s:clamp(48px,18cqw,80px)}
   .s-ledge{margin-inline:-6px}
+  .s-stack{--sw:9px;--pitch:7px;--morew:36px}
+  .s-stack.fan{--hw:1.5}
+  .s-more{min-width:28px;padding:1px 6px;font-size:11px}
+  .s-furnace{width:calc(var(--s) * 1.45)}
+  .sh-note{font-size:11px}
   .sh-head h2{font-size:19px}
   .s-detail{grid-template-columns:auto minmax(0,1fr);padding:14px}
   .s-detail .s-x{position:absolute;top:10px;right:10px}
@@ -1741,11 +1801,44 @@ function artSvg(title) {
 }
 
 /* ---------- shelf component ---------- */
-const shelfUI = { expanded: {}, sel: null, arrive: null };
+const shelfUI = { expanded: {}, sel: null, arrive: null, fan: null, rove: {} };
 const mq = { narrow: matchMedia('(max-width: 560px)'), fine: matchMedia('(pointer: fine)') };
 const nStand = () => mq.narrow.matches ? 3 : 5;
 const gcols = () => mq.narrow.matches ? 4 : 6;
-const LEAN_MAX = 6;   // the fan shows this many leaning sleeves; "Show all" opens the rest
+const STACK_MAX = () => mq.narrow.matches ? 10 : 16;   // slices drawn in the packed stack; "Show all" opens the rest
+const INC_SLOTS = () => mq.narrow.matches ? 3 : 4;      // Didn't like: the newest few stand here, the older ones are "incinerated" (still in the sheet)
+const FAN_N = 4;                                          // cards in the hand when the stack fans out
+const INC_TIP = "Albums you didn't like. The oldest get fed to the furnace, but they stay in your sheet.";
+const INC_LABEL = "Incinerator: the oldest albums you didn't like get fed to it. They stay in your sheet.";
+const FLAME_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z" fill="currentColor"/></svg>';
+function furnaceHtml() {
+  const fl = (c, d, cls) => `<path class="fn-fl ${cls}" d="${d}" fill="${c}"/>`;
+  let teeth = '';
+  for (let i = 0; i < 7; i++) { const x = 52 + i * 14.2; teeth += `<path d="M${x} 122 L${x + 14.2} 122 L${x + 7.1} 141 Z" fill="#f5efe0" stroke="#000" stroke-width="2" stroke-linejoin="round"/>`; }
+  for (let i = 0; i < 6; i++) { const x = 59 + i * 14.2; teeth += `<path d="M${x} 180 L${x + 14.2} 180 L${x + 7.1} 164 Z" fill="#f5efe0" stroke="#000" stroke-width="2" stroke-linejoin="round"/>`; }
+  return `<div class="s-furnace"><svg class="furnace" viewBox="0 14 200 208" role="img" aria-label="${esc(INC_LABEL)}" focusable="false"><title>${esc(INC_LABEL)}</title>` +
+    `<defs><linearGradient id="fnBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2e2e3b"/><stop offset="1" stop-color="#101016"/></linearGradient>` +
+    `<linearGradient id="fnFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#ff8a2a"/><stop offset="1" stop-color="#d62a12"/></linearGradient>` +
+    `<clipPath id="fnMouthClip"><rect x="48" y="122" width="104" height="58" rx="12"/></clipPath></defs>` +
+    `<g class="fn-smoke"><circle class="fn-p p1" cx="150" cy="30" r="9"/><circle class="fn-p p2" cx="156" cy="26" r="12"/><circle class="fn-p p3" cx="146" cy="28" r="8"/></g>` +
+    `<circle class="fn-boom" cx="150" cy="28" r="16"/>` +
+    `<rect x="134" y="46" width="32" height="40" fill="url(#fnBody)" stroke="#4a4a60" stroke-width="3"/><rect x="127" y="38" width="46" height="12" rx="4" fill="#23232e" stroke="#4a4a60" stroke-width="3"/><rect x="134" y="60" width="32" height="6" fill="#ff8a2a" opacity=".55"/>` +
+    `<rect x="56" y="204" width="28" height="18" rx="6" fill="#0c0c11" stroke="#3a3a4c" stroke-width="2.5"/><rect x="116" y="204" width="28" height="18" rx="6" fill="#0c0c11" stroke="#3a3a4c" stroke-width="2.5"/>` +
+    `<path d="M32 130 Q8 126 8 98" fill="none" stroke="#23232e" stroke-width="11" stroke-linecap="round"/><circle cx="8" cy="92" r="10" fill="#2e2e3b" stroke="#4a4a60" stroke-width="2.5"/>` +
+    `<path d="M168 134 Q192 150 188 174" fill="none" stroke="#23232e" stroke-width="11" stroke-linecap="round"/><circle cx="188" cy="178" r="10" fill="#2e2e3b" stroke="#4a4a60" stroke-width="2.5"/>` +
+    `<rect x="28" y="76" width="144" height="136" rx="20" fill="url(#fnBody)" stroke="#4d4d64" stroke-width="3"/><rect x="38" y="82" width="124" height="5" rx="2.5" fill="#fff" opacity=".1"/>` +
+    `<circle cx="42" cy="96" r="2.6" fill="#6a6a82"/><circle cx="158" cy="96" r="2.6" fill="#6a6a82"/><circle cx="42" cy="198" r="2.6" fill="#6a6a82"/><circle cx="158" cy="198" r="2.6" fill="#6a6a82"/>` +
+    `<ellipse cx="78" cy="104" rx="12" ry="13" fill="#f6f1e4" stroke="#000" stroke-width="2.5"/><circle cx="72" cy="106" r="5.5" fill="#000"/><circle cx="70.5" cy="104" r="1.8" fill="#fff"/>` +
+    `<ellipse cx="122" cy="104" rx="12" ry="13" fill="#f6f1e4" stroke="#000" stroke-width="2.5"/><circle cx="116" cy="106" r="5.5" fill="#000"/><circle cx="114.5" cy="104" r="1.8" fill="#fff"/>` +
+    `<path d="M62 88 L92 95 M138 88 L108 95" stroke="#ff8a2a" stroke-width="4.5" stroke-linecap="round"/>` +
+    `<rect class="fn-mouth" x="48" y="122" width="104" height="58" rx="12" fill="#1a0604" stroke="#000" stroke-width="4"/>` +
+    `<g clip-path="url(#fnMouthClip)"><rect x="48" y="122" width="104" height="58" fill="url(#fnFire)" opacity=".92"/>` +
+    fl('#ffd24a', 'M54 182 C50 160 64 154 60 134 C76 148 82 164 78 182 Z', 'f1') + fl('#ff6a1a', 'M76 182 C72 156 90 150 88 128 C104 146 108 166 102 182 Z', 'f2') +
+    fl('#ffd24a', 'M100 182 C98 160 112 154 112 132 C126 148 130 166 126 182 Z', 'f3') + fl('#ff6a1a', 'M122 182 C120 164 134 160 134 142 C148 156 150 170 148 182 Z', 'f4') +
+    `</g>${teeth}` +
+    `<g class="fn-sign" transform="rotate(-3 100 198)"><title>${esc(INC_TIP)}</title><rect x="58" y="186" width="84" height="22" rx="4" fill="#d1ad72" stroke="#4b3516" stroke-width="2.5"/><text x="100" y="202" text-anchor="middle" font-size="14" font-weight="700" fill="#2a1a08">Feed me</text></g>` +
+    `</svg></div>`;
+}
 const PICK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#pickico"/></svg>';
 const ratingText = a => toNum(a.rating) ? `${a.rating}/10` : 'Not rated yet';
 
@@ -1754,19 +1847,21 @@ const pickPillHtml = (a, ctx) => `<button class="s-pickbtn" type="button" data-s
 const pickTinyHtml = (a, ctx) => `<button class="pickbtn-sm" type="button" data-sa="pick" data-id="${albumKey(a)}" data-fk="${ctx}:row:${albumKey(a)}:pick" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>`;
 const chipPillHtml = (a, ctx) => `<button class="lblchip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${albumKey(a)}" data-fk="${ctx}:pill:${albumKey(a)}:chip" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[labelOf(a)].n)}. Change label for ${esc(a.title)}">${esc(LAB[labelOf(a)].n)} ▾</button>`;
 
-function itemHtml(e, S, role, i, k, ctx) {
+function itemHtml(e, S, role, i, k, ctx, o = {}) {
   const a = e.a, key = albumKey(a), lab = labelOf(a), ri = releaseInfo(a);
   const sel = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S && shelfUI.sel.id === key;
   const arrive = shelfUI.arrive && shelfUI.arrive.id === key && shelfUI.arrive.shelf === S;
-  const cls = ['s-it', 'album', role, sel ? 'sel' : '', arrive ? 'arrive' : ''].filter(Boolean).join(' ');
+  const cls = ['s-it', 'album', role, sel ? 'sel' : '', arrive ? 'arrive' : '', o.warm ? 'warm' : '', o.ash ? 'ash' : ''].filter(Boolean).join(' ');
   const fk = c => `${ctx}:${S}:${key}:${c}`;
-  const aria = `${a.title}${a.artist ? ' by ' + a.artist : ''}, album, label ${LAB[lab].n}${favOf(a) ? ', favourite' : ''}`;
-  return `<div class="${cls}" style="--i:${i}" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}"${mq.fine.matches ? ' draggable="true"' : ''}><div class="s-lift">` +
-    `<button class="s-art" type="button" data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
+  const aria = `${a.title}${a.artist ? ' by ' + a.artist : ''}, album, label ${LAB[lab].n}${favOf(a) ? ', favourite' : ''}${o.ash ? ', incinerated, still in your sheet' : ''}`;
+  const slice = role === 'slice';
+  return `<div class="${cls}" style="--i:${i}${slice ? ';--ox:' + (hash(String(a.title || '')) % 38) : ''}" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}"${slice ? ` data-i="${i}"` : ''}${o.slot != null ? ` data-slot="${o.slot}"` : ''}${mq.fine.matches ? ' draggable="true"' : ''}><div class="s-lift">` +
+    `<button class="s-art" type="button"${slice ? ` tabindex="${o.rove ? 0 : -1}"` : ''} data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
     `<button class="s-chip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${key}" data-fk="${fk('chip')}" aria-haspopup="menu" aria-expanded="false" aria-label="Label for ${esc(a.title)}: ${esc(LAB[lab].n)}. Change label">${esc(LAB[lab].short)} ▾</button>` +
     `<button class="s-pick" type="button" data-sa="pick" data-id="${key}" data-fk="${fk('pick')}" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>` +
+    (o.ash ? `<span class="s-ash" aria-hidden="true" title="Incinerated (still in your sheet)">${FLAME_SVG}Ash</span>` : '') +
     (lab === 'upcoming' && ri.text ? `<span class="s-cd" aria-hidden="true">${esc(mq.narrow.matches ? ri.text.replace(/ days?$/, 'd') : ri.text)}</span>` : '') +
-    `<span class="s-cap" aria-hidden="true"><b>${esc(a.title)}</b>${a.artist ? `<span>${esc(a.artist)}</span>` : ''}<span>${esc(ratingText(a))}${lab === 'upcoming' && ri.text ? ' · ' + esc(ri.text) : ''}</span><span class="k">${esc(LAB[lab].n)}</span></span>` +
+    `<span class="s-cap" aria-hidden="true"><b>${esc(a.title)}</b>${a.artist ? `<span>${esc(a.artist)}</span>` : ''}<span>${esc(ratingText(a))}${lab === 'upcoming' && ri.text ? ' · ' + esc(ri.text) : ''}</span><span class="k">${esc(LAB[lab].n)}</span>${o.ash ? '<span class="ash-note">Incinerated (still in your sheet)</span>' : ''}</span>` +
     `</div></div>`;
 }
 function detailHtml(a, S, ctx) {
@@ -1785,30 +1880,105 @@ function detailHtml(a, S, ctx) {
     `<div class="s-dinfo"><h3>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div>` +
     `<button class="s-x" type="button" data-sa="close" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" aria-label="Close details">×</button></div>`;
 }
-// One shelf's inner markup: header, board (standing sleeves + leaning fan, or a wrapping grid) and the detail strip
+// One shelf's inner markup: header, board (standing sleeves + packed stack, or a wrapping grid) and the detail strip
 function shelfInner(S, ctx, all, o = {}) {
-  const compact = !!o.compact, n = all.length, N = compact ? (mq.narrow.matches ? 3 : 4) : nStand();
-  const open = !compact && !!shelfUI.expanded[S.k];
-  const list = open ? all : all.slice(0, N + LEAN_MAX), hid = `h-${ctx}-${S.k}`;
+  const compact = !!o.compact, n = all.length, inc = S.k === 'nope' && !compact;
+  const N = inc ? INC_SLOTS() : compact ? (mq.narrow.matches ? 3 : 4) : nStand();
+  const open = !compact && !!shelfUI.expanded[S.k], hid = `h-${ctx}-${S.k}`;
   const icon = S.k === 'fav' ? PICK_SVG : '<span class="sh-dot"></span>';
   let body;
-  if (!n) body = `<p class="s-empty">${S.k === 'fav' ? 'No favourites yet. Tap the guitar pick on an album.' : 'Nothing on this shelf. Drop an album here or change a label.'}</p><div class="s-row"><div class="s-standing"></div></div>`;
+  if (!n) body = `<p class="s-empty">${S.k === 'fav' ? 'No favourites yet. Tap the guitar pick on an album.' : 'Nothing on this shelf. Drop an album here or change a label.'}</p><div class="s-row"><div class="s-standing"></div>${inc ? furnaceHtml() : ''}</div>`;
   else if (open) {
     const G = gcols();
-    body = `<div class="s-grid">${list.map((e, i) => `<div class="s-cell${i % G === 0 ? ' first' : ''}${i % G === G - 1 ? ' last' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx)}</div>`).join('')}</div>`;
+    body = `<div class="s-grid">${all.map((e, i) => `<div class="s-cell${i % G === 0 ? ' first' : ''}${i % G === G - 1 ? ' last' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx, inc ? { ash: i >= N } : {})}</div>`).join('')}</div>`;
+  } else if (inc) {
+    body = `<div class="s-row"><div class="s-standing inc n${N}">${all.slice(0, N).map((e, i) => `<div class="s-cell${i === 0 ? ' first' : ''}${i === N - 1 ? ' last' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx, { slot: i, warm: i === N - 1 })}</div>`).join('')}</div>${furnaceHtml()}</div>`;
   } else {
-    const st = list.slice(0, N), ln = list.slice(N);
+    const st = all.slice(0, N), rest = all.slice(N), k = Math.min(rest.length, STACK_MAX()), more = rest.length - k;
+    const key = `${ctx}:${S.k}`, rv = Math.min(Math.max(0, k - 1), shelfUI.rove[key] || 0);
     body = `<div class="s-row"><div class="s-standing">${st.map((e, i) => `<div class="s-cell${i === 0 ? ' first' : ''}">${itemHtml(e, S.k, 'stand', i, n, ctx)}</div>`).join('')}</div>` +
-      (ln.length ? `<div class="s-lean" style="--k:${ln.length}">${ln.map((e, i) => itemHtml(e, S.k, 'lean', i, ln.length, ctx)).join('')}</div>` : '') + `</div>`;
+      (k ? `<div class="s-stack${more ? ' more' : ''}" role="group" tabindex="-1" aria-label="${rest.length} more album${rest.length === 1 ? '' : 's'} on this shelf. Arrow keys move along them" data-ctx="${ctx}" data-shelf="${S.k}" style="--k:${k}">` +
+        rest.slice(0, k).map((e, i) => itemHtml(e, S.k, 'slice', i, k, ctx, { rove: i === rv })).join('') +
+        (more ? `<span class="s-more" aria-hidden="true">+${more}</span>` : '') +
+        `<button class="s-chev prev" type="button" data-sa="fan" data-dir="-1" aria-label="Show earlier albums">‹</button><button class="s-chev next" type="button" data-sa="fan" data-dir="1" aria-label="Show later albums">›</button></div>` : '') + `</div>`;
   }
   const selA = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S.k ? all.find(e => albumKey(e.a) === shelfUI.sel.id) : null;
   const more = compact ? (n ? `<button class="btn sh-btn" type="button" data-sa="seeall">See all on Collection</button>` : '')
     : (n > N ? `<button class="btn sh-btn" type="button" data-sa="all" data-key="${S.k}" data-fk="${ctx}:${S.k}:all:btn" aria-expanded="${open}">${open ? 'Show fewer' : 'Show all ' + n}</button>` : '');
-  return `<div class="sh-head"><h2 id="${hid}" tabindex="-1">${icon}${esc(S.head)}</h2><div class="sh-right"><span class="sh-count" aria-label="${n} album${n === 1 ? '' : 's'}">${n}</span>${more}</div></div>` +
+  const burnt = inc && n > N ? `<span class="sh-note">${n - N} incinerated</span>` : '';
+  return `<div class="sh-head"><h2 id="${hid}" tabindex="-1"${inc ? ` title="${esc(INC_TIP)}"` : ''}>${icon}${esc(S.head)}</h2><div class="sh-right"><span class="sh-count" aria-label="${n} album${n === 1 ? '' : 's'}">${n}</span>${burnt}${more}</div></div>` +
     `<div class="s-board${open ? ' open' : ''}${compact ? ' compact' : ''}">${body}<div class="s-ledge"></div></div>${selA ? detailHtml(selA.a, S.k, ctx) : ''}`;
 }
+
+/* ---------- the packed stack: hover / touch / keyboard fan it out like a hand of cards (display only) ---------- */
+// shelfUI.fan = { key: 'c:hear', idx, src: 'ptr' | 'kb' | 'touch', touch }; shelfUI.rove = which slice of each stack is the tab stop
+const stackKey = st => `${st.dataset.ctx}:${st.dataset.shelf}`;
+const fanRange = (k, idx) => { const m = Math.min(FAN_N, k); return [Math.max(0, Math.min(k - m, idx - 1)), m]; };
+function paintFan(st) {
+  const f = shelfUI.fan, key = stackKey(st), on = !!f && f.key === key;
+  const sl = [...st.querySelectorAll('.slice')], k = sl.length;
+  let s0 = 0, m = 0;
+  if (on) { f.idx = Math.max(0, Math.min(k - 1, f.idx)); [s0, m] = fanRange(k, f.idx); }
+  st.classList.toggle('fan', on); st.classList.toggle('touch', on && !!f.touch);
+  if (on) { st.style.setProperty('--f0', s0); st.style.setProperty('--m', m); st.style.setProperty('--ci', f.idx); } else { ['--f0', '--m', '--ci'].forEach(v => st.style.removeProperty(v)); }
+  const rv = Math.min(k - 1, shelfUI.rove[key] || 0);
+  sl.forEach((el, i) => {
+    const j = i - s0, inn = on && j >= 0 && j < m;
+    el.classList.toggle('fanned', inn); el.classList.toggle('cur', on && i === f.idx);
+    if (inn) el.style.setProperty('--j', j); else el.style.removeProperty('--j');
+    el.querySelector('.s-art').tabIndex = i === rv ? 0 : -1;
+  });
+}
+const paintStacks = root => root.querySelectorAll('.s-stack').forEach(paintFan);
+function setFan(st, idx, src) {
+  const key = stackKey(st);
+  if (src === 'kb') shelfUI.rove[key] = idx;
+  shelfUI.fan = { key, idx, src, touch: src === 'touch' };
+  document.querySelectorAll('.s-stack').forEach(paintFan);
+}
+function clearFan() { if (!shelfUI.fan) return; shelfUI.fan = null; document.querySelectorAll('.s-stack.fan').forEach(paintFan); }
+
+/* ---------- Didn't like: the incinerator. Sleeves shift a slot closer; the one pushed out is fed to the furnace ---------- */
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function nopeBoxes() {
+  const sh = document.querySelector('#shelves .shelf[data-key="nope"]'), st = sh && sh.querySelector('.s-standing.inc');
+  if (!st) return null;
+  const board = sh.querySelector('.s-board'), b = board.getBoundingClientRect();
+  if (!b.width) return null;
+  return { board, b, items: [...st.querySelectorAll('.s-it')].map(el => { const r = el.getBoundingClientRect(); return { id: el.dataset.id, el, x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height }; }) };
+}
+function incinerate(box, p) {
+  const fur = box.board.querySelector('.furnace'), mouth = fur && fur.querySelector('.fn-mouth'), art = p.el.querySelector('.s-art');
+  if (!mouth || !art) return;
+  const g = document.createElement('div'); g.className = 's-ghost'; g.setAttribute('aria-hidden', 'true');
+  g.innerHTML = `<div class="s-art">${art.innerHTML}</div>`;
+  Object.assign(g.style, { position: 'absolute', left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px', zIndex: 6, pointerEvents: 'none' });
+  box.board.appendChild(g);
+  const m = mouth.getBoundingClientRect(), dx = m.left + m.width / 2 - box.b.left - (p.x + p.w / 2), dy = m.top + m.height / 2 - box.b.top - (p.y + p.h / 2);
+  const run = g.animate([
+    { transform: 'translate(0,0) scale(1) rotate(0deg)', filter: 'brightness(1)', opacity: 1, offset: 0 },
+    { transform: `translate(${dx * .55}px,${dy * .55 - 14}px) scale(.8) rotate(-5deg)`, filter: 'brightness(.95) sepia(.7) saturate(1.7)', opacity: 1, offset: .45 },
+    { transform: `translate(${dx}px,${dy}px) scale(.12) rotate(16deg)`, filter: 'brightness(.2) sepia(1)', opacity: .1, offset: 1 }
+  ], { duration: 1000, easing: 'cubic-bezier(.5,0,.8,.6)', fill: 'forwards' });
+  run.finished.then(() => g.remove(), () => g.remove());
+  fur.querySelectorAll('.fn-fl').forEach(f => f.animate([{ transform: 'scale(1,1)' }, { transform: 'scale(1.4,1.9)' }, { transform: 'scale(1,1)' }], { duration: 800, delay: 600, easing: 'ease-out' }));
+  fur.querySelector('.fn-boom').animate([{ opacity: 0, transform: 'translate(0,0) scale(.4)' }, { opacity: .8, offset: .25 }, { opacity: 0, transform: 'translate(-14px,-44px) scale(1.8)' }], { duration: 1400, delay: 700, easing: 'ease-out' });
+}
+function nopeAnimate(prev) {
+  if (!prev || reducedMotion()) return;
+  const box = nopeBoxes(); if (!box) return;
+  const was = new Map(prev.items.map(p => [p.id, p])), ids = new Set(box.items.map(c => c.id));
+  const arr = shelfUI.arrive && shelfUI.arrive.shelf === 'nope' ? shelfUI.arrive.id : null;
+  for (const c of box.items) {
+    const p = was.get(c.id);
+    if (p) { const dx = p.x - c.x, dy = p.y - c.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) c.el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.3,.7,.3,1)' }); }
+    else if (c.id !== arr) c.el.querySelector('.s-lift').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-out' });
+  }
+  const last = prev.items[INC_SLOTS() - 1];
+  if (arr && last && !ids.has(last.id)) incinerate(box, last);
+}
 function renderShelves() {
-  const q = norm(state.lib.q);
+  const q = norm(state.lib.q), snap = nopeBoxes();
   let html = '';
   for (const S of SHELVES) {
     const all = shelfEntries(S.k).filter(e => !q || [e.a.title, e.a.artist, e.a.genre].some(v => norm(v).includes(q)));
@@ -1816,8 +1986,9 @@ function renderShelves() {
     html += `<section class="panel shelf" data-key="${S.k}" data-ctx="c" aria-labelledby="h-c-${S.k}">${shelfInner(S, 'c', all)}</section>`;
   }
   $('shelves').innerHTML = html || '<p class="empty">No albums match that search.</p>';
+  paintStacks($('shelves')); nopeAnimate(snap);
 }
-function renderHomeFav() { $('homeFav').innerHTML = shelfInner(SHELVES[0], 'h', favEntries(), { compact: true }); }
+function renderHomeFav() { $('homeFav').innerHTML = shelfInner(SHELVES[0], 'h', favEntries(), { compact: true }); paintStacks($('homeFav')); }
 
 /* ---------- label popover (a menu: arrows, Home/End, Enter, Esc) ---------- */
 let menu = null, menuOpener = null, menuKey = null;
@@ -1839,7 +2010,12 @@ function openMenu(btn) {
 function closeMenu(refocus) {
   if (!menu) return;
   const o = menuOpener, fk = o && o.dataset.fk; menu.remove(); menu = null; menuOpener = null;
-  if (o && o.isConnected) { o.setAttribute('aria-expanded', 'false'); if (refocus) o.focus({ preventScroll: true }); }
+  if (o && o.isConnected) {
+    o.setAttribute('aria-expanded', 'false');
+    const sl = o.closest('.slice');   // the chip of a fanned stack card: keep that card fanned while focus is on it
+    if (refocus) { if (sl) setFan(sl.closest('.s-stack'), +sl.dataset.i, 'kb'); o.focus({ preventScroll: true }); }
+    else if (shelfUI.fan && shelfUI.fan.src === 'ptr') { const st = document.querySelector('.s-stack.fan'); if (st && !st.matches(':hover')) clearFan(); }
+  }
   else if (refocus) restoreFocus(fk);
 }
 document.addEventListener('keydown', e => {
@@ -1863,9 +2039,14 @@ document.addEventListener('click', e => {
     if (m.getAttribute('aria-disabled') === 'true') { toast(m.title || LOCK_MSG); return; }
     closeMenu(false); relabel(a, k, { fk }); return;
   }
+  if (shelfUI.fan && shelfUI.fan.touch && !e.target.closest('.s-stack')) clearFan();   // tap outside packs the stack again
   const b = e.target.closest('[data-sa]'); if (!b) return;
   const act = b.dataset.sa, a = b.dataset.id ? albumByKey(b.dataset.id) : null, fk = b.dataset.fk;
-  if (act === 'sel') { const same = shelfUI.sel && shelfUI.sel.id === b.dataset.id && shelfUI.sel.shelf === b.dataset.shelf && shelfUI.sel.ctx === b.dataset.ctx; shelfUI.sel = same ? null : { id: b.dataset.id, shelf: b.dataset.shelf, ctx: b.dataset.ctx }; render(fk); }
+  if (act === 'fan') { const st = b.closest('.s-stack'), f = shelfUI.fan; if (st && f && f.key === stackKey(st)) setFan(st, f.idx + 2 * Number(b.dataset.dir), 'touch'); return; }
+  if (act === 'sel') {
+    const sl = b.closest('.slice');
+    if (sl && !mq.fine.matches && !sl.classList.contains('fanned')) { setFan(sl.closest('.s-stack'), +sl.dataset.i, 'touch'); return; }   // touch: the first tap opens the fan
+    const same = shelfUI.sel && shelfUI.sel.id === b.dataset.id && shelfUI.sel.shelf === b.dataset.shelf && shelfUI.sel.ctx === b.dataset.ctx; shelfUI.sel = same ? null : { id: b.dataset.id, shelf: b.dataset.shelf, ctx: b.dataset.ctx }; render(fk); }
   else if (act === 'close') { shelfUI.sel = null; render(`${b.dataset.ctx}:${b.dataset.shelf}:${b.dataset.id}:art`); }
   else if (act === 'all') { shelfUI.expanded[b.dataset.key] = !shelfUI.expanded[b.dataset.key]; render(fk); }
   else if (act === 'seeall') showTab('collection');
@@ -1875,6 +2056,49 @@ document.addEventListener('click', e => {
   else if (act === 'edit') openAlbumDialog(a);
 });
 
+/* ---------- the stack: pointer, focus and keys ---------- */
+const inFanZone = (st, e) => { const r = st.getBoundingClientRect(), h = r.height; return e.clientX >= r.left - h * .2 && e.clientX <= r.right + h * .3 && e.clientY >= r.top - h * .25 && e.clientY <= r.bottom + 8; };
+document.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch' || !e.target.closest) return;
+  let st = e.target.closest('.s-stack');
+  if (!st && shelfUI.fan && shelfUI.fan.src === 'ptr') {   // the fan is wider than the packed stack: stay open over the gap it leaves, pack when the pointer is really away
+    const open = document.querySelector('.s-stack.fan');
+    if (open && !e.target.closest('.s-it') && inFanZone(open, e)) st = open;
+    else if (open && !(menu && menuOpener && open.contains(menuOpener))) { clearFan(); return; }
+  }
+  if (!st || e.target.closest('.s-chip, .s-pick, .s-chev, .s-more')) return;   // on a card's own controls: hold still
+  const sl = e.target.closest('.slice:not(.fanned)'); let idx;
+  if (sl) idx = +sl.dataset.i;
+  else {   // over the raised card or the gap the fan left: work out which packed slice is under the pointer (the slices lean 10deg)
+    const r = st.getBoundingClientRect(), cs = getComputedStyle(st), pitch = parseFloat(cs.getPropertyValue('--pitch')), sw = parseFloat(cs.getPropertyValue('--sw'));
+    idx = Math.round((e.clientX - r.left - sw / 2 + (r.bottom - e.clientY) * 0.1736) / pitch);
+    idx = Math.max(0, Math.min(st.querySelectorAll('.slice').length - 1, idx));
+  }
+  const f = shelfUI.fan; if (f && f.key === stackKey(st) && f.idx === idx && f.src === 'ptr') return;
+  setFan(st, idx, 'ptr');
+});
+document.documentElement.addEventListener('mouseleave', () => { if (shelfUI.fan && shelfUI.fan.src === 'ptr' && !menu) clearFan(); });
+document.addEventListener('focusin', e => {
+  const sl = e.target.closest && e.target.closest('.slice');
+  if (sl && e.target.matches(':focus-visible')) setFan(sl.closest('.s-stack'), +sl.dataset.i, 'kb');
+});
+document.addEventListener('focusout', e => {
+  const st = e.target.closest && e.target.closest('.s-stack'); if (!st || (e.relatedTarget && st.contains(e.relatedTarget))) return;
+  const f = shelfUI.fan; if (f && f.key === stackKey(st) && f.src === 'kb') clearFan();
+});
+document.addEventListener('keydown', e => {
+  if (menu || !e.target.closest) return;
+  const st = e.target.closest('.s-stack'); if (!st) return;
+  if (e.key === 'Escape') { if (shelfUI.fan && shelfUI.fan.key === stackKey(st)) { e.preventDefault(); clearFan(); st.focus({ preventScroll: true }); } return; }
+  const sl = e.target.closest('.slice'); if (!sl || !e.target.classList.contains('s-art')) return;
+  const all = [...st.querySelectorAll('.slice')], i = +sl.dataset.i;
+  const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: all.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  const j = Math.max(0, Math.min(all.length - 1, to));
+  setFan(st, j, 'kb'); all[j].querySelector('.s-art').focus({ preventScroll: true });
+});
+
 /* ---------- drag and drop between shelves (mouse and trackpad) ---------- */
 let dragKey = null;
 const shelfOf = t => t.closest && t.closest('.shelf[data-key]');
@@ -1882,7 +2106,7 @@ document.addEventListener('dragstart', e => {
   const it = e.target.closest && e.target.closest('.s-it[draggable]'); if (!it) return;
   dragKey = it.dataset.id; e.dataTransfer.setData('text/plain', dragKey); e.dataTransfer.effectAllowed = 'move'; closeMenu(false); it.classList.add('dragging');
 });
-document.addEventListener('dragend', () => { dragKey = null; document.querySelectorAll('.dragging,.drop').forEach(x => x.classList.remove('dragging', 'drop')); });
+document.addEventListener('dragend', () => { dragKey = null; clearFan(); document.querySelectorAll('.dragging,.drop').forEach(x => x.classList.remove('dragging', 'drop')); });
 document.addEventListener('dragover', e => {
   const s = shelfOf(e.target); if (!dragKey || !s) return;
   e.preventDefault(); e.dataTransfer.dropEffect = 'move';
