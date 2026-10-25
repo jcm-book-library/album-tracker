@@ -342,6 +342,11 @@ div.hbar{padding:3px 6px}
 .aotd{background:var(--raise);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:14px;padding:18px 20px}
 .aotd-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .aotd-top > div:first-child{min-width:0;flex:1 1 220px}
+.aotd-lead{display:flex;gap:14px;align-items:flex-start}
+.aotd-lead > div:last-child{min-width:0;flex:1}
+.aotd-art{flex:none;width:84px;height:84px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+.aotd-art svg{display:block;width:100%;height:100%}
+.aotd-art svg text{font-family:var(--body);font-weight:600}
 .aotd h3{font-family:var(--display);font-size:clamp(24px,4vw,32px);line-height:1.15;margin:0;overflow-wrap:anywhere}
 .aotd .by{font-size:16px;margin-top:4px;overflow-wrap:anywhere}
 .aotd .big-rating{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;color:color-mix(in srgb,var(--accent) 60%,#fff)}
@@ -490,7 +495,17 @@ div.hbar{padding:3px 6px}
 
 /* detail strip under a shelf */
 .s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
-.s-dcover{width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+.s-dcover{position:relative;width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+/* cover art: the picture sits over the generated sleeve, which fades away except its initials badge */
+[data-cv]{position:relative}
+.cvimg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;opacity:0;transition:opacity .35s ease}
+.cvimg.in{opacity:1}
+[data-cv].cv svg{position:relative}
+[data-cv].cv svg > :not(.bdg){opacity:0;transition:opacity 0s .4s}
+.s-it.slice .cvimg{left:calc(var(--s) * var(--ox) / -100);width:var(--s);height:var(--s);max-width:none}
+.cover-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 260px;min-width:0}
+.cover-ctl input{flex:1 1 200px}
+.cover-stat{flex:1 1 100%;margin:0;font-size:13px;overflow-wrap:anywhere}
 .s-dcover svg{display:block;width:100%;height:100%}
 .s-dcover svg text{font-family:var(--body);font-weight:600}
 .s-dinfo{min-width:0;display:grid;gap:6px}
@@ -556,6 +571,7 @@ input[type="checkbox"][role="switch"]:checked::after{transform:translateX(18px);
   .sh-head h2{font-size:19px}
   .s-detail{grid-template-columns:auto minmax(0,1fr);padding:14px}
   .s-detail .s-x{position:absolute;top:10px;right:10px}
+  .s-detail .s-dinfo h3{padding-right:34px}
   .s-dcover{width:76px;height:76px}
   .sh-btn{padding:6px 11px;font-size:13px}
 }
@@ -1169,6 +1185,10 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
       <div class="panel-head"><h2 id="lookH">Look</h2><span class="muted small">Remembered in this browser only</span></div>
       <div class="look-row"><label for="lookPressing">Pressing</label><select id="lookPressing"></select></div>
       <div class="look-row"><label for="lookBg">Background</label><select id="lookBg"><option value="marble">Marble record</option><option value="plain">Plain dark</option></select></div>
+      <div class="look-row"><label for="coverLink">Covers</label>
+        <div class="cover-ctl"><input type="text" id="coverLink" autocomplete="off" spellcheck="false" placeholder="Cover folder link" aria-label="Cover folder link"><button class="btn" type="button" id="coverSave">Save</button><button class="btn" type="button" id="coverClear">Clear</button></div>
+        <p class="cover-stat muted" id="coverStat" role="status"></p>
+        <button class="btn" type="button" id="coverConnect" hidden>Connect again</button></div>
       <div class="look-row"><label for="lookLog">Listening log</label><label class="switch"><input type="checkbox" role="switch" id="lookLog"><span>Show listening log</span></label></div>
     </section>
     </div>
@@ -1312,6 +1332,7 @@ function initLook() {
   $('lookBg').addEventListener('change', e => { lsSet('sg-bg', e.target.value === 'plain' ? 'plain' : 'marble'); applyTheme(); });
   $('lookLog').addEventListener('change', e => { state.showLog = e.target.checked; lsSet('sg-showlog', state.showLog ? '1' : '0'); applyLogVisibility(); render(); });
   sync();
+  renderCovers();
 }
 
 /* ---------- sheet model ---------- */
@@ -1510,8 +1531,10 @@ async function refresh() {
     const parsedPl = plGone ? null : plParse(plRows);
     state.playlists = parsedPl || []; state.plMissing = !parsedPl; PL.loadError = '';
 
+    state.settings.coverFolder = '';
     for (const r of settings.slice(1)) {
       const k = norm(r[0]), v = toNum(r[1]);
+      if (k === 'coverfolder') { const t = String(r[1] ?? '').trim().replace(/^'/, ''); if (/^[A-Za-z0-9_-]{10,}$/.test(t)) state.settings.coverFolder = t; continue; }
       if (k === 'yeargoalalbums' && v) state.settings.yearGoalAlbums = v;
       else if (k === 'rotationdays' && v) state.settings.rotationDays = v;
       else if (k === 'upnextsize' && v) state.settings.upNextSize = v;
@@ -1522,6 +1545,7 @@ async function refresh() {
     notice(state.logMissing ? `The ${TAB_LOG} tab wasn't found or has no header row, so listens can't be logged yet.` : '', state.logMissing ? 'error' : '');
     setStatus('live', 'Live from your sheet · ' + new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }));
     renderAll(); spinMark();
+    coverInit();
   } catch (err) {
     setStatus('error', state.live ? 'Showing the last data loaded' : 'Showing a sample snapshot');
     notice(explain(err), 'error');
@@ -2035,7 +2059,7 @@ function artSvg(title) {
   else if (comp === 2) g = `<rect width="100" height="100" fill="${A.c}"/><polygon points="50,14 90,84 10,84" fill="${A.d}"/><circle cx="50" cy="62" r="10" fill="${B.c}"/>`;
   else if (comp === 3) { g = `<rect width="100" height="100" fill="${A.d}"/>`; for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) g += `<circle cx="${20 + i * 15}" cy="${20 + j * 15}" r="${i === 2 && j === 2 ? 7 : 4.5}" fill="${(i + j) % 2 ? A.c : B.c}"/>`; }
   else g = `<rect width="100" height="100" fill="${A.c}"/><rect x="50" width="50" height="100" fill="${A.d}"/><circle cx="50" cy="50" r="22" fill="${B.c}" stroke="${A.v}" stroke-width="3"/>`;
-  g += `<rect x="68" y="85" width="28" height="11" rx="3" fill="#000" fill-opacity=".62"/><text x="82" y="93.4" text-anchor="middle" font-size="8" fill="#fff">${esc(initials(title))}</text>`;
+  g += `<g class="bdg"><rect x="68" y="85" width="28" height="11" rx="3" fill="#000" fill-opacity=".62"/><text x="82" y="93.4" text-anchor="middle" font-size="8" fill="#fff">${esc(initials(title))}</text></g>`;
   return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${g}</svg>`;
 }
 
@@ -2086,6 +2110,8 @@ const pickPillHtml = (a, ctx) => `<button class="s-pickbtn" type="button" data-s
 const pickTinyHtml = (a, ctx) => `<button class="pickbtn-sm" type="button" data-sa="pick" data-id="${albumKey(a)}" data-fk="${ctx}:row:${albumKey(a)}:pick" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>`;
 const chipPillHtml = (a, ctx) => `<button class="lblchip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${albumKey(a)}" data-fk="${ctx}:pill:${albumKey(a)}:chip" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[labelOf(a)].n)}. Change label for ${esc(a.title)}">${esc(LAB[labelOf(a)].n)} ▾</button>`;
 
+// Cover art hooks onto any element carrying data-cv (the album id); see "Cover art" below
+const cvAttr = a => toNum(a.id) ? ` data-cv="${toNum(a.id)}"` : '';
 function itemHtml(e, S, role, i, k, ctx, o = {}) {
   const a = e.a, key = albumKey(a), lab = labelOf(a), ri = releaseInfo(a);
   const sel = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S && shelfUI.sel.id === key;
@@ -2095,7 +2121,7 @@ function itemHtml(e, S, role, i, k, ctx, o = {}) {
   const aria = `${a.title}${a.artist ? ' by ' + a.artist : ''}, album, label ${LAB[lab].n}${favOf(a) ? ', favourite' : ''}${o.ash ? ', incinerated, still in your sheet' : ''}`;
   const slice = role === 'slice';
   return `<div class="${cls}" style="--i:${i}${slice ? ';--ox:' + (hash(String(a.title || '')) % 38) : ''}" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}"${slice ? ` data-i="${i}"` : ''}${o.slot != null ? ` data-slot="${o.slot}"` : ''}${mq.fine.matches ? ' draggable="true"' : ''}><div class="s-lift">` +
-    `<button class="s-art" type="button"${slice ? ` tabindex="${o.rove ? 0 : -1}"` : ''} data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
+    `<button class="s-art" type="button"${cvAttr(a)}${slice ? ` tabindex="${o.rove ? 0 : -1}"` : ''} data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
     `<button class="s-chip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${key}" data-fk="${fk('chip')}" aria-haspopup="menu" aria-expanded="false" aria-label="Label for ${esc(a.title)}: ${esc(LAB[lab].n)}. Change label">${esc(LAB[lab].short)} ▾</button>` +
     `<button class="s-pick" type="button" data-sa="pick" data-id="${key}" data-fk="${fk('pick')}" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>` +
     (o.ash ? `<span class="s-ash" aria-hidden="true" title="Incinerated (still in your sheet)">${FLAME_SVG}Ash</span>` : '') +
@@ -2115,7 +2141,7 @@ function detailHtml(a, S, ctx) {
     (toNum(a.id) ? `<button class="s-act" type="button" data-sa="tracks" data-id="${key}">Tracks</button>` : '') +
     `<button class="s-act" type="button" data-sa="edit" data-id="${key}">Edit</button>` +
     (u ? `<a class="s-buy" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Buy ${esc(a.title)} at ${esc(shopName(u))}">Buy · ${esc(shopName(u))}</a>` : '');
-  return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover">${artSvg(a.title)}</div>` +
+  return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover"${cvAttr(a)}>${artSvg(a.title)}</div>` +
     `<div class="s-dinfo"><h3>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div>` +
     `<button class="s-x" type="button" data-sa="close" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" aria-label="Close details">×</button></div>`;
 }
@@ -3242,8 +3268,18 @@ async function saveSetting(key, value) {
   if (hits.length === 1) {
     const cur = await readRange(`${qt(TAB_SET)}!B${hits[0]}`);
     const was = cur[0] && String(cur[0][0] ?? '').trim();
+    if (typeof value === 'string') {   // text settings (coverFolder): compare as text, store with a leading ' so Sheets keeps it as text
+      if (String(was ?? '').replace(/^'/, '') === value) return false;
+      await putCell(TAB_SET, 'B', hits[0], value ? "'" + value : '');
+      return true;
+    }
     if (was !== '' && was != null && toNum(was) === value) return false;
     await putCell(TAB_SET, 'B', hits[0], value);
+    return true;
+  }
+  if (typeof value === 'string') {
+    if (!value) return false;   // nothing to clear
+    await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_SET)}!A1`, values: [["'" + key, "'" + value]] }, { cache: false });
     return true;
   }
   await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_SET)}!A1`, values: [["'" + key, value]] }, { cache: false });
@@ -3398,8 +3434,10 @@ function renderAotd() {
   box.textContent = '';
   const a = aotdFor(t);
   if (!a) { box.appendChild(mk('p', 'empty', `No albums rated ${min} or higher yet. Rate some albums and one will be picked each day.`)); return; }
-  const card = mk('div', 'aotd'), top = mk('div', 'aotd-top'), left = mk('div');
-  left.append(mk('h3', null, a.title), mk('div', 'by', a.artist || 'Unknown artist'));
+  const card = mk('div', 'aotd'), top = mk('div', 'aotd-top'), left = mk('div', 'aotd-lead'), txt = mk('div');
+  txt.append(mk('h3', null, a.title), mk('div', 'by', a.artist || 'Unknown artist'));
+  const art = mk('div', 'aotd-art'); if (toNum(a.id)) art.dataset.cv = String(toNum(a.id));
+  art.innerHTML = artSvg(a.title); left.append(art, txt);
   const rt = mk('div', 'big-rating tnum'); rt.innerHTML = `${esc(a.rating)}<small>/10</small>`;
   top.append(left, rt);
   const p = playedOf(a), info = ownInfo(a);
@@ -4776,6 +4814,247 @@ $('albumForm').addEventListener('submit', saveAlbumDialog);
 $('dlgClose').addEventListener('click', () => $('albumDlg').close());
 $('dlgTracks').addEventListener('click', () => { if (editing) openTracks(editing); });
 
+/* ---------- cover art ----------
+   One image per album in a private Google Drive folder, named by the album id (1043.jpg, 1043.png ...). The folder id is kept in
+   🎸 Settings (coverFolder), never in the code. Only the covers on screen are fetched, shrunk to 256px and cached in this browser;
+   the generated sleeve (artSvg) stays as the fallback and the starting point everywhere. Nothing is written to the sheet but coverFolder. */
+const DRIVE = 'Google Drive';
+const cov = {
+  folder: '', files: null, mem: new Map(), failed: new Set(), pending: new Set(), queue: [], active: 0, epoch: 0, gen: 0,
+  st: 'none',      // none | listing | ok | noaccess | error
+  msg: '', io: null, mo: null
+};
+const cover = { msg: '' };
+const coverFolderFrom = v => {
+  v = String(v || '').trim();
+  const m = v.match(/\/folders\/([A-Za-z0-9_-]{10,})/) || v.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : /^[A-Za-z0-9_-]{20,}$/.test(v) ? v : '';
+};
+// IndexedDB: database sg-covers, key <folderId>/<albumId>, value { src, mod, name }. Every access is allowed to fail.
+let covDbP = null;
+function covDb() {
+  if (!covDbP) covDbP = new Promise((ok, no) => {
+    try {
+      const r = indexedDB.open('sg-covers', 1);
+      r.onupgradeneeded = () => { try { r.result.createObjectStore('c'); } catch (e) {} };
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); r.onblocked = () => no(new Error('blocked'));
+    } catch (e) { no(e); }
+  });
+  return covDbP;
+}
+const covReq = r => new Promise((ok, no) => { r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+async function covLoad(folder) {
+  const out = new Map();
+  try {
+    const st = (await covDb()).transaction('c').objectStore('c'), range = IDBKeyRange.bound(folder + '/', folder + '/￿');
+    const [keys, vals] = await Promise.all([covReq(st.getAllKeys(range)), covReq(st.getAll(range))]);
+    keys.forEach((k, i) => { const v = vals[i]; if (v && typeof v.src === 'string' && /^data:image\//.test(v.src)) out.set(String(k).slice(folder.length + 1), v); });
+  } catch (e) {}
+  return out;
+}
+async function covPut(folder, id, val) {
+  try { const tx = (await covDb()).transaction('c', 'readwrite'); tx.objectStore('c').put(val, folder + '/' + id); await new Promise(ok => { tx.oncomplete = ok; tx.onerror = ok; tx.onabort = ok; }); } catch (e) {}
+}
+// When the folder changes, whatever was cached for any other folder goes
+async function covDrop(folder) {
+  try {
+    const tx = (await covDb()).transaction('c', 'readwrite'), st = tx.objectStore('c');
+    st.openCursor().onsuccess = ev => { const c = ev.target.result; if (!c) return; if (!folder || !String(c.key).startsWith(folder + '/')) c.delete(); c.continue(); };
+    await new Promise(ok => { tx.oncomplete = ok; tx.onerror = ok; tx.onabort = ok; });
+  } catch (e) {}
+}
+// The folder's files -> Map(albumId -> { id, name, mod }). The name stem must be all digits; the extension is ignored; the newest file wins a tie.
+function coverMap(files) {
+  const m = new Map();
+  for (const f of files || []) {
+    const name = String(f.title || f.name || '');
+    const x = name.match(/^(\d+)(?:\.(jpe?g|png|webp))?$/i);
+    if (!x || (f.mimeType && !/^image\//.test(f.mimeType))) continue;
+    const id = String(Number(x[1])), t = Date.parse(f.modifiedTime) || 0, cur = m.get(id);
+    if (!cur || t > cur.t) m.set(id, { id: f.id, name, mod: String(f.modifiedTime || ''), t });
+  }
+  return m;
+}
+async function listCoverFiles(folder) {
+  const out = [];
+  let tok = '';
+  if (state.google) {
+    const q = encodeURIComponent(`'${folder}' in parents and trashed = false`);
+    for (let i = 0; i < 50; i++) {
+      const r = await google_.drive(`files?q=${q}&fields=nextPageToken,files(id,name,modifiedTime,mimeType)&pageSize=1000${tok ? '&pageToken=' + encodeURIComponent(tok) : ''}`);
+      for (const f of r.files || []) out.push({ id: f.id, title: f.name, modifiedTime: f.modifiedTime, mimeType: f.mimeType });
+      tok = r.nextPageToken || ''; if (!tok) break;
+    }
+    return out;
+  }
+  for (let i = 0; i < 50; i++) {   // the connector returns a few files a page and a token for the next
+    const input = { query: `parentId = '${folder}'`, excludeContentSnippets: true, pageSize: 100 };
+    if (tok) input.pageToken = tok;
+    const p = (await state.mcp.callTool(DRIVE, 'search_files', input, { cache: false })).payload || {};
+    out.push(...(p.files || []));
+    const next = p.nextPageToken || p.next_page_token || '';
+    if (!next || next === tok) break;
+    tok = next;
+  }
+  return out;
+}
+async function downloadCover(fileId) {
+  if (state.google) return { url: URL.createObjectURL(await google_.drive(`files/${encodeURIComponent(fileId)}?alt=media`, true)), revoke: true };
+  const p = (await state.mcp.callTool(DRIVE, 'download_file_content', { fileId }, { cache: false })).payload || {};
+  if (!p.content) throw new Error('no content');
+  return { url: `data:${p.mimeType || 'image/jpeg'};base64,${p.content}` };
+}
+// Centre-crop to a square, at most 256px, as a JPEG (a transparent PNG gets the dark shelf colour behind it)
+const shrinkCover = src => new Promise((ok, fail) => {
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h), out = Math.max(1, Math.min(256, side)), c = document.createElement('canvas');
+      c.width = c.height = out;
+      const g = c.getContext('2d'); g.fillStyle = '#14151f'; g.fillRect(0, 0, out, out);
+      g.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, out, out);
+      ok(c.toDataURL('image/jpeg', 0.82));
+    } catch (e) { fail(e); }
+  };
+  img.onerror = () => fail(new Error('not an image')); img.src = src;
+});
+function applyCover(el, src, fade) {
+  let img = el.querySelector(':scope > img.cvimg');
+  if (img) { if (img.getAttribute('src') !== src) img.src = src; }
+  else {
+    img = document.createElement('img'); img.className = 'cvimg'; img.alt = ''; img.draggable = false; img.decoding = 'async'; img.src = src;
+    if (!fade) img.classList.add('in');
+    el.insertBefore(img, el.firstChild);
+    if (fade) { void img.offsetWidth; img.classList.add('in'); }
+  }
+  el.classList.add('cv');
+}
+function stripCovers() {
+  document.querySelectorAll('[data-cv].cv').forEach(el => { el.classList.remove('cv'); el.querySelectorAll(':scope > img.cvimg').forEach(i => i.remove()); });
+  cov.epoch++;
+}
+// A sleeve (or strip, or tile) that carries data-cv: show what is cached now, and watch it for the screen when it has a file that needs downloading
+function covBind(el) {
+  el._cvg = cov.epoch;
+  const id = el.dataset.cv, hit = cov.mem.get(id), f = cov.files && cov.files.get(id);
+  if (hit && el.querySelector(':scope > img.cvimg') == null) applyCover(el, hit.src, false);
+  if (f && (!hit || hit.mod !== f.mod) && !cov.failed.has(id) && covIO()) { cov.io.unobserve(el); cov.io.observe(el); }
+}
+function covScan() {
+  if (!cov.folder && !cov.mem.size) return;
+  document.querySelectorAll('[data-cv]').forEach(el => { if (el._cvg !== cov.epoch) covBind(el); });
+}
+function covIO() {
+  if (cov.io) return cov.io;
+  if (!('IntersectionObserver' in window)) return null;
+  cov.io = new IntersectionObserver(es => {
+    for (const e of es) {
+      e.target._cvVis = e.isIntersecting;
+      if (!e.isIntersecting) continue;
+      const id = e.target.dataset.cv, f = cov.files && cov.files.get(id), hit = cov.mem.get(id);
+      if (!f || (hit && hit.mod === f.mod) || cov.failed.has(id) || cov.pending.has(id)) continue;
+      cov.pending.add(id); cov.queue.push(id);
+    }
+    covPump();
+  }, { rootMargin: '200px' });
+  return cov.io;
+}
+const covShown = id => [...document.querySelectorAll(`[data-cv="${id}"]`)].some(e => e._cvVis && e.isConnected);
+function covPump() {
+  const limit = state.google ? 3 : 2;   // a few at a time: each one is a download plus a decode
+  while (cov.active < limit && cov.queue.length) {
+    const id = cov.queue.shift();
+    if (!covShown(id)) { cov.pending.delete(id); continue; }   // scrolled away before its turn: it can queue again later
+    cov.active++; covFetch(id);
+  }
+}
+async function covFetch(id) {
+  const gen = cov.gen, folder = cov.folder, f = cov.files && cov.files.get(id);
+  let dl = null;
+  try {
+    if (!f) throw new Error('gone');
+    dl = await downloadCover(f.id);
+    const src = await shrinkCover(dl.url);
+    if (gen !== cov.gen) return;
+    const val = { src, mod: f.mod, name: f.name };
+    cov.mem.set(id, val);
+    document.querySelectorAll(`[data-cv="${id}"]`).forEach(el => applyCover(el, src, !el.classList.contains('cv')));
+    covPut(folder, id, val);
+  } catch (e) { if (gen === cov.gen) cov.failed.add(id); }   // that sleeve keeps its generated art
+  finally {
+    if (dl && dl.revoke) { try { URL.revokeObjectURL(dl.url); } catch (e) {} }
+    if (gen === cov.gen) { cov.active--; cov.pending.delete(id); renderCovers(); covPump(); }
+  }
+}
+// After a refresh or a change of folder: show the cached covers, list the folder (cheap), then let the sleeves on screen ask for downloads
+async function coverInit() {
+  const folder = state.settings.coverFolder || '', changed = folder !== cov.folder;
+  if (!changed && cov.st === 'listing') return;
+  const gen = changed ? ++cov.gen : cov.gen;
+  if (changed) {
+    if (cov.io) cov.io.disconnect();
+    cov.folder = folder; cov.files = null; cov.mem = new Map(); cov.failed = new Set(); cov.pending = new Set(); cov.queue = []; cov.active = 0;
+    stripCovers();
+    covDrop(folder);
+  }
+  cov.msg = '';
+  if (!folder) { cov.st = 'none'; renderCovers(); return; }
+  cov.st = 'listing'; renderCovers();
+  try {
+    if (changed) { const cached = await covLoad(folder); if (gen !== cov.gen) return; for (const [k, v] of cached) cov.mem.set(k, v); cov.epoch++; covScan(); renderCovers(); }
+    const files = await listCoverFiles(folder);
+    if (gen !== cov.gen) return;
+    cov.files = coverMap(files); cov.failed = new Set(); cov.st = 'ok';
+  } catch (err) {
+    if (gen !== cov.gen) return;
+    cov.files = null;
+    cov.st = state.google ? (err && (err.code === 'drive_access' || err.code === 'google_signin') ? 'noaccess' : 'error') : 'noaccess';
+    if (cov.st === 'error') cov.msg = "Couldn't read the cover folder. Check that it is shared and the link is right, then press Refresh.";
+  }
+  cov.epoch++; covScan(); renderCovers();
+}
+function renderCovers() {
+  const stat = document.getElementById('coverStat'), btn = document.getElementById('coverConnect');
+  if (!stat) return;
+  let t = '', hint = false;
+  if (cov.st === 'none') t = 'No cover folder set';
+  else if (cov.st === 'listing') t = 'Looking in the cover folder…';
+  else if (cov.st === 'ok') {
+    const ids = state.albums.filter(a => toNum(a.id)).map(a => String(toNum(a.id)));
+    t = `${ids.filter(i => cov.files && cov.files.has(i)).length} of ${ids.length} albums have a cover in the folder · ${ids.filter(i => cov.mem.has(i)).length} loaded`;
+  } else if (cov.st === 'noaccess') { t = state.google ? 'Press Connect again to allow read-only access to Google Drive.' : 'Allow Google Drive for this page, then press Refresh.'; hint = state.google; }
+  else t = cov.msg;
+  stat.textContent = cover.msg || t;
+  btn.hidden = !(hint && !cover.msg);
+}
+async function saveCover(clear) {
+  const inp = $('coverLink');
+  let id = '';
+  if (!clear) {
+    id = coverFolderFrom(inp.value);
+    if (!id) { cover.msg = "That doesn't look like a Drive folder link."; renderCovers(); return; }
+  }
+  if (!isLive()) { cover.msg = 'Saving needs the live connection. ' + connectHint(); renderCovers(); return; }
+  if (state.busy) return;
+  state.busy = true; cover.msg = '';
+  try {
+    await saveSetting('coverFolder', id);
+    state.settings.coverFolder = id; inp.value = '';
+    state.busy = false; renderCovers(); coverInit();
+  } catch (err) {
+    state.busy = false;
+    cover.msg = 'Not saved: ' + ((err && err.code === 'tool_error' && err.message) || explain(err)); renderCovers();
+  }
+}
+$('coverSave').addEventListener('click', () => saveCover(false));
+$('coverClear').addEventListener('click', () => saveCover(true));
+$('coverLink').addEventListener('keydown', e => { if (e.key === 'Enter') saveCover(false); });
+$('coverLink').addEventListener('input', () => { if (cover.msg) { cover.msg = ''; renderCovers(); } });
+$('coverConnect').addEventListener('click', () => googleConnect());
+// Sleeves are drawn all over the place and redrawn often: pick up new ones as they appear, before they are painted
+try { new MutationObserver(() => covScan()).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+
+
 /* ---------- Google Sheets direct (GitHub Pages and other hosts outside claude.ai) ----------
    Same calls as the claude.ai connector, sent straight to the Sheets API with a Google sign-in.
    Writes use USER_ENTERED, like the connector, so ' prefixes, numbers and dates behave the same.
@@ -4803,6 +5082,14 @@ const google_ = {
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw { code: 'tool_error', message: (body.error && body.error.message) || 'HTTP ' + res.status };
     return { payload: body };
+  },
+  // Google Drive (read-only), for the cover art. 401/403 means this sign-in doesn't have the Drive scope yet: not an app error.
+  async drive(path, asBlob) {
+    if (!this.valid()) throw { code: 'google_signin' };
+    const res = await fetch('https://www.googleapis.com/drive/v3/' + path, { headers: { Authorization: 'Bearer ' + this.tok().t } });
+    if (res.status === 401 || res.status === 403) throw { code: 'drive_access' };
+    if (!res.ok) throw { code: 'tool_error', message: 'Drive HTTP ' + res.status };
+    return asBlob ? res.blob() : res.json();
   }
 };
 function googleSignedOut() {
@@ -4825,7 +5112,7 @@ function googleConnect() {
   if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().then(googleConnect, err => notice(err.message, 'error')); return; }
   try {
     if (!google_.client) google_.client = google.accounts.oauth2.initTokenClient({
-      client_id: id, scope: 'https://www.googleapis.com/auth/spreadsheets',
+      client_id: id, scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
       callback: r => {
         if (r.error) { notice('Google sign-in failed: ' + r.error, 'error'); return; }
         lsSet(google_.tokKey, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in - 120) * 1000 }));
@@ -4867,7 +5154,7 @@ $('gForm').addEventListener('submit', e => {
 });
 
 /* ---------- boot ---------- */
-window.__sg = { state, render: renderAll };
+window.__sg = { state, render: renderAll, cov };
 setLogDay(null);
 initLook();
 applyLogVisibility();

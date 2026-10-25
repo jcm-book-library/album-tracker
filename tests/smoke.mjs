@@ -45,7 +45,19 @@ const POOL2 = [
   ['Track URI', 'Track Name', 'Artist Name(s)', 'Album Name', 'Album Release Date', 'Duration (ms)', 'Popularity', 'Explicit', 'Added At', 'Genres', 'Danceability', 'Energy', 'Key', 'Loudness', 'Mode', 'Speechiness', 'Acousticness', 'Instrumentalness', 'Liveness', 'Valence', 'Tempo', 'Time Signature'],
   ...POOL2_IDS.map((id, i) => [`spotify:track:${id}`, `Pool Two Song ${i + 1}`, `Pool Artist ${i + 1};Guest`, 'Pool Album', '2020-01-0' + (i + 1), String(180000 + i * 30000), String(40 + i), 'false', '2024-01-01T00:00:00Z', 'ambient', '0.3', String(0.2 + i * 0.1), String(i * 2), '-12.5', String(i % 2), '0.05', '0.8', '0.9', '0.1', '0.4', String(70 + i * 10), '4'])
 ];
-function buildSeed({ labelled = false, noPlaylists = false } = {}) {
+// The cover folder: a made-up id (the real one lives only in the owner's sheet) and a made-up Drive listing.
+const COVER_FOLDER = 'FOLDER_TEST_ID_0123456789abcd';
+function buildDrive() {
+  const files = [], T0 = '2026-09-01T10:00:00.000Z';
+  const add = (id, title, mod = T0, mime) => files.push({ id, title, fileExtension: title.includes('.') ? title.split('.').pop() : '', mimeType: mime || (/\.png$/i.test(title) ? 'image/png' : /\.jpe?g$/i.test(title) ? 'image/jpeg' : 'image/webp'), modifiedTime: mod, fileSize: '123456' });
+  // 1043.png, 1044.jpg ... one file per album except every 7th id; odd ids are 600x300 PNGs, even ids 300x600 JPEGs
+  for (let n = 1001; n <= 1127; n++) { if (n % 7 === 0 || n === 1050) continue; add(`drv-${n}`, `${n}.${n % 2 ? 'png' : 'jpg'}`); }
+  add('drv-1050-old', '1050.jpg', '2026-08-01T00:00:00.000Z');   // two files for one id: the newer (png) wins
+  add('drv-1050-new', '1050.png', '2026-09-15T00:00:00.000Z');
+  add('drv-warning', 'Warning.jpg'); add('drv-notes', 'notes.txt', T0, 'text/plain'); add('drv-1051b', '1051b.jpg'); add('drv-nodigits', '10x5.png');
+  return { files, reject: false, failIds: [] };
+}
+function buildSeed({ labelled = false, noPlaylists = false, covers = false } = {}) {
   const albums = FIXTURE.values.map(r => [...r]);   // a copy: FIXTURE itself stays the fixed reference. [header, ...rows]; id is column J (index 9)
   // New columns after the fixture's A:O. P (Buy link) is added inside the page, so it is left blank here.
   albums[0].push('', 'Favourite');
@@ -102,6 +114,7 @@ function buildSeed({ labelled = false, noPlaylists = false } = {}) {
       ['rotationDays', '14'],
       ['upNextSize', '10'],
       ['albumOfDayMin', '8'],
+      ...(covers ? [['coverFolder', COVER_FOLDER]] : []),
     ],
     // Tracks: two albums, some copied, and one fully blank row in the middle like a deleted track
     '🎸 Tracks': [
@@ -119,6 +132,7 @@ function buildSeed({ labelled = false, noPlaylists = false } = {}) {
     ...(noPlaylists ? {} : { '🎸 Playlists': [PL_HEADER] }),
     'Classical': FIXTURE_CL.values.map(r => [...r]),
     __pool2: POOL2,
+    __drive: buildDrive(),
   };
 }
 
@@ -130,7 +144,8 @@ function installStub(seed) {
   const OTHER_ID = 'POOL2_SHEET_ID_0123456789abcdefghij';   // the second spreadsheet: read-only, one tab "Pool 2"
   const tabs = {};
   const other = { 'Pool 2': (seed.__pool2 || []).map(r => r.map(c => String(c))) };
-  seed = Object.fromEntries(Object.entries(seed).filter(([k]) => k !== '__pool2'));
+  const drive = seed.__drive || { files: [], reject: false, failIds: [] };
+  seed = Object.fromEntries(Object.entries(seed).filter(([k]) => k !== '__pool2' && k !== '__drive'));
   for (const [name, rows] of Object.entries(seed)) {
     tabs[name] = rows.map(r => r.map(c => (c == null ? '' : String(c))));
   }
@@ -141,6 +156,46 @@ function installStub(seed) {
   window.__forbidden = [];
   window.__errors = [];
   window.__sheet = tabs;
+  window.__driveCalls = [];   // every call made to the Google Drive connector: { tool, args }
+
+  // Google Drive connector (read-only): search_files pages through the folder 5 at a time, download_file_content returns a
+  // base64 image drawn on a canvas: a 600x300 PNG (green | red | blue thirds) for .png names, a 300x600 JPEG (yellow / magenta / cyan thirds) otherwise.
+  let driveMod = {};
+  try { driveMod = JSON.parse(localStorage.getItem('__driveMod') || '{}'); } catch (e) {}   // tests set new modifiedTimes here before a reload
+  const driveFiles = drive.files.map(f => ({ ...f, modifiedTime: driveMod[f.title] || f.modifiedTime }));
+  window.__driveFiles = driveFiles;
+  function drawImage(land) {
+    const c = document.createElement('canvas'), g = c.getContext('2d');
+    if (land) {
+      c.width = 600; c.height = 300;
+      [['#00ff00', 0], ['#ff0000', 200], ['#0000ff', 400]].forEach(([col, x]) => { g.fillStyle = col; g.fillRect(x, 0, 200, 300); });
+      return c.toDataURL('image/png').split(',')[1];
+    }
+    c.width = 300; c.height = 600;
+    [['#ffff00', 0], ['#ff00ff', 200], ['#00ffff', 400]].forEach(([col, y]) => { g.fillStyle = col; g.fillRect(0, y, 300, 200); });
+    return c.toDataURL('image/jpeg', 0.95).split(',')[1];
+  }
+  const driveMcp = {
+    async callTool(server, tool, args = {}) {
+      window.__driveCalls.push({ tool, args: JSON.parse(JSON.stringify(args)) });
+      if (drive.reject) throw { code: 'server_not_connected', message: 'Google Drive is not connected' };
+      if (tool === 'search_files') {
+        const m = /^parentId = '([^']+)'$/.exec(String(args.query || ''));
+        if (!m) throw { code: 'tool_error', message: 'unsupported query' };
+        const at = args.pageToken ? Number(String(args.pageToken).replace('t', '')) : 0;
+        const page = driveFiles.slice(at, at + 5).map(f => ({ id: f.id, title: f.title, fileExtension: f.fileExtension, mimeType: f.mimeType, modifiedTime: f.modifiedTime, fileSize: f.fileSize }));
+        return { payload: { files: page, ...(at + 5 < driveFiles.length ? { nextPageToken: 't' + (at + 5) } : {}) } };
+      }
+      if (tool === 'download_file_content') {
+        const f = driveFiles.find(x => x.id === args.fileId);
+        if (!f || (drive.failIds || []).includes(f.id)) throw { code: 'tool_error', message: 'download failed' };
+        const png = /\.png$/i.test(f.title);
+        return { payload: { mimeType: png ? 'image/png' : 'image/jpeg', content: drawImage(png) } };
+      }
+      window.__errors.push({ tool, server });
+      throw { code: 'tool_error', message: `Unsupported Drive tool in stub: ${tool}` };
+    },
+  };
 
   // Stage 2 sample data, applied here (not in the fixture): a "Buy link" column (P), a plan with
   // Up next 1..3 (numbered against sheet order), two Soon, and one Someday planned long ago.
@@ -227,6 +282,7 @@ function installStub(seed) {
 
   const mcp = {
     async callTool(server, tool, args = {}, opts) {
+      if (server === 'Google Drive') return driveMcp.callTool(server, tool, args);
       if (server !== 'Google Sheets') {
         window.__errors.push({ tool, server });
         throw new Error(`Unknown server: ${server}`);
@@ -2861,7 +2917,9 @@ async function playlistsGuardTests(browser, vp, seed, url) {
 
 // ---------- runner ----------
 const results = [];
+let recPrefix = '';   // the existing suites are run again with covers present: their lines say so
 const record = (vp, name, ok, detail = '') => {
+  name = recPrefix + name;
   results.push({ vp, name, ok, detail });
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` (${detail})` : ''}`);
 };
@@ -2871,6 +2929,460 @@ const record = (vp, name, ok, detail = '') => {
 const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
 const CHART_LOCAL = join(here, 'node_modules', 'chart.js', 'dist', 'chart.umd.js');
 const HAVE_CHART = existsSync(CHART_LOCAL);
+
+// ---------- Cover art ----------
+// The seed with covers has a coverFolder row in 🎸 Settings and a made-up Drive listing (see buildDrive). Everything below
+// runs against the stubbed Drive connector, except the Pages-mode test, which intercepts the Drive and Sheets REST calls.
+const withDrive = (sd, patch) => ({ ...sd, __drive: { ...sd.__drive, ...patch } });
+const driveStem = t => (/^(\d+)(?:\.(?:jpe?g|png|webp))?$/i.exec(t) || [])[1];
+function expectedCovers(sd) {   // album id -> file (newest wins), worked out here separately from the app
+  const m = new Map();
+  for (const f of sd.__drive.files) {
+    const s = driveStem(f.title); if (!s || !/^image\//.test(f.mimeType)) continue;
+    const k = String(Number(s)), cur = m.get(k);
+    if (!cur || Date.parse(f.modifiedTime) > Date.parse(cur.modifiedTime)) m.set(k, f);
+  }
+  return m;
+}
+const downloadedIds = page => page.evaluate(() => window.__driveCalls.filter(c => c.tool === 'download_file_content').map(c => { const f = window.__driveFiles.find(x => x.id === c.args.fileId); return f ? String(Number(f.title.replace(/\D.*$/, ''))) : '?'; }));
+const downloadCalls = page => page.evaluate(() => window.__driveCalls.filter(c => c.tool === 'download_file_content').length);
+const coverWait = (page, ms = 900) => page.waitForFunction(() => { const c = window.__sg.cov; return c.st !== 'listing'; }, null, { timeout: 8000 }).then(() => page.waitForTimeout(ms));
+// ids of the covered sleeves/tiles on screen: strict = fully inside the window; near = within the 200px margin
+const coverVisible = page => page.evaluate(() => {
+  const vh = innerHeight, vw = innerWidth, strict = new Set(), near = new Set(), M = 200 + 40;
+  for (const el of document.querySelectorAll('[data-cv]')) {
+    if (!el.getClientRects().length) continue;
+    const r = el.getBoundingClientRect(), id = el.dataset.cv;
+    if (r.bottom > -M && r.top < vh + M && r.right > -M && r.left < vw + M) near.add(id);
+    if (r.top >= 4 && r.bottom <= vh - 4 && r.left >= 4 && r.right <= vw - 4) strict.add(id);
+  }
+  return { strict: [...strict], near: [...near] };
+});
+const pixelAt = (page, src, pts) => page.evaluate(async ([src, pts]) => {
+  const img = new Image(); img.src = src; await img.decode();
+  const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  return { w: c.width, h: c.height, px: pts.map(([fx, fy]) => Array.from(g.getImageData(Math.floor(fx * (c.width - 1)), Math.floor(fy * (c.height - 1)), 1, 1).data.slice(0, 3))) };
+}, [src, pts]);
+const closeRgb = (px, want, tol = 70) => px.every((v, i) => Math.abs(v - want[i]) <= tol);
+const GREEN = [0, 255, 0], RED = [255, 0, 0], BLUE = [0, 0, 255], YELLOW = [255, 255, 0], MAGENTA = [255, 0, 255], CYAN = [0, 255, 255];
+const coverImgs = (page, sel) => page.evaluate(s => [...document.querySelectorAll(s)].map(el => { const i = el.querySelector(':scope > img.cvimg'); if (!i) return { id: el.dataset.cv, img: false }; const r = i.getBoundingClientRect(), a = el.getBoundingClientRect(); return { id: el.dataset.cv, img: true, data: i.src.startsWith('data:image/'), nw: i.naturalWidth, nh: i.naturalHeight, w: r.width, h: r.height, aw: a.width, ah: a.height, alt: i.getAttribute('alt'), drag: i.draggable, src: i.src }; }), sel);
+// A page that opens straight on the given tab (so nothing is on screen from another tab while the first covers load)
+async function coverPageOn(browser, vp, sd, url, tab) {
+  const ctx = await openContext(browser, vp, sd);
+  await ctx.context.addInitScript(t => { try { localStorage.setItem('sg-tab', t); } catch (e) {} }, tab);
+  await ctx.page.goto(url); await ctx.page.waitForLoadState('load');
+  await ctx.page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  return ctx;
+}
+const lookText = page => page.evaluate(() => document.getElementById('coverStat').textContent);
+async function openLook(page) { await page.locator('#tab-tools').click(); await page.locator('#coverLink').scrollIntoViewIfNeeded(); }
+async function coverSave(page, text) { await openLook(page); await page.locator('#coverLink').fill(text); await page.locator('#coverSave').click(); await page.waitForTimeout(500); }
+const settingsWrites = page => page.evaluate(() => window.__writes.map(w => ({ tool: w.tool, sheet: w.sheet, range: w.range, values: w.values })));
+
+async function coverTests(browser, vp, seed, seedC, url) {
+  const n = vp.name, phone = vp.width < 560, want = expectedCovers(seedC), albums = fxSeedRows(seedC).length;
+  const shelves = expectedShelves(seedC);
+
+  // 1. listing: every page is followed, the stem rules hold, and nothing is downloaded that is not on screen
+  let f = await coverPageOn(browser, vp, seedC, url, 'collection');
+  let page = f.page;
+  await coverWait(page);
+  const listing = await page.evaluate(() => ({ calls: window.__driveCalls.filter(c => c.tool === 'search_files').map(c => c.args), files: [...window.__sg.cov.files].map(([k, v]) => [k, v.id, v.name]), st: window.__sg.cov.st }));
+  const pages = Math.ceil(seedC.__drive.files.length / 5);
+  record(n, `Covers: the folder listing follows every page (${pages} search_files calls of 5, each with the next pageToken)`, listing.calls.length === pages && listing.calls.slice(1).every((a, i) => a.pageToken === 't' + (5 * (i + 1))) && !listing.calls[0].pageToken, `${listing.calls.length} calls`);
+  record(n, 'Covers: the search asks for the folder by parentId, without snippets, 100 a page', listing.calls.every(a => a.query === `parentId = '${COVER_FOLDER}'` && a.excludeContentSnippets === true && a.pageSize === 100), JSON.stringify(listing.calls[0]));
+  const got = new Map(listing.files.map(([k, id, name]) => [k, id]));
+  record(n, `Covers: the id -> file map has exactly the digit-named image files (${want.size}); Warning.jpg, notes.txt, 1051b.jpg and 10x5.png are ignored`, got.size === want.size && [...want].every(([k, fl]) => got.get(k) === fl.id) && !listing.files.some(([k, id, name]) => /Warning|notes|[a-z]/i.test(name.replace(/\.(jpe?g|png|webp)$/i, ''))), `${got.size} vs ${want.size}`);
+  record(n, 'Covers: with two files for one id (1050.jpg old, 1050.png new) the most recently modified wins', got.get('1050') === 'drv-1050-new');
+  record(n, 'Covers: extensions are ignored (1045.png and 1044.jpg both match their ids)', got.get('1045') === 'drv-1045' && got.get('1044') === 'drv-1044');
+  const stat = await lookText(page);
+  const sm = /^(\d+) of (\d+) albums have a cover in the folder · (\d+) loaded$/.exec(stat);
+  record(n, `Covers: the Look panel says how many albums have a cover: "${stat}"`, !!sm && +sm[1] === want.size && +sm[2] === albums && +sm[3] > 0, stat);
+
+  const vis = await coverVisible(page), dl = await downloadedIds(page);
+  const wantStrict = vis.strict.filter(i => want.has(i)), wantNear = vis.near.filter(i => want.has(i));
+  record(n, `Covers: only the covers on screen are downloaded (${dl.length} downloads for ${wantStrict.length}-${wantNear.length} matched albums on screen, not all ${want.size})`,
+    wantStrict.every(i => dl.includes(i)) && dl.every(i => wantNear.includes(i)) && new Set(dl).size === dl.length && dl.length < want.size / 2, `downloaded ${dl.length}, strict ${wantStrict.length}, near ${wantNear.length}`);
+
+  // scrolling a lower shelf into view downloads its covers
+  const lowKey = 'nope', before = dl.length;
+  await page.locator(shelfSel(lowKey)).scrollIntoViewIfNeeded();
+  await page.locator(shelfSel(lowKey)).evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1200);
+  const dl2 = await downloadedIds(page);
+  const lowIds = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(e => e.dataset.cv), `${shelfSel(lowKey)} .s-it.stand .s-art[data-cv]`);
+  record(n, `Covers: scrolling the ${SHELF_HEAD[lowKey]} shelf into view downloads its covers (${dl2.length - before} more)`, dl2.length > before && lowIds.filter(i => want.has(i)).length > 0 && lowIds.filter(i => want.has(i)).every(i => dl2.includes(i)), `before ${before}, after ${dl2.length}, shelf ${lowIds.join()}`);
+  const ashImgs = await coverImgs(page, `${shelfSel(lowKey)} .s-it.stand .s-art[data-cv]`);
+  record(n, 'Covers: the incinerator shelf sleeves show covers too', ashImgs.filter(x => want.has(x.id)).every(x => x.img && x.data), JSON.stringify(ashImgs.map(x => [x.id, x.img])));
+
+  // 2. a sleeve: a square data: image inside, alt empty, not draggable, badge and generated art underneath
+  await page.locator(shelfSel('hear')).evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1200);
+  const hearStand = await coverImgs(page, `${shelfSel('hear')} .s-standing .s-art[data-cv]`);
+  const withCover = hearStand.filter(x => want.has(x.id));
+  record(n, `Covers: standing sleeves with a file show an <img> with a data: src, square and at most 256px (${withCover.length} of ${hearStand.length})`, withCover.length > 0 && withCover.every(x => x.img && x.data && x.nw === x.nh && x.nw <= 256 && x.nw >= 100 && Math.abs(x.w - x.h) < 1.5 && Math.abs(x.w - x.aw) < 1.5), JSON.stringify(withCover.map(x => [x.id, x.nw, x.nh, x.w, x.h])));
+  record(n, 'Covers: the cover is decorative (alt="", draggable=false) and the button keeps its aria-label', withCover.every(x => x.alt === '' && x.drag === false) && await page.evaluate(sel => [...document.querySelectorAll(sel)].every(b => /album, label /.test(b.getAttribute('aria-label') || '') && !b.querySelector('img[alt]:not([alt=""])')), `${shelfSel('hear')} .s-standing .s-art[data-cv]`));
+  const missing = hearStand.filter(x => !want.has(x.id));
+  record(n, `Covers: a sleeve whose id has no file keeps its generated art (${missing.length} here)`, missing.every(x => !x.img), JSON.stringify(missing.map(x => x.id)));
+  const layers = await page.evaluate(sel => { const el = document.querySelector(sel), svg = el.querySelector('svg'), img = el.querySelector('img.cvimg'), b = svg.querySelector('.bdg'); const kids = [...svg.children].filter(k => !k.classList.contains('bdg')); return { order: !!(img.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING), pos: getComputedStyle(svg).position, badge: !!b, badgeOp: b && getComputedStyle(b).opacity, kidsOp: kids.map(k => getComputedStyle(k).opacity), chip: !!el.closest('.s-lift').querySelector('.s-chip') }; }, `${shelfSel('hear')} .s-standing .s-art.cv`);
+  record(n, 'Covers: the initials badge stays on top of the cover (svg above the picture, only the badge left visible)', layers.order && layers.pos !== 'static' && layers.badge && layers.badgeOp === '1' && layers.kidsOp.every(o => o === '0'), JSON.stringify(layers));
+  // crop: odd ids are 600x300 PNGs (green | red | blue), even ids 300x600 JPEGs (yellow / magenta / cyan)
+  const odd = withCover.find(x => +x.id % 2 === 1 && +x.id !== 1050), even = withCover.find(x => +x.id % 2 === 0 && +x.id !== 1050);
+  if (odd) { const p = await pixelAt(page, odd.src, [[0.06, 0.5], [0.5, 0.5], [0.94, 0.5]]); record(n, `Covers: a landscape PNG (${odd.id}) is centre-cropped to a square (green sliver, red middle, blue sliver)`, p.w === p.h && closeRgb(p.px[0], GREEN) && closeRgb(p.px[1], RED) && closeRgb(p.px[2], BLUE), JSON.stringify(p)); } else record(n, 'Covers: a landscape sample was on screen', false, 'none');
+  if (even) { const p = await pixelAt(page, even.src, [[0.5, 0.05], [0.5, 0.5], [0.5, 0.95]]); record(n, `Covers: a portrait JPEG (${even.id}) is centre-cropped to a square (yellow sliver, magenta middle, cyan sliver)`, p.w === p.h && closeRgb(p.px[0], YELLOW) && closeRgb(p.px[1], MAGENTA) && closeRgb(p.px[2], CYAN), JSON.stringify(p)); } else record(n, 'Covers: a portrait sample was on screen', false, 'none');
+
+  // 3. the packed stack: slices carry the strip of the cover
+  const sliceSel = `${stackSel('hear')} .s-it.slice .s-art[data-cv]`;
+  const slices = await coverImgs(page, sliceSel);
+  const sg = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(el => { const i = el.querySelector('img.cvimg'); if (!i) return null; const a = el.getBoundingClientRect(), r = i.getBoundingClientRect(); return { hOk: Math.abs(i.offsetHeight - el.offsetHeight) < 2, wide: i.offsetWidth > el.offsetWidth, clip: getComputedStyle(el).overflow }; }), sliceSel);
+  const sWith = slices.filter(x => want.has(x.id) && x.img);
+  record(n, `Covers: packed-stack slices show their strip of the cover (${sWith.length} of ${slices.length} slices have one on screen)`, sWith.length > 0 && sg.filter(Boolean).every(g => g.hOk && g.wide && g.clip === 'hidden'), JSON.stringify(sg.filter(Boolean).slice(0, 2)));
+  if (vp.name === 'laptop') await page.locator(shelfSel('hear')).screenshot({ path: join(OUT, `${n}-covers-stack.png`) });
+
+  // 4. the detail strip: click a covered sleeve
+  const pickSleeve = hearStand.find(x => x.img);
+  await page.locator(`${shelfSel('hear')} .s-standing .s-it[data-id="${pickSleeve.id}"] .s-art`).click();
+  await page.waitForTimeout(700);
+  const det = await coverImgs(page, `${shelfSel('hear')} .s-detail .s-dcover[data-cv]`);
+  record(n, 'Covers: the detail strip shows the large cover (square, data: src)', det.length === 1 && det[0].img && det[0].data && det[0].nw === det[0].nh && Math.abs(det[0].w - det[0].h) < 1.5 && det[0].w >= 70, JSON.stringify(det.map(x => ({ ...x, src: undefined }))));
+  await page.locator(shelfSel('hear')).screenshot({ path: join(OUT, `${n}-covers-shelf.png`) });
+  await page.locator(`${shelfSel('hear')} .s-detail`).screenshot({ path: join(OUT, `${n}-covers-detail.png`) });
+  // the Show all grid and ash tiles
+  await expandShelf(page, 'nope');
+  await page.locator(shelfSel('nope')).evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1000);
+  const ash = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(el => ({ id: el.dataset.cv, img: !!el.querySelector('img.cvimg'), filter: getComputedStyle(el.querySelector('.s-art')).filter })), `${shelfSel('nope')} .s-it.ash`);
+  record(n, 'Covers: ash tiles on the Show all grid get covers and stay desaturated', ash.length > 0 ? ash.filter(a => want.has(a.id)).length >= 0 && ash.every(a => /grayscale/.test(a.filter)) : true, JSON.stringify(ash.slice(0, 2)));
+  const ov = await page.evaluate(overflow);
+  record(n, 'Covers: no sideways scroll on the shelves with covers', ov.sw <= ov.iw, `${ov.sw} vs ${ov.iw}`);
+  record(n, 'Covers: no console errors, no access outside 🎸, no sheet writes', f.problems.length === 0 && (await allOnTab(page)) && (await settingsWrites(page)).length === 0, f.problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 5. Home: Favourites and Album of the day
+  f = await freshPage(browser, vp, seedC, url, 'home');
+  page = f.page;
+  await coverWait(page, 300);
+  await page.locator('#homeFav').evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.locator('.aotd-art').evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1200);
+  const aot = await coverImgs(page, '.aotd-art');
+  const aid = aot[0].id;
+  if (want.has(aid)) record(n, 'Covers: Home Album of the day shows its cover (square)', aot[0].img && aot[0].data && Math.abs(aot[0].w - aot[0].h) < 1.5, JSON.stringify(aot.map(x => ({ ...x, src: undefined })))); else record(n, 'Covers: Home Album of the day without a file keeps the generated sleeve', !aot[0].img);
+  await page.locator('#homeFav').evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1200);
+  const favImgs = await coverImgs(page, '#homeFav .s-it .s-art[data-cv]');
+  record(n, `Covers: Home Favourites sleeves show covers where a file exists (${favImgs.filter(x => x.img).length} of ${favImgs.length})`, favImgs.length > 0 && favImgs.every(x => x.img === want.has(x.id)), JSON.stringify(favImgs.map(x => [x.id, x.img])));
+  record(n, 'Covers: Home has no sideways scroll, no console errors', (await page.evaluate(overflow)).sw <= vp.width && f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  await page.locator('#homeFav').screenshot({ path: join(OUT, `${n}-covers-home-fav.png`) });
+  await page.locator('.aotd').screenshot({ path: join(OUT, `${n}-covers-aotd.png`) });
+  // 6. second load: cached, no downloads, and exactly the changed file is fetched again
+  const firstIds = (await downloadedIds(page)), hasCover = await page.evaluate(() => [...document.querySelectorAll('#homeFav [data-cv].cv')].map(e => e.dataset.cv));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.reload(); await page.waitForLoadState('load');
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  await coverWait(page, 800);
+  const again = await downloadCalls(page);
+  const rendered = await page.evaluate(() => [...document.querySelectorAll('[data-cv].cv')].map(e => e.dataset.cv));
+  record(n, `Covers: a second load with the cache and unchanged modifiedTimes makes zero download calls (${again})`, again === 0 && firstIds.length > 0, `${again} downloads, ${firstIds.length} before`);
+  record(n, 'Covers: the cached covers are drawn again on the second load', rendered.length > 0 && rendered.every(i => firstIds.includes(i)), `${rendered.length} drawn`);
+  const homeCovered = await page.evaluate(() => [...document.querySelectorAll('[data-cv].cv')].filter(e => e.getClientRects().length).map(e => e.dataset.cv));
+  const target = homeCovered.find(i => want.has(i));
+  await page.evaluate(([t]) => { localStorage.setItem('__driveMod', JSON.stringify({ [t]: '2026-10-20T08:00:00.000Z' })); }, [want.get(target).title]);
+  await page.reload(); await page.waitForLoadState('load');
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+  await coverWait(page, 1000);
+  const dl3 = await downloadedIds(page);
+  record(n, `Covers: when one file's modifiedTime changes exactly that file is downloaded again (${target})`, dl3.length === 1 && dl3[0] === target, JSON.stringify(dl3));
+  await page.evaluate(() => localStorage.removeItem('__driveMod'));
+  await f.context.close();
+
+  // 7. nothing set / nothing allowed / a failing download
+  f = await freshPage(browser, vp, seed, url, 'tools');   // the plain seed has no coverFolder row
+  page = f.page; await page.waitForTimeout(300);
+  const none = { text: await lookText(page), imgs: await page.locator('img.cvimg').count(), calls: await page.evaluate(() => window.__driveCalls.length), btn: await page.locator('#coverConnect').isHidden() };
+  record(n, 'Covers: with no coverFolder row the Look panel says "No cover folder set", no Drive call is made and no cover is drawn', none.text === 'No cover folder set' && none.imgs === 0 && none.calls === 0 && none.btn, JSON.stringify(none));
+  record(n, 'Covers: the Covers row has a labelled input, Save and Clear', await page.evaluate(() => !!document.querySelector('label[for="coverLink"]') && document.getElementById('coverLink').getAttribute('aria-label') === 'Cover folder link' && document.getElementById('coverSave').textContent === 'Save' && document.getElementById('coverClear').textContent === 'Clear'));
+  record(n, 'Covers: the Look panel has no sideways scroll', (await page.evaluate(overflow)).sw <= vp.width);
+  await f.context.close();
+
+  f = await freshPage(browser, vp, withDrive(seedC, { reject: true }), url, 'collection');
+  page = f.page; await coverWait(page, 500);
+  const na = { imgs: await page.locator('img.cvimg').count(), svgs: await page.locator('.s-art[data-cv] svg').count(), text: await lookText(page), btn: await page.locator('#coverConnect').isHidden() };
+  const plain = await freshPage(browser, vp, seed, url, 'collection');
+  const sameSleeves = (await page.evaluate(() => [...document.querySelectorAll('#shelves .s-art')].map(e => e.innerHTML).join('|'))) === (await plain.page.evaluate(() => [...document.querySelectorAll('#shelves .s-art')].map(e => e.innerHTML).join('|')));
+  record(n, 'Covers: when the Drive connector refuses, the sleeves are exactly the generated ones and no cover is drawn', na.imgs === 0 && na.svgs > 0 && sameSleeves, JSON.stringify(na));
+  record(n, 'Covers: the refusal shows "Allow Google Drive for this page, then press Refresh." and no Connect button', na.text === 'Allow Google Drive for this page, then press Refresh.' && na.btn, na.text);
+  const rejCalls = await page.evaluate(() => window.__driveCalls.map(c => c.tool));
+  record(n, 'Covers: a refusing connector is asked to list once and never to download', rejCalls.every(t => t === 'search_files') && rejCalls.length >= 1, rejCalls.join());
+  record(n, 'Covers: no console errors when Drive is not allowed', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  await plain.context.close(); await f.context.close();
+
+  const failId = withCover.find(x => x.id !== '1050').id;
+  f = await freshPage(browser, vp, withDrive(seedC, { failIds: [want.get(failId).id] }), url, 'collection');
+  page = f.page; await coverWait(page, 1200);
+  await page.locator(shelfSel('hear')).evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1200);
+  const st = await page.evaluate(id => ({ failed: !!document.querySelector(`#shelves [data-cv="${id}"]`) && !document.querySelector(`#shelves [data-cv="${id}"] img.cvimg`), others: document.querySelectorAll('#shelves img.cvimg').length, svg: !!document.querySelector(`#shelves [data-cv="${id}"] svg`), tries: window.__driveCalls.filter(c => c.tool === 'download_file_content').length }), failId);
+  record(n, `Covers: a failing download (${failId}) leaves that sleeve as generated art and the others still load`, st.failed && st.svg && st.others > 0, JSON.stringify(st));
+  record(n, 'Covers: a failing download raises no console error', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 8. reduced motion: no cross-fade
+  f = await freshPage(browser, vp, seedC, url, 'home', { reducedMotion: 'reduce' });
+  page = f.page; await coverWait(page, 1200);
+  const dur = await page.evaluate(() => { const i = document.querySelector('img.cvimg'); return i ? getComputedStyle(i).transitionDuration : 'no cover'; });
+  record(n, 'Covers: under reduced motion the cover does not cross-fade', dur === '0s', dur);
+  await f.context.close();
+}
+
+// the folder link: pasting one writes exactly the coverFolder cell, Clear empties it, the id never shows on screen
+async function coverSaveTests(browser, vp, seed, seedC, url) {
+  const n = vp.name, ID = 'PASTED_FOLDER_ID_0123456789ab';
+  const forms = [
+    [`https://drive.google.com/drive/folders/${ID}?usp=sharing`, 'a /folders/ link'],
+    [`https://drive.google.com/drive/u/1/folders/${ID}`, 'a /u/1/folders/ link'],
+    [`https://drive.google.com/open?id=${ID}&usp=drive_fs`, 'an open?id= link'],
+    [ID, 'a raw id'],
+  ];
+  for (const [text, label] of forms) {
+    const f = await freshPage(browser, vp, seed, url, 'tools');   // no coverFolder row yet
+    const page = f.page; await cw(page);
+    await coverSave(page, text);
+    const w = await settingsWrites(page);
+    record(n, `Covers save (${label}, row missing): exactly one write, one appended row ['coverFolder, '<id>]`, w.length === 1 && w[0].tool === 'append_values' && w[0].sheet === '🎸 Settings' && JSON.stringify(w[0].values) === JSON.stringify([["'coverFolder", "'" + ID]]), JSON.stringify(w));
+    const after = await page.evaluate(id => ({ input: document.getElementById('coverLink').value, body: document.body.innerText + ' ' + document.body.textContent + [...document.querySelectorAll('input')].map(i => i.value).join(' '), set: window.__sg.state.settings.coverFolder === id, stat: document.getElementById('coverStat').textContent }), ID);
+    record(n, `Covers save (${label}): the input is emptied, the id appears nowhere on the page, only counts are shown`, after.input === '' && !after.body.includes(ID) && after.set && /albums have a cover in the folder/.test(after.stat), after.stat);
+    if (label === 'a raw id') {
+      await page.waitForTimeout(800);
+      // covers load for the new folder; the same link pasted again writes nothing
+      await page.locator('#tab-collection').click(); await page.waitForTimeout(1200);
+      record(n, 'Covers save: covers start loading for the new folder (on the Collection tab)', (await page.locator('#shelves img.cvimg').count()) > 0);
+      await page.locator('#tab-tools').click();
+      await cw(page);
+      await coverSave(page, text);
+      record(n, 'Covers save: saving the same folder again writes nothing', (await settingsWrites(page)).length === 0);
+      await cw(page);
+      await page.locator('#coverClear').click(); await page.waitForTimeout(500);
+      const wc = await settingsWrites(page);
+      const row = await page.evaluate(() => window.__sheet['🎸 Settings'].findIndex(r => r[0] === "'coverFolder") + 1);
+      record(n, 'Covers clear: writes "" to the coverFolder value cell and nothing else', wc.length === 1 && wc[0].tool === 'update_values' && wc[0].sheet === '🎸 Settings' && wc[0].range === `'🎸 Settings'!B${row}` && JSON.stringify(wc[0].values) === '[[""]]', JSON.stringify(wc));
+      const cleared = await page.evaluate(() => ({ stat: document.getElementById('coverStat').textContent, imgs: document.querySelectorAll('img.cvimg').length, cv: document.querySelectorAll('[data-cv].cv').length, set: window.__sg.state.settings.coverFolder, svgs: document.querySelectorAll('.s-art[data-cv] svg').length }));
+      await page.locator('#tab-collection').click(); await page.waitForTimeout(300);
+      const svgs = await page.locator('#shelves .s-art svg').count();
+      record(n, 'Covers clear: covers go, the generated sleeves come back, the panel says "No cover folder set"', cleared.stat === 'No cover folder set' && cleared.imgs === 0 && cleared.cv === 0 && cleared.set === '' && svgs > 0, JSON.stringify(cleared));
+      const idb = await page.evaluate(() => new Promise(ok => { const r = indexedDB.open('sg-covers', 1); r.onsuccess = () => { const q = r.result.transaction('c').objectStore('c').count(); q.onsuccess = () => ok(q.result); q.onerror = () => ok(-1); }; r.onerror = () => ok(-1); }));
+      record(n, 'Covers clear: the cached covers of the old folder are dropped', idb === 0, `${idb} cached`);
+      await cw(page);
+      await page.locator('#tab-tools').click(); await page.locator('#coverClear').click(); await page.waitForTimeout(400);
+      record(n, 'Covers clear: clearing again writes nothing', (await settingsWrites(page)).length === 0);
+      const ov = await page.evaluate(overflow);
+      record(n, 'Covers save: no sideways scroll, no console errors, no access outside 🎸', ov.sw <= ov.iw && f.problems.length === 0 && (await allOnTab(page)), f.problems.slice(0, 2).join(' | '));
+    }
+    await f.context.close();
+  }
+  // a bad link writes nothing and says so
+  for (const bad of ['hello', 'https://docs.google.com/spreadsheets/d/' + ID + '/edit', 'https://example.com/folders/', '   ']) {
+    const f = await freshPage(browser, vp, seed, url, 'tools');
+    const page = f.page; await cw(page);
+    await coverSave(page, bad);
+    const msg = await lookText(page);
+    record(n, `Covers save: "${bad.trim().slice(0, 30)}" is refused with a message and writes nothing`, msg === "That doesn't look like a Drive folder link." && (await settingsWrites(page)).length === 0, msg);
+    record(n, 'Covers save: the refusal raises no console error', f.problems.length === 0);
+    await f.context.close();
+  }
+  // a row that exists: one cell changes
+  {
+    const f = await freshPage(browser, vp, seedC, url, 'tools');
+    const page = f.page; await cw(page);
+    await coverSave(page, `https://drive.google.com/drive/folders/${ID}`);
+    const row = await page.evaluate(() => window.__sheet['🎸 Settings'].findIndex(r => r[0] === 'coverFolder') + 1);
+    const w = await settingsWrites(page);
+    record(n, 'Covers save (row exists): exactly one write, the value cell of coverFolder, text with a leading apostrophe', w.length === 1 && w[0].tool === 'update_values' && w[0].range === `'🎸 Settings'!B${row}` && JSON.stringify(w[0].values) === JSON.stringify([["'" + ID]]), JSON.stringify(w));
+    await cw(page);
+    await page.locator('#coverClear').click(); await page.waitForTimeout(400);
+    const w2 = await settingsWrites(page);
+    record(n, 'Covers clear (row exists): one write of "" to that cell', w2.length === 1 && w2[0].range === `'🎸 Settings'!B${row}` && JSON.stringify(w2[0].values) === '[[""]]', JSON.stringify(w2));
+    // a goal save still compares numbers: unchanged goal writes nothing, a new goal writes one cell
+    record(n, 'Covers: no console errors and no write outside 🎸 Settings', f.problems.length === 0 && (await allOnTab(page)), f.problems.slice(0, 2).join(' | '));
+    await f.context.close();
+  }
+  // two coverFolder rows: nothing is written
+  {
+    const dup = { ...seedC, '🎸 Settings': [...seedC['🎸 Settings'], ['coverFolder', 'SOME_OTHER_FOLDER_ID_0123456789']] };
+    const f = await freshPage(browser, vp, dup, url, 'tools');
+    const page = f.page; await cw(page);
+    await coverSave(page, ID);
+    const msg = await lookText(page);
+    record(n, 'Covers save: when coverFolder appears twice nothing is written and the panel says why', (await settingsWrites(page)).length === 0 && /appears 2 times/.test(msg), msg);
+    await f.context.close();
+  }
+}
+
+// a sleeve that has a cover still drags, opens its label menu, takes the pick and fans by keyboard
+async function coverInteractionTests(browser, vp, seedC, url) {
+  const n = vp.name;
+  const f = await freshPage(browser, vp, seedC, url, 'collection');
+  const page = f.page, want = expectedCovers(seedC), shelves = expectedShelves(seedC), rows = fxSeedRows(seedC);
+  await coverWait(page, 600);
+  await page.locator(shelfSel('hear')).evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(1000);
+  await cw(page);
+  const stand = (await shelfIds(page, 'hear')).filter(i => i && rows.find(r => r[COLS.id] === i) && !rows.find(r => r[COLS.id] === i)[COLS.format]);
+  const id = (await page.evaluate(sel => [...document.querySelectorAll(sel)].filter(e => e.classList.contains('cv')).map(e => e.dataset.cv), `${shelfSel('hear')} .s-standing .s-art[data-cv]`)).find(i => stand.includes(i));
+  record(n, 'Covers + interactions: a standing sleeve with a cover is on screen', !!id, String(id));
+  const sr = await page.evaluate(sheetRow, id);
+  // chip menu
+  await openChip(page, id, 'hear');
+  record(n, 'Covers + interactions: the label menu opens from a sleeve with a cover', (await page.locator('.s-menu').count()) === 1);
+  await page.keyboard.press('Escape');
+  // pick
+  await page.locator(`${shelfSel('hear')} .s-it[data-id="${id}"] .s-pick`).click({ force: true });
+  await waitWrites(page, 1); await settle(page);
+  let w = await gw(page);
+  record(n, 'Covers + interactions: the pick on a sleeve with a cover writes the Favourite cell only', w.length === 1 && w[0].range === `'🎸'!Q${sr}`, JSON.stringify(w));
+  // drag and drop onto the Heard shelf, with the drag events a browser sends
+  await cw(page);
+  const hasImg = await page.evaluate(i => !!document.querySelector(`#shelves .shelf[data-key="hear"] .s-it[data-id="${i}"] .s-art > img.cvimg`), id);
+  const dt = await page.evaluateHandle(() => new DataTransfer());
+  await page.locator(`${shelfSel('hear')} .s-it[data-id="${id}"]`).first().dispatchEvent('dragstart', { dataTransfer: dt });
+  await page.locator(shelfSel('heard')).dispatchEvent('dragover', { dataTransfer: dt });
+  const over = await page.evaluate(() => !!document.querySelector('.shelf.drop'));
+  await page.locator(shelfSel('heard')).dispatchEvent('drop', { dataTransfer: dt });
+  await page.evaluate(() => document.dispatchEvent(new Event('dragend', { bubbles: true })));
+  await waitWrites(page, 1).catch(() => {}); await settle(page);
+  w = await gw(page);
+  record(n, 'Covers + interactions: dragging a sleeve that has a cover highlights the shelf and writes Status only', hasImg && over && w.length === 1 && w[0].range === `'🎸'!D${sr}` && w[0].v === 'Listened', JSON.stringify([hasImg, over, w]));
+  // keyboard fan on a stack of sleeves with covers
+  await page.locator(shelfSel('heard')).evaluate(el => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(900);
+  const s0 = page.locator(`${stackSel('heard')} .slice .s-art[tabindex="0"]`).first();
+  await s0.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(300);
+  const fanned = await page.evaluate(sel => document.querySelectorAll(sel).length, `${stackSel('heard')} .slice.fanned`);
+  record(n, 'Covers + interactions: the arrow keys still fan a stack whose slices have covers', fanned > 0, `${fanned} fanned`);
+  const fi = await page.evaluate(sel => [...document.querySelectorAll(sel)].map(e => !!e.querySelector('img.cvimg')), `${stackSel('heard')} .slice.fanned`);
+  record(n, 'Covers + interactions: no console errors', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  void fi; void shelves; void want;
+  await f.context.close();
+}
+
+// ----- GitHub Pages mode: no window.claude, the user's own token, Drive and Sheets REST calls intercepted
+async function makeImages(browser) {
+  const p = await browser.newPage();
+  const out = await p.evaluate(() => {
+    const c = document.createElement('canvas'), g = c.getContext('2d');
+    c.width = 600; c.height = 300;
+    [['#00ff00', 0], ['#ff0000', 200], ['#0000ff', 400]].forEach(([col, x]) => { g.fillStyle = col; g.fillRect(x, 0, 200, 300); });
+    const png = c.toDataURL('image/png').split(',')[1];
+    c.width = 300; c.height = 600;
+    [['#ffff00', 0], ['#ff00ff', 200], ['#00ffff', 400]].forEach(([col, y]) => { g.fillStyle = col; g.fillRect(0, y, 300, 200); });
+    return { png, jpg: c.toDataURL('image/jpeg', 0.95).split(',')[1] };
+  });
+  await p.close();
+  return { png: Buffer.from(out.png, 'base64'), jpg: Buffer.from(out.jpg, 'base64') };
+}
+function sheetsRest(seedC, log) {
+  const tabs = Object.fromEntries(Object.entries(seedC).filter(([k]) => k !== '__pool2' && k !== '__drive').map(([k, rows]) => [k, rows.map(r => r.map(c => String(c ?? '')))]));
+  const col = s => { let x = 0; for (const ch of s.toUpperCase()) x = x * 26 + ch.charCodeAt(0) - 64; return x - 1; };
+  return async route => {
+    const req = route.request(), u = new URL(req.url());
+    const seg = decodeURIComponent(u.pathname.split('/values/')[1] || '').replace(/:append$/, '');
+    const bang = seg.lastIndexOf('!'); let tab = seg.slice(0, bang); if (tab.startsWith("'")) tab = tab.slice(1, -1).replace(/''/g, "'");
+    const cells = seg.slice(bang + 1), m = /^([A-Z]*)(\d*)(?::([A-Z]*)(\d*))?$/.exec(cells), rows = tabs[tab];
+    if (!rows || !m) return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: { message: 'No such tab' } }) });
+    const sc = m[1] ? col(m[1]) : 0, sr = m[2] ? +m[2] - 1 : 0;
+    if (req.method() === 'GET') {
+      const colon = cells.includes(':'), ec = m[3] ? col(m[3]) : colon ? 99 : sc, er = m[4] ? +m[4] - 1 : colon ? rows.length - 1 : sr;
+      let values = rows.slice(sr, er + 1).map(r => { const x = r.slice(sc, ec + 1); while (x.length && x[x.length - 1] === '') x.pop(); return x; });
+      while (values.length && !values[values.length - 1].length) values.pop();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: seg, majorDimension: 'ROWS', values }) });
+    }
+    const vals = JSON.parse(req.postData()).values;
+    log.push({ method: req.method(), tab, cells, values: vals });
+    if (req.method() === 'POST') { let at = sr; while (rows[at] && rows[at].some(c => c !== '')) at++; vals.forEach((v, i) => { rows[at + i] = v.map(String); }); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ updates: { updatedRange: `'${tab}'!A${at + 1}` } }) }); }
+    vals.forEach((v, i) => v.forEach((c, j) => { while (rows.length <= sr + i) rows.push([]); while (rows[sr + i].length <= sc + j) rows[sr + i].push(''); rows[sr + i][sc + j] = String(c); }));
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ updatedRange: seg }) });
+  };
+}
+async function coverPagesTests(browser, vp, seedC, url, imgs) {
+  const n = vp.name, want = expectedCovers(seedC);
+  for (const mode of ['ok', 'deny']) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+    await ctx.clock.install({ time: RUN_START });
+    const sheetLog = [], driveReqs = [], sheet = sheetsRest(seedC, sheetLog), files = seedC.__drive.files, problems = [];
+    await ctx.route('**/*', async route => {
+      const req = route.request(), u = req.url();
+      if (u.startsWith('file:') || u.startsWith('data:') || u.startsWith('blob:')) return route.continue();
+      if (u.startsWith('https://sheets.googleapis.com/v4/spreadsheets/')) return sheet(route);
+      if (u.startsWith('https://www.googleapis.com/drive/v3/files')) {
+        const x = new URL(u), auth = req.headers().authorization;
+        driveReqs.push({ method: req.method(), path: x.pathname, q: x.searchParams.get('q'), fields: x.searchParams.get('fields'), token: x.searchParams.get('pageToken'), alt: x.searchParams.get('alt'), auth });
+        if (mode === 'deny') return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: { message: 'insufficient scope' } }) });
+        if (x.pathname === '/drive/v3/files') {   // listing, 7 a page whatever pageSize says
+          const at = x.searchParams.get('pageToken') ? +x.searchParams.get('pageToken').replace('pg', '') : 0;
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ files: files.slice(at, at + 7).map(f => ({ id: f.id, name: f.title, modifiedTime: f.modifiedTime, mimeType: f.mimeType })), ...(at + 7 < files.length ? { nextPageToken: 'pg' + (at + 7) } : {}) }) });
+        }
+        const f = files.find(y => y.id === decodeURIComponent(x.pathname.split('/').pop()));
+        if (!f) return route.fulfill({ status: 404, body: '{}' });
+        return route.fulfill({ status: 200, contentType: /png/.test(f.mimeType) ? 'image/png' : 'image/jpeg', body: /png/.test(f.mimeType) ? imgs.png : imgs.jpg });
+      }
+      return route.abort();
+    });
+    await ctx.addInitScript(() => {
+      delete window.claude;
+      try {
+        localStorage.setItem('sg-token', JSON.stringify({ t: 'test-token', exp: 4102444800000 }));
+        localStorage.setItem('sg-config', JSON.stringify({ clientId: 'test-client.apps.googleusercontent.com' }));
+      } catch (e) {}
+      window.google = { accounts: { oauth2: { initTokenClient: cfg => { window.__tokCfg = cfg; return { requestAccessToken: o => { window.__tokReq = o; } }; } } } };
+    });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => problems.push('uncaught: ' + e.message));
+    page.on('console', m => { if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) problems.push('console: ' + m.text()); });
+    await page.goto(url); await page.waitForLoadState('load');
+    await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live'), null, { timeout: 8000 });
+    await page.locator('#tab-collection').click();
+    await coverWait(page, 1200);
+    const L = `Pages (${mode})`;
+    record(n, `${L}: runs without window.claude, on the user's own token`, await page.evaluate(() => window.__sg.state.google === true && !window.claude));
+    const lists = driveReqs.filter(r => r.path === '/drive/v3/files');
+    record(n, `${L}: Drive is listed with the folder query and read-only GET requests with the bearer token`, lists.length >= 1 && lists.every(r => r.method === 'GET' && r.auth === 'Bearer test-token' && r.q === `'${COVER_FOLDER}' in parents and trashed = false` && /nextPageToken,files\(id,name,modifiedTime,mimeType\)/.test(r.fields)) && driveReqs.every(r => r.method === 'GET'), JSON.stringify(lists[0]));
+    if (mode === 'ok') {
+      record(n, `Pages: the listing follows nextPageToken (${Math.ceil(files.length / 7)} pages)`, lists.length === Math.ceil(files.length / 7) && lists.slice(1).every((r, i) => r.token === 'pg' + 7 * (i + 1)), `${lists.length} pages`);
+      const dls = driveReqs.filter(r => r.alt === 'media'), vis = await coverVisible(page);
+      const dlIds = dls.map(r => String(Number(files.find(f => f.id === decodeURIComponent(r.path.split('/').pop())).title.replace(/\D.*$/, ''))));
+      const strict = vis.strict.filter(i => want.has(i)), near = vis.near.filter(i => want.has(i));
+      record(n, `Pages: only covers on screen are downloaded (${dls.length}, not ${want.size}), each with the bearer token`, dls.length > 0 && strict.every(i => dlIds.includes(i)) && dlIds.every(i => near.includes(i)) && dls.every(r => r.auth === 'Bearer test-token') && dls.length < want.size / 2, `${dls.length} downloads, strict ${strict.length}, near ${near.length}`);
+      const imgsOn = await coverImgs(page, '#shelves .s-art[data-cv].cv');
+      record(n, 'Pages: covers appear as square data: images (blob downloads are shrunk and cached)', imgsOn.length > 0 && imgsOn.every(x => x.img && x.data && x.nw === x.nh && x.nw <= 256), `${imgsOn.length} covers`);
+      const odd = imgsOn.find(x => +x.id % 2 === 1 && +x.id !== 1050);
+      if (odd) { const p = await pixelAt(page, odd.src, [[0.06, 0.5], [0.5, 0.5], [0.94, 0.5]]); record(n, 'Pages: the landscape PNG is centre-cropped', closeRgb(p.px[0], GREEN) && closeRgb(p.px[1], RED) && closeRgb(p.px[2], BLUE), JSON.stringify(p.px)); }
+      const stat = await lookText(page);
+      record(n, 'Pages: the Look panel shows the counts and no hint', /^\d+ of 127 albums have a cover in the folder · \d+ loaded$/.test(stat) && await page.locator('#coverConnect').isHidden(), stat);
+      record(n, 'Pages: no sheet write happened', sheetLog.length === 0, JSON.stringify(sheetLog));
+      // saving a link here writes the coverFolder cell through the Sheets REST route
+      await openLook(page);
+      await page.locator('#coverLink').fill('https://drive.google.com/drive/folders/PAGES_FOLDER_ID_0123456789abc');
+      await page.locator('#coverSave').click(); await page.waitForTimeout(600);
+      record(n, 'Pages: saving a folder link makes one Sheets write, the coverFolder value cell', sheetLog.length === 1 && sheetLog[0].method === 'PUT' && sheetLog[0].tab === '🎸 Settings' && JSON.stringify(sheetLog[0].values) === JSON.stringify([["'PAGES_FOLDER_ID_0123456789abc"]]), JSON.stringify(sheetLog));
+    } else {
+      await openLook(page);
+      const na = { imgs: await page.locator('img.cvimg').count(), text: await lookText(page), btn: await page.locator('#coverConnect').isVisible(), dl: driveReqs.filter(r => r.alt === 'media').length };
+      record(n, `${L}: a 403 from Drive is "no Drive access yet": sleeves stay generated, no download is tried`, na.imgs === 0 && na.dl === 0, JSON.stringify(na));
+      record(n, `${L}: the Covers row says "Press Connect again to allow read-only access to Google Drive." with a button`, na.text === 'Press Connect again to allow read-only access to Google Drive.' && na.btn, JSON.stringify(na));
+      await openLook(page);
+      await page.locator('#coverConnect').click();
+      const tok = await page.evaluate(() => ({ scope: window.__tokCfg && window.__tokCfg.scope, req: !!window.__tokReq }));
+      record(n, `${L}: the button re-runs the Connect flow asking for the read-only Drive scope too`, /auth\/spreadsheets/.test(tok.scope || '') && /auth\/drive\.readonly/.test(tok.scope || '') && tok.req, JSON.stringify(tok));
+      const ov = await page.evaluate(overflow);
+      record(n, `${L}: no sideways scroll`, ov.sw <= ov.iw);
+    }
+    record(n, `${L}: no console errors`, problems.length === 0, problems.slice(0, 2).join(' | '));
+    await ctx.close();
+  }
+}
 
 async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false, touch = false, clipboard = false } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}), ...(touch ? { hasTouch: true, isMobile: vp.width < 560 } : {}) });
@@ -2901,7 +3413,8 @@ async function openContext(browser, vp, seed, { blockChart = false, reducedMotio
   return { context, page, problems, blocked: () => externalBlocked };
 }
 
-async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl) {
+let COVER_IMGS = null;
+async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, seedLC) {
   console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
   const only = (process.env.SMOKE_ONLY || '').split(',').filter(Boolean);
   const run = (name, fn) => (!only.length || only.includes(name)) ? fn() : null;
@@ -2999,6 +3512,18 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl) {
   await run('playlists', () => playlistsMissingTests(browser, vp, seed, wrapperUrl));
   await run('playlists', () => playlistsSourceTests(browser, vp, seed, wrapperUrl));
   await run('playlists', () => playlistsGuardTests(browser, vp, seed, wrapperUrl));
+  await run('covers', () => coverTests(browser, vp, seed, seedC, wrapperUrl));
+  await run('covers', () => coverSaveTests(browser, vp, seed, seedC, wrapperUrl));
+  await run('covers', () => coverInteractionTests(browser, vp, seedC, wrapperUrl));
+  await run('covers', async () => { COVER_IMGS = COVER_IMGS || await makeImages(browser); await coverPagesTests(browser, vp, seedC, wrapperUrl, COVER_IMGS); });
+  // the drag, pick, menu and stack suites again, on a sheet where every shelf is full of covers
+  recPrefix = 'with covers: ';
+  try {
+    await run('coverrerun', () => menuKeyboardTests(browser, vp, seedC, wrapperUrl));
+    await run('coverrerun', () => dragTests(browser, vp, seedC, wrapperUrl));
+    await run('coverrerun', () => pickTests(browser, vp, seedC, seedLC, wrapperUrl));
+    await run('coverrerun', () => stackTests(browser, vp, seedC, wrapperUrl));
+  } finally { recPrefix = ''; }
 }
 
 async function main() {
@@ -3024,9 +3549,10 @@ async function main() {
     args: ['--no-sandbox'],          // container runs as root
   });
   try {
+    const seedC = buildSeed({ covers: true }), seedLC = buildSeed({ labelled: true, covers: true });
     const seed = buildSeed(), seedL = buildSeed({ labelled: true });   // seedL: the sheet also has a Labelled column
     for (const vp of VIEWPORTS) {
-      await runViewport(browser, vp, seed, seedL, pathToFileURL(wrapperPath).href, pathToFileURL(rawPath).href);
+      await runViewport(browser, vp, seed, seedL, pathToFileURL(wrapperPath).href, pathToFileURL(rawPath).href, seedC, seedLC);
     }
   } finally {
     await browser.close();
