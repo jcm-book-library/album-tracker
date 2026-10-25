@@ -47,10 +47,18 @@ Started 2026-10-18.
 - Storage: on the device (IndexedDB) or Google Drive, never in the Sheet.
 - Format-shifting music you own for private use is generally allowed in Australia; sharing the recordings isn't.
 
-### Cover art (GitHub Pages only)
-- Album covers kept as image files in your Google Drive (never in the public repo), loaded by the GitHub Pages version after Google sign-in. The sign-in would also ask for read access to that Drive folder.
-- The claude.ai artifact can't show them (it blocks images from other sites), so it keeps the generated record graphics.
-- Reuse whatever approach the sports-logos project settles on, so both work the same way.
+### Cover art (both hosts, same method as the sports tracker)
+- Covers are image files in a private Google Drive folder (never in the public repo). The folder's id is kept in `🎸 Settings`
+  (key `coverFolder`), set once by pasting the folder link in the app, so it never appears in code.
+- GitHub Pages: read with the owner's own Google sign-in (Drive read-only scope, already used by the sports tracker with the shared Client ID).
+  The claude.ai app: read through the Google Drive connector (`search_files`, `download_file_content`); the artifact must declare that connector.
+- The Drive connector is signed in as the owner's second Google account, so the folder must be shared with that account (Editor, as for the logo folders).
+- File format: one image per album (JPEG, PNG or WebP), square (1:1), about 600 x 600 px (300 minimum, 1000 maximum). JPEG under about 200 KB is ideal;
+  PNG files work as they are (a transparent PNG shows the dark shelf through), but keep them under about 1 MB so they load quickly.
+- File name: the album's `id` from the 🎸 tab plus the extension, e.g. `1043.jpg` or `1043.png`. The app matches on the id and ignores the extension;
+  if there are two files for one id, the most recently modified wins. The id never changes, so renaming an album can't break the link.
+- The app loads only the covers on screen, shrinks each to about 256 px, caches it in the browser (IndexedDB, keyed by folder, file and modified time),
+  and falls back to the generated sleeve when a file is missing or Drive isn't reachable.
 
 ### Not planned
 - Running on hardware MP3 players (iPod-style devices can't run web apps).

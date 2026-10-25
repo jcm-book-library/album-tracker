@@ -25,7 +25,10 @@ See [ROADMAP.md](ROADMAP.md).
 
 ## What's in the app
 
-- Tabs: Home, Collection, Plan, Dashboard, Tools. The listening log is hidden unless "Show listening log" is switched on in Tools
+- Tabs: Home, Collection, Plan, Playlists, Dashboard, Tools.
+- **Playlists** builds playlists from a pool of tracks (the `Classical` tab, read-only; another sheet and tab; or an uploaded CSV): Browse the pool,
+  Build with presets and rules (era, form, mood, work-friendly, energy, BPM, composer, target length; ordered by energy, key flow, era or shuffle),
+  and Save to `🎸 Playlists`. "Copy for Spotify" copies track links in order to paste into a Spotify playlist. The listening log is hidden unless "Show listening log" is switched on in Tools
   (this browser only); its code and the `🎸 Log` tab are kept for the later MP3 player.
 - **Collection** shows the albums as shelves. A shelf is a label; the label is worked out from the album's row, first match wins:
   Didn't like (Status) → Owned (Status Owned, or Format Vinyl (Owned)) → Vinyl wish list (Status Purchase, or Format Vinyl (Wanted))
@@ -94,6 +97,15 @@ See [ROADMAP.md](ROADMAP.md).
   so the newest albums sit at the far end and the oldest are closest to the incinerator.
   Backup before this change: `🎸 backup 2026-10-25 (before Labelled)`.
 - Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact; later A–Q identical to the second backup and Labelled empty.
+
+### 2026-10-25 (Playlists)
+
+- New tab `🎸 Playlists`, one row per saved playlist: `id | name | purpose | source | created | tracks | minutes | rules | trackIds | notes`.
+  - `id`: permanent number from 7001, highest + 1; duplicates highlighted red.
+  - `trackIds`: the playlist's Spotify track ids in order, comma-separated text. `rules` is the rule set as compact JSON text.
+  - Deleting a playlist in the app clears that row's cells (found by id first); the row stays, empty, and new rows go below the last used row.
+- The app also **reads** (never writes) the `Classical` tab, and any sheet link and tab the owner pastes into the Playlists tab, as the pool of tracks.
+  The only writes in this feature go to `🎸 Playlists`.
 
 ## Look
 

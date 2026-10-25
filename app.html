@@ -328,6 +328,11 @@ div.hbar{padding:3px 6px}
 .aotd{background:var(--raise);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:14px;padding:18px 20px}
 .aotd-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .aotd-top > div:first-child{min-width:0;flex:1 1 220px}
+.aotd-lead{display:flex;gap:14px;align-items:flex-start}
+.aotd-lead > div:last-child{min-width:0;flex:1}
+.aotd-art{flex:none;width:84px;height:84px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+.aotd-art svg{display:block;width:100%;height:100%}
+.aotd-art svg text{font-family:var(--body);font-weight:600}
 .aotd h3{font-family:var(--display);font-size:clamp(24px,4vw,32px);line-height:1.15;margin:0;overflow-wrap:anywhere}
 .aotd .by{font-size:16px;margin-top:4px;overflow-wrap:anywhere}
 .aotd .big-rating{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;color:color-mix(in srgb,var(--accent) 60%,#fff)}
@@ -373,7 +378,7 @@ div.hbar{padding:3px 6px}
 .s-board.compact .s-row{--s:clamp(52px,13cqw,100px)}
 .s-standing{flex:1;min-width:0;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));align-items:end}
 .s-cell{display:flex;justify-content:center;align-items:flex-end}
-.s-stack{--sw:12px;--pitch:9.5px;--ang:12deg;--w0:calc(var(--s) * .6);--R:calc(var(--s) * .5);--stw:calc((var(--k) - 1) * var(--pitch) + var(--sw));position:relative;z-index:3;flex:none;width:var(--stw);height:var(--s);margin-left:calc(var(--s) * .24);outline:none}
+.s-stack{--sw:12px;--pitch:9.5px;--ang:12deg;--w0:calc(var(--s) * .6);--R:calc(var(--s) * .5);--stw:calc((var(--k) - 1) * var(--pitch) + var(--sw));position:relative;z-index:3;flex:none;width:var(--stw);height:var(--s);margin-left:calc(var(--s) * .1);margin-right:calc(var(--s) * .18);outline:none}
 .s-stack.more{margin-right:var(--morew,44px)}
 .s-more{position:absolute;left:calc(100% + 8px);bottom:6px;min-width:34px;padding:2px 8px;border-radius:999px;background:rgba(14,15,22,.92);border:1px solid rgba(255,255,255,.22);color:var(--muted);font-size:12px;font-weight:700;line-height:1.5;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
 .s-grid{--s:clamp(52px,12.2cqw,132px);position:relative;z-index:2;display:grid;grid-template-columns:repeat(var(--gc),minmax(0,1fr));row-gap:78px;align-items:end}
@@ -413,7 +418,7 @@ div.hbar{padding:3px 6px}
 .s-cell.last .s-it:hover .s-cap,.s-cell.last .s-it:focus-within .s-cap{transform:none}
 
 /* the packed stack: narrow slices of the remaining sleeves, leaning like records filed in a crate */
-.s-it.slice{position:absolute;bottom:0;left:var(--x);--x:calc(var(--i) * var(--pitch));width:var(--sw);height:var(--s);z-index:calc(var(--i) + 1);transform-origin:50% 100%;transform:translateX(0) rotate(-10deg);transition:transform .12s ease-out,width .12s ease-out}
+.s-it.slice{position:absolute;bottom:0;left:var(--x);--x:calc(var(--i) * var(--pitch));width:var(--sw);height:var(--s);z-index:calc(var(--i) + 1);transform-origin:50% 100%;transform:translateX(0) rotate(10deg);transition:transform .12s ease-out,width .12s ease-out}
 .s-it.slice::before{display:none}
 .s-it.slice:hover,.s-it.slice:focus-within{z-index:calc(var(--i) + 1)}
 .s-it.slice .s-lift{height:100%;transition:transform .12s ease-out}
@@ -423,7 +428,7 @@ div.hbar{padding:3px 6px}
 .s-it.slice.sel .s-art{outline-offset:0}
 .s-it.slice .s-chip,.s-it.slice .s-pick,.s-it.slice .s-cap,.s-it.slice .s-cd{display:none}
 .s-it.slice .s-chip{font-size:9px;padding:2px 6px}
-.s-stack.fan{z-index:60;--ang:15deg;--hw:1.3;--ac:calc((var(--ci) - var(--f0) - (var(--m) - 1) / 2) * var(--ang));--px:min(calc(var(--ci) * var(--pitch) + var(--sw) / 2 - var(--s) * .087 - (var(--hw) - 1) * var(--w0) / 2 - (var(--R) + var(--s) / 2) * sin(var(--ac))),calc(var(--stw) - var(--s) * .6))}
+.s-stack.fan{z-index:60;--ang:15deg;--hw:1.3;--ac:calc((var(--ci) - var(--f0) - (var(--m) - 1) / 2) * var(--ang));--px:min(calc(var(--ci) * var(--pitch) + var(--sw) / 2 + var(--s) * .087 - (var(--hw) - 1) * var(--w0) / 2 - (var(--R) + var(--s) / 2) * sin(var(--ac))),calc(var(--stw) - var(--s) * .6))}
 .s-stack.fan .s-it.slice.fanned{--a:calc((var(--j) - (var(--m) - 1) / 2) * var(--ang));width:var(--w0);z-index:calc(40 + var(--j));transform-origin:calc(var(--w0) / 2) calc(100% + var(--R));transform:translateX(calc(var(--px) - var(--w0) / 2 - var(--x))) rotate(var(--a))}
 .s-stack.fan:not(.touch) .s-it.slice.fanned:not(.cur){pointer-events:none}
 .s-stack.fan .s-it.slice.fanned .s-art{border-radius:4px;box-shadow:0 0 0 1px rgba(255,255,255,.14) inset,-4px 4px 9px -3px var(--shadow)}
@@ -476,7 +481,17 @@ div.hbar{padding:3px 6px}
 
 /* detail strip under a shelf */
 .s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
-.s-dcover{width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+.s-dcover{position:relative;width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+/* cover art: the picture sits over the generated sleeve, which fades away except its initials badge */
+[data-cv]{position:relative}
+.cvimg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;opacity:0;transition:opacity .35s ease}
+.cvimg.in{opacity:1}
+[data-cv].cv svg{position:relative}
+[data-cv].cv svg > :not(.bdg){opacity:0;transition:opacity 0s .4s}
+.s-it.slice .cvimg{left:calc(var(--s) * var(--ox) / -100);width:var(--s);height:var(--s);max-width:none}
+.cover-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 260px;min-width:0}
+.cover-ctl input{flex:1 1 200px}
+.cover-stat{flex:1 1 100%;margin:0;font-size:13px;overflow-wrap:anywhere}
 .s-dcover svg{display:block;width:100%;height:100%}
 .s-dcover svg text{font-family:var(--body);font-weight:600}
 .s-dinfo{min-width:0;display:grid;gap:6px}
@@ -542,6 +557,7 @@ input[type="checkbox"][role="switch"]:checked::after{transform:translateX(18px);
   .sh-head h2{font-size:19px}
   .s-detail{grid-template-columns:auto minmax(0,1fr);padding:14px}
   .s-detail .s-x{position:absolute;top:10px;right:10px}
+  .s-detail .s-dinfo h3{padding-right:34px}
   .s-dcover{width:76px;height:76px}
   .sh-btn{padding:6px 11px;font-size:13px}
 }
@@ -636,6 +652,82 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 @media (max-width:420px){.dlg-body{grid-template-columns:minmax(0,1fr)}.field.w2{grid-column:auto}}
 .look-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:10px}
 .look-row label{min-width:6.5em;font-size:13px;font-weight:600;color:var(--muted)}
+/* playlists */
+.pl-source{margin-bottom:var(--gap-tile)}
+.pl-srcbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pl-srcrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+.pl-srcrow .field{flex:1 1 240px}
+.pl-line{margin:12px 0 0;font-size:14px;color:var(--fg);overflow-wrap:anywhere}
+.pl-line[data-kind="error"]{color:var(--danger)}
+.pl-bar{margin-top:var(--gap-tile)}
+.pl-msg{margin:0 0 var(--gap-tile);padding:8px 12px;border-radius:8px;background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);font-size:14px}
+.pl-msg[data-kind="error"]{border-left-color:var(--danger)}
+.pl-search{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:var(--gap-tile)}
+.pl-search input{flex:1 1 240px;height:38px}
+.pl-search .btn{height:38px}
+.pl-fg{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin-bottom:10px}
+.pl-fg .flabel{min-width:6.2em}
+.pl-fg .chips,.pl-f .chips{margin:0}
+.pl-tbl .thbtn,.pl-tbl .rowbtn{all:unset;box-sizing:border-box;cursor:pointer;color:inherit;text-align:left}
+.pl-tbl .thbtn:focus-visible,.pl-tbl .rowbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.pl-tbl .rowbtn{display:block}
+.pl-tbl td.num,.pl-tbl th.num{text-align:right;white-space:nowrap}
+.pl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);align-items:stretch}
+.pl-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.pl-fields .w2{grid-column:1/-1}
+.pl-fields-end{align-items:end;border-top:1px solid var(--line);padding-top:14px}
+.pl-f.field label,.pl-f .flabel{font-size:12px;color:var(--muted);font-weight:600}
+.pl-f input,.pl-f select{width:100%}
+.pl-f[data-off]{opacity:.5}
+.pl-f .off-note{display:none;font-weight:400}
+.pl-f[data-off] .off-note{display:inline}
+.pl-seedbtn .btn{width:100%;height:36px}
+.pl-list{list-style:none;margin:0;padding:0}
+.pl-list > li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.pl-list > li:first-child{border-top:0;padding-top:0}
+.pl-list .no{color:var(--muted);text-align:right}
+.pl-list .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.pl-list .m{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;color:var(--muted);margin-top:2px}
+.pl-list .main{min-width:0}
+.pl-list .acts{display:flex;gap:4px}
+.pl-list .acts .btn{padding:4px 9px}
+.pl-e{display:inline-block;width:56px;height:6px;border-radius:3px;background:var(--raise);overflow:hidden;flex:none}
+.pl-e > i{display:block;height:100%;background:var(--accent-2);border-radius:3px}
+.pl-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pl-saveform{display:grid;gap:10px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--raise)}
+.pl-saveform .pl-actions{margin-top:2px}
+.pl-copybox{width:100%;margin-top:10px;font:13px/1.4 var(--body);resize:vertical}
+.pl-slist{list-style:none;margin:0;padding:0}
+.pl-saved{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.pl-saved:first-child{border-top:0;padding-top:0}
+.pl-saved .t{font-weight:600;overflow-wrap:anywhere}
+.pl-saved .purpose{font-size:14px;overflow-wrap:anywhere}
+.pl-saved .m{font-size:13px;color:var(--muted)}
+.pl-saved .acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.pl-saved .ask{font-size:13px;color:var(--muted)}
+.pl-saved .pl-copybox{grid-column:1/-1;margin-top:0}
+.pl-ren{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pl-ren .field label{display:flex;flex-direction:column;gap:4px}
+.pl-ren input{width:100%}
+@media (max-width:860px){
+  .pl-grid{display:flex;flex-direction:column}
+  .pl-tbl td.c-title{order:1;flex:1 1 100%}
+  .pl-tbl td.c-who{order:2;flex:1 0 100%;color:var(--muted);font-size:13px}
+  .pl-tbl td.c-era{order:3}.pl-tbl td.c-mood{order:4}.pl-tbl td.c-form{order:5;font-size:13px;color:var(--muted)}
+  .pl-tbl td.c-bpm{order:6}.pl-tbl td.c-key{order:7}.pl-tbl td.c-energy{order:8}.pl-tbl td.c-dur{order:9;margin-left:auto}
+  .pl-tbl td.num{font-size:12px;color:var(--muted);text-align:left}
+  .pl-tbl td[data-l]::before{content:attr(data-l) " ";opacity:.75}
+  .pl-tbl .detail td{display:block}
+}
+@media (max-width:560px){
+  .pl-list > li{grid-template-columns:2em minmax(0,1fr)}
+  .pl-list .acts{grid-column:2}
+  .pl-saved{grid-template-columns:minmax(0,1fr)}
+  .pl-saved .acts{justify-content:flex-start}
+  .pl-ren{grid-template-columns:minmax(0,1fr)}
+  .seg button{padding:0 12px}
+  #plSrc{flex-wrap:wrap;border-radius:18px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -718,6 +810,7 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     <button class="tab" role="tab" id="tab-collection" aria-selected="false" aria-controls="view-collection" type="button">Collection</button>
     <button class="tab" role="tab" id="tab-log" aria-selected="false" aria-controls="view-log" type="button" hidden>Log</button>
     <button class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="view-plan" type="button">Plan</button>
+    <button class="tab" role="tab" id="tab-playlists" aria-selected="false" aria-controls="view-playlists" type="button">Playlists</button>
     <button class="tab" role="tab" id="tab-dashboard" aria-selected="false" aria-controls="view-dashboard" type="button">Dashboard</button>
     <button class="tab" role="tab" id="tab-tools" aria-selected="false" aria-controls="view-tools" type="button">Tools</button>
   </nav>
@@ -877,6 +970,146 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
     </div>
   </div>
 
+  <!-- ===== Playlists ===== -->
+  <div id="view-playlists" role="tabpanel" aria-labelledby="tab-playlists" hidden>
+    <section class="panel pl-source" aria-labelledby="plSrcH">
+      <div class="panel-head"><h2 id="plSrcH">Track pool</h2><span class="muted small" id="plSrcName"></span></div>
+      <div class="pl-srcbar">
+        <div class="seg" id="plSrc" role="group" aria-label="Where the tracks come from">
+          <button type="button" data-s="classical" aria-pressed="true">Classical (this sheet)</button>
+          <button type="button" data-s="sheet" aria-pressed="false">Another sheet</button>
+          <button type="button" data-s="csv" aria-pressed="false">CSV upload</button>
+        </div>
+        <button class="btn" type="button" id="plReload">Reload</button>
+      </div>
+      <form class="pl-srcrow" id="plSrcSheet" hidden>
+        <div class="field"><label for="plLink">Sheet link</label><input id="plLink" type="url" autocomplete="off" spellcheck="false" placeholder="https://docs.google.com/spreadsheets/d/…"></div>
+        <div class="field"><label for="plTab">Tab name</label><input id="plTab" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. My playlist"></div>
+      </form>
+      <div class="pl-srcrow" id="plSrcCsv" hidden>
+        <div class="field"><label for="plFile">CSV file (a Spotify export works)</label><input id="plFile" type="file" accept=".csv,text/csv"></div>
+      </div>
+      <p class="pl-line" id="plLoadLine" role="status"></p>
+    </section>
+
+    <div class="col-bar pl-bar">
+      <div class="seg" id="plView" role="group" aria-label="Playlists view">
+        <button type="button" data-v="browse" aria-pressed="true">Browse</button>
+        <button type="button" data-v="build" aria-pressed="false">Build</button>
+        <button type="button" data-v="saved" aria-pressed="false">Saved <span class="tnum" id="plSavedCount"></span></button>
+      </div>
+    </div>
+    <p class="pl-msg" id="plMsg" role="status" hidden></p>
+
+    <!-- Browse -->
+    <div id="plBrowse">
+      <p class="empty" id="plBrowseEmpty">Load a track pool above to browse it.</p>
+      <div id="plBrowseBody" hidden>
+        <div class="pl-search">
+          <input type="search" id="plQ" placeholder="Search title, composer, artist or album" aria-label="Search the tracks" autocomplete="off">
+          <button class="btn" type="button" id="plClear">Clear filters</button>
+        </div>
+        <div class="pl-fg"><div class="flabel" id="plFEraL">Era</div><div class="chips" id="plFEra" role="group" aria-labelledby="plFEraL"></div></div>
+        <div class="pl-fg"><div class="flabel" id="plFFormL">Form</div><div class="chips" id="plFForm" role="group" aria-labelledby="plFFormL"></div></div>
+        <div class="pl-fg"><div class="flabel" id="plFMoodL">Mood</div><div class="chips" id="plFMood" role="group" aria-labelledby="plFMoodL"></div></div>
+        <div class="pl-fg"><div class="flabel" id="plFWfL">Work-friendly</div><div class="chips" id="plFWf" role="group" aria-labelledby="plFWfL"></div></div>
+        <div class="tbl-bar">
+          <select id="plSort" aria-label="Sort by">
+            <option value="pos">Sort: Sheet order</option><option value="title">Sort: Title</option><option value="who">Sort: Composer / artists</option><option value="era">Sort: Era</option>
+            <option value="form">Sort: Form</option><option value="mood">Sort: Mood</option><option value="bpm">Sort: BPM</option><option value="key">Sort: Key</option>
+            <option value="energy">Sort: Energy</option><option value="dur">Sort: Length</option>
+          </select>
+          <button class="btn" id="plDir" type="button" aria-pressed="false">Descending</button>
+        </div>
+        <div class="lib-foot"><span id="plCount" role="status"></span></div>
+        <div class="table-wrap">
+          <table class="lib pl-tbl">
+            <thead id="plHead"></thead>
+            <tbody id="plBody"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="plNone" hidden>No tracks match. Clear a filter or the search.</p>
+        <div class="lib-foot"><button class="btn" id="plMore" type="button" hidden>Show more</button></div>
+      </div>
+    </div>
+
+    <!-- Build -->
+    <div id="plBuild" hidden>
+      <p class="empty" id="plBuildEmpty">Load a track pool above to build a playlist from it.</p>
+      <div class="pl-grid" id="plBuildBody">
+        <section class="panel pl-rules" id="plRules" aria-labelledby="plRulesH">
+          <div class="panel-head"><h2 id="plRulesH">Rules</h2><button class="btn" type="button" id="plReset">Reset rules</button></div>
+          <div class="flabel" id="plPresetsL">Presets</div>
+          <div class="chips" id="plPresets" role="group" aria-labelledby="plPresetsL">
+            <button class="chip" type="button" aria-pressed="false" data-preset="focus">Deep focus (work)</button>
+            <button class="chip" type="button" aria-pressed="false" data-preset="ramp">Gentle ramp</button>
+            <button class="chip" type="button" aria-pressed="false" data-preset="wind">Wind-down</button>
+            <button class="chip" type="button" aria-pressed="false" data-preset="era">Era tour</button>
+            <button class="chip" type="button" aria-pressed="false" data-preset="beginner">Beginner path</button>
+            <button class="chip" type="button" aria-pressed="false" data-preset="deep">Composer deep dive</button>
+          </div>
+          <p class="muted small" id="plPresetNote"></p>
+          <div class="pl-fields">
+            <div class="pl-f w2" data-need="era"><div class="flabel" id="rEraL">Era <span class="off-note">(not in this pool)</span></div><div class="chips" id="rEra" role="group" aria-labelledby="rEraL"></div></div>
+            <div class="pl-f w2" data-need="form"><div class="flabel" id="rFormL">Form <span class="off-note">(not in this pool)</span></div><div class="chips" id="rForm" role="group" aria-labelledby="rFormL"></div></div>
+            <div class="pl-f w2" data-need="mood"><div class="flabel" id="rMoodL">Mood <span class="off-note">(not in this pool)</span></div><div class="chips" id="rMood" role="group" aria-labelledby="rMoodL"></div></div>
+            <div class="pl-f field" data-need="wf"><label for="rWf">Work-friendly <span class="off-note">(not in this pool)</span></label>
+              <select id="rWf"><option value="any">Any</option><option value="yes">Yes</option><option value="yesmaybe">Yes or Maybe</option></select></div>
+            <div class="pl-f field"><label for="rComposer" id="rComposerL">Composer<span class="off-note"></span></label><select id="rComposer"><option value="">Any</option></select></div>
+            <div class="pl-f field" data-need="energy"><label for="rEMin">Energy from <span class="off-note">(not in this pool)</span></label><input type="number" id="rEMin" min="0" max="100" inputmode="numeric" placeholder="0"></div>
+            <div class="pl-f field" data-need="energy"><label for="rEMax">Energy up to</label><input type="number" id="rEMax" min="0" max="100" inputmode="numeric" placeholder="100"></div>
+            <div class="pl-f field" data-need="bpm"><label for="rBMin">BPM from <span class="off-note">(not in this pool)</span></label><input type="number" id="rBMin" min="0" max="300" inputmode="numeric"></div>
+            <div class="pl-f field" data-need="bpm"><label for="rBMax">BPM up to</label><input type="number" id="rBMax" min="0" max="300" inputmode="numeric"></div>
+            <div class="pl-f field" data-need="inst"><label for="rInst">Min instrumental <span class="off-note">(not in this pool)</span></label><input type="number" id="rInst" min="0" max="100" inputmode="numeric" placeholder="0-100"></div>
+            <div class="pl-f field" data-need="speech"><label for="rSpeech">Max speech <span class="off-note">(not in this pool)</span></label><input type="number" id="rSpeech" min="0" max="100" inputmode="numeric" placeholder="0-100"></div>
+            <div class="pl-f field" data-need="dur"><label for="rMaxLen">Max track length (min) <span class="off-note">(not in this pool)</span></label><input type="number" id="rMaxLen" min="0" step="0.5" inputmode="decimal"></div>
+            <div class="pl-f field"><label for="rPer">Max tracks per composer or artist</label><input type="number" id="rPer" min="1" inputmode="numeric"></div>
+            <div class="pl-f field" data-need="pop"><label for="rTopEra">Top tracks per era (by popularity) <span class="off-note">(not in this pool)</span></label><input type="number" id="rTopEra" min="1" inputmode="numeric"></div>
+            <div class="pl-f field"><label for="rQ">Text search</label><input type="search" id="rQ" autocomplete="off"></div>
+          </div>
+          <div class="pl-fields pl-fields-end">
+            <div class="pl-f field"><label for="rTarget">Target length (minutes, blank = all matches)</label><input type="number" id="rTarget" min="1" step="1" inputmode="numeric"></div>
+            <div class="pl-f field"><label for="rOrder">Order</label>
+              <select id="rOrder"><option value="sheet">Sheet order</option><option value="energyUp">Energy low to high</option><option value="energyDown">Energy high to low</option><option value="key">Key flow</option><option value="era">Era (chronological)</option><option value="form">Form, then sheet order</option><option value="shuffle">Shuffle</option></select></div>
+            <div class="pl-f field"><label for="plSeed">Seed</label><input type="number" id="plSeed" step="1" inputmode="numeric"></div>
+            <div class="pl-f pl-seedbtn"><button class="btn" type="button" id="plShuffle">Shuffle again</button></div>
+          </div>
+          <p class="muted small" id="plLack"></p>
+        </section>
+
+        <section class="panel pl-res" aria-labelledby="plResH">
+          <div class="panel-head"><h2 id="plResH" tabindex="-1">Playlist preview</h2><span class="muted small tnum" id="plResHead"></span></div>
+          <p class="muted small" id="plNotes"></p>
+          <ol class="pl-list" id="plResList"></ol>
+          <div class="pl-actions">
+            <button class="btn btn-primary" type="button" id="plSave">Save playlist</button>
+            <button class="btn" type="button" id="plCopySp">Copy for Spotify</button>
+            <button class="btn" type="button" id="plCopyNames">Copy track names</button>
+          </div>
+          <form class="pl-saveform" id="plSaveForm" hidden>
+            <div class="field"><label for="plName">Name</label><input type="text" id="plName" maxlength="120" autocomplete="off"></div>
+            <div class="field"><label for="plPurpose">Purpose</label><input type="text" id="plPurpose" maxlength="240" autocomplete="off" placeholder="e.g. quiet work mornings"></div>
+            <div class="pl-actions"><button class="btn btn-primary" type="submit" id="plSaveGo">Save to sheet</button><button class="btn" type="button" id="plSaveCancel">Cancel</button></div>
+          </form>
+          <p class="muted small" id="plSaveNote"></p>
+          <p class="muted small" id="plSkip"></p>
+          <p class="muted small" id="plHelper">In Spotify's desktop app, open a playlist and paste (Ctrl+V, or Cmd+V on a Mac). Not tested here: tell me if it doesn't work.</p>
+          <textarea class="pl-copybox" id="plCopyBox" rows="5" readonly hidden aria-label="Text to copy"></textarea>
+        </section>
+      </div>
+    </div>
+
+    <!-- Saved -->
+    <div id="plSaved" hidden>
+      <section class="panel" aria-labelledby="plSavedH">
+        <div class="panel-head"><h2 id="plSavedH">Saved playlists</h2><span class="muted small">Stored in your 🎸 Playlists tab</span></div>
+        <p class="notice" id="plSavedNote" hidden></p>
+        <ul class="pl-slist" id="plSavedList"></ul>
+      </section>
+    </div>
+    <div class="sr" id="plLive" role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
   <!-- ===== Dashboard ===== -->
   <div id="view-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden>
     <div class="periods" id="dashPeriods" role="group" aria-label="Year"></div>
@@ -938,6 +1171,10 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
       <div class="panel-head"><h2 id="lookH">Look</h2><span class="muted small">Remembered in this browser only</span></div>
       <div class="look-row"><label for="lookPressing">Pressing</label><select id="lookPressing"></select></div>
       <div class="look-row"><label for="lookBg">Background</label><select id="lookBg"><option value="marble">Marble record</option><option value="plain">Plain dark</option></select></div>
+      <div class="look-row"><label for="coverLink">Covers</label>
+        <div class="cover-ctl"><input type="text" id="coverLink" autocomplete="off" spellcheck="false" placeholder="Cover folder link" aria-label="Cover folder link"><button class="btn" type="button" id="coverSave">Save</button><button class="btn" type="button" id="coverClear">Clear</button></div>
+        <p class="cover-stat muted" id="coverStat" role="status"></p>
+        <button class="btn" type="button" id="coverConnect" hidden>Connect again</button></div>
       <div class="look-row"><label for="lookLog">Listening log</label><label class="switch"><input type="checkbox" role="switch" id="lookLog"><span>Show listening log</span></label></div>
     </section>
     </div>
@@ -1081,6 +1318,7 @@ function initLook() {
   $('lookBg').addEventListener('change', e => { lsSet('sg-bg', e.target.value === 'plain' ? 'plain' : 'marble'); applyTheme(); });
   $('lookLog').addEventListener('change', e => { state.showLog = e.target.checked; lsSet('sg-showlog', state.showLog ? '1' : '0'); applyLogVisibility(); render(); });
   sync();
+  renderCovers();
 }
 
 /* ---------- sheet model ---------- */
@@ -1170,7 +1408,7 @@ function snapshotState() {
 /* ---------- state ---------- */
 const snap = snapshotState();
 const state = {
-  albums: snap.albums, log: snap.log, tracks: snap.tracks, tracksMissing: false,
+  albums: snap.albums, log: snap.log, tracks: snap.tracks, tracksMissing: false, playlists: [], plMissing: false,
   settings: { yearGoalAlbums: 52, rotationDays: 14, upNextSize: 10, albumOfDayMin: 8 },
   mcp: null, google: false, live: false, busy: false, logMissing: false, hasLabelled: false,
   tab: 'home', logDate: null, pick: null, editingLog: null, ratePick: {},
@@ -1219,7 +1457,11 @@ async function readRange(range) {
   const p = res.payload;
   return (p && Array.isArray(p.values)) ? p.values : [];
 }
-const putCell = (tab, col, row, v) => state.mcp.callTool(SERVER, 'update_values', { spreadsheetId: sheetId(), range: `${qt(tab)}!${col}${row}`, values: [[v]] }, { cache: false });
+// Writes only ever go to 🎸 tabs: any write helper refuses another tab (the Classical tab and pasted sheets are read-only)
+function assertSheetTab(tab) {
+  if (!String(tab).startsWith(TAB)) throw { code: 'tool_error', message: `Refusing to write to “${tab}”: this app only writes to the ${TAB} tabs` };
+}
+const putCell = (tab, col, row, v) => (assertSheetTab(tab), state.mcp.callTool(SERVER, 'update_values', { spreadsheetId: sheetId(), range: `${qt(tab)}!${col}${row}`, values: [[v]] }, { cache: false }));
 const rowFromAppend = res => {
   const p = (res && res.payload) || {};
   const m = String((p.updates && p.updates.updatedRange) || p.updatedRange || '').match(/![A-Z]+(\d+)/);
@@ -1247,6 +1489,8 @@ async function refresh() {
     try { settings = await readRange(`${qt(TAB_SET)}!A1:B`); } catch (e) { if (e && e.code === 'google_signin') throw e; }
     let trkRows = [], trkMissing = false;
     try { trkRows = await readRange(`${qt(TAB_TRK)}!A1:I`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; trkMissing = true; }
+    let plRows = [], plGone = false;
+    try { plRows = await readRange(`${qt(TAB_PL)}!A1:J`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; plGone = true; }
     if (!albums.length) throw { code: 'tool_error', message: `the ${TAB} tab came back empty` };
 
     const ah = (albums[0] || []).map(h => String(h).trim());
@@ -1270,9 +1514,13 @@ async function refresh() {
     state.logMissing = logMissing || !lh.length;
     const parsedTracks = trkMissing ? null : parseTracks(trkRows);
     state.tracks = parsedTracks || []; state.tracksMissing = !parsedTracks;
+    const parsedPl = plGone ? null : plParse(plRows);
+    state.playlists = parsedPl || []; state.plMissing = !parsedPl; PL.loadError = '';
 
+    state.settings.coverFolder = '';
     for (const r of settings.slice(1)) {
       const k = norm(r[0]), v = toNum(r[1]);
+      if (k === 'coverfolder') { const t = String(r[1] ?? '').trim().replace(/^'/, ''); if (/^[A-Za-z0-9_-]{10,}$/.test(t)) state.settings.coverFolder = t; continue; }
       if (k === 'yeargoalalbums' && v) state.settings.yearGoalAlbums = v;
       else if (k === 'rotationdays' && v) state.settings.rotationDays = v;
       else if (k === 'upnextsize' && v) state.settings.upNextSize = v;
@@ -1283,6 +1531,7 @@ async function refresh() {
     notice(state.logMissing ? `The ${TAB_LOG} tab wasn't found or has no header row, so listens can't be logged yet.` : '', state.logMissing ? 'error' : '');
     setStatus('live', 'Live from your sheet · ' + new Date().toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }));
     renderAll(); spinMark();
+    coverInit();
   } catch (err) {
     setStatus('error', state.live ? 'Showing the last data loaded' : 'Showing a sample snapshot');
     notice(explain(err), 'error');
@@ -1796,7 +2045,7 @@ function artSvg(title) {
   else if (comp === 2) g = `<rect width="100" height="100" fill="${A.c}"/><polygon points="50,14 90,84 10,84" fill="${A.d}"/><circle cx="50" cy="62" r="10" fill="${B.c}"/>`;
   else if (comp === 3) { g = `<rect width="100" height="100" fill="${A.d}"/>`; for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) g += `<circle cx="${20 + i * 15}" cy="${20 + j * 15}" r="${i === 2 && j === 2 ? 7 : 4.5}" fill="${(i + j) % 2 ? A.c : B.c}"/>`; }
   else g = `<rect width="100" height="100" fill="${A.c}"/><rect x="50" width="50" height="100" fill="${A.d}"/><circle cx="50" cy="50" r="22" fill="${B.c}" stroke="${A.v}" stroke-width="3"/>`;
-  g += `<rect x="68" y="85" width="28" height="11" rx="3" fill="#000" fill-opacity=".62"/><text x="82" y="93.4" text-anchor="middle" font-size="8" fill="#fff">${esc(initials(title))}</text>`;
+  g += `<g class="bdg"><rect x="68" y="85" width="28" height="11" rx="3" fill="#000" fill-opacity=".62"/><text x="82" y="93.4" text-anchor="middle" font-size="8" fill="#fff">${esc(initials(title))}</text></g>`;
   return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${g}</svg>`;
 }
 
@@ -1847,6 +2096,8 @@ const pickPillHtml = (a, ctx) => `<button class="s-pickbtn" type="button" data-s
 const pickTinyHtml = (a, ctx) => `<button class="pickbtn-sm" type="button" data-sa="pick" data-id="${albumKey(a)}" data-fk="${ctx}:row:${albumKey(a)}:pick" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>`;
 const chipPillHtml = (a, ctx) => `<button class="lblchip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${albumKey(a)}" data-fk="${ctx}:pill:${albumKey(a)}:chip" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[labelOf(a)].n)}. Change label for ${esc(a.title)}">${esc(LAB[labelOf(a)].n)} ▾</button>`;
 
+// Cover art hooks onto any element carrying data-cv (the album id); see "Cover art" below
+const cvAttr = a => toNum(a.id) ? ` data-cv="${toNum(a.id)}"` : '';
 function itemHtml(e, S, role, i, k, ctx, o = {}) {
   const a = e.a, key = albumKey(a), lab = labelOf(a), ri = releaseInfo(a);
   const sel = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S && shelfUI.sel.id === key;
@@ -1856,7 +2107,7 @@ function itemHtml(e, S, role, i, k, ctx, o = {}) {
   const aria = `${a.title}${a.artist ? ' by ' + a.artist : ''}, album, label ${LAB[lab].n}${favOf(a) ? ', favourite' : ''}${o.ash ? ', incinerated, still in your sheet' : ''}`;
   const slice = role === 'slice';
   return `<div class="${cls}" style="--i:${i}${slice ? ';--ox:' + (hash(String(a.title || '')) % 38) : ''}" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}"${slice ? ` data-i="${i}"` : ''}${o.slot != null ? ` data-slot="${o.slot}"` : ''}${mq.fine.matches ? ' draggable="true"' : ''}><div class="s-lift">` +
-    `<button class="s-art" type="button"${slice ? ` tabindex="${o.rove ? 0 : -1}"` : ''} data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
+    `<button class="s-art" type="button"${cvAttr(a)}${slice ? ` tabindex="${o.rove ? 0 : -1}"` : ''} data-sa="sel" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" data-fk="${fk('art')}" aria-pressed="${sel}" aria-label="${esc(aria)}">${artSvg(a.title)}</button>` +
     `<button class="s-chip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${key}" data-fk="${fk('chip')}" aria-haspopup="menu" aria-expanded="false" aria-label="Label for ${esc(a.title)}: ${esc(LAB[lab].n)}. Change label">${esc(LAB[lab].short)} ▾</button>` +
     `<button class="s-pick" type="button" data-sa="pick" data-id="${key}" data-fk="${fk('pick')}" aria-pressed="${favOf(a)}" aria-label="Favourite: ${esc(a.title)}">${PICK_SVG}</button>` +
     (o.ash ? `<span class="s-ash" aria-hidden="true" title="Incinerated (still in your sheet)">${FLAME_SVG}Ash</span>` : '') +
@@ -1876,7 +2127,7 @@ function detailHtml(a, S, ctx) {
     (toNum(a.id) ? `<button class="s-act" type="button" data-sa="tracks" data-id="${key}">Tracks</button>` : '') +
     `<button class="s-act" type="button" data-sa="edit" data-id="${key}">Edit</button>` +
     (u ? `<a class="s-buy" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Buy ${esc(a.title)} at ${esc(shopName(u))}">Buy · ${esc(shopName(u))}</a>` : '');
-  return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover">${artSvg(a.title)}</div>` +
+  return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover"${cvAttr(a)}>${artSvg(a.title)}</div>` +
     `<div class="s-dinfo"><h3>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div>` +
     `<button class="s-x" type="button" data-sa="close" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" aria-label="Close details">×</button></div>`;
 }
@@ -2069,9 +2320,9 @@ document.addEventListener('pointermove', e => {
   if (!st || e.target.closest('.s-chip, .s-pick, .s-chev, .s-more')) return;   // on a card's own controls: hold still
   const sl = e.target.closest('.slice:not(.fanned)'); let idx;
   if (sl) idx = +sl.dataset.i;
-  else {   // over the raised card or the gap the fan left: work out which packed slice is under the pointer (the slices lean 10deg)
+  else {   // over the raised card or the gap the fan left: work out which packed slice is under the pointer (the slices lean 10deg to the right)
     const r = st.getBoundingClientRect(), cs = getComputedStyle(st), pitch = parseFloat(cs.getPropertyValue('--pitch')), sw = parseFloat(cs.getPropertyValue('--sw'));
-    idx = Math.round((e.clientX - r.left - sw / 2 + (r.bottom - e.clientY) * 0.1736) / pitch);
+    idx = Math.round((e.clientX - r.left - sw / 2 - (r.bottom - e.clientY) * 0.1736) / pitch);
     idx = Math.max(0, Math.min(st.querySelectorAll('.slice').length - 1, idx));
   }
   const f = shelfUI.fan; if (f && f.key === stackKey(st) && f.idx === idx && f.src === 'ptr') return;
@@ -3003,8 +3254,18 @@ async function saveSetting(key, value) {
   if (hits.length === 1) {
     const cur = await readRange(`${qt(TAB_SET)}!B${hits[0]}`);
     const was = cur[0] && String(cur[0][0] ?? '').trim();
+    if (typeof value === 'string') {   // text settings (coverFolder): compare as text, store with a leading ' so Sheets keeps it as text
+      if (String(was ?? '').replace(/^'/, '') === value) return false;
+      await putCell(TAB_SET, 'B', hits[0], value ? "'" + value : '');
+      return true;
+    }
     if (was !== '' && was != null && toNum(was) === value) return false;
     await putCell(TAB_SET, 'B', hits[0], value);
+    return true;
+  }
+  if (typeof value === 'string') {
+    if (!value) return false;   // nothing to clear
+    await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_SET)}!A1`, values: [["'" + key, "'" + value]] }, { cache: false });
     return true;
   }
   await state.mcp.callTool(SERVER, 'append_values', { spreadsheetId: sheetId(), range: `${qt(TAB_SET)}!A1`, values: [["'" + key, value]] }, { cache: false });
@@ -3159,8 +3420,10 @@ function renderAotd() {
   box.textContent = '';
   const a = aotdFor(t);
   if (!a) { box.appendChild(mk('p', 'empty', `No albums rated ${min} or higher yet. Rate some albums and one will be picked each day.`)); return; }
-  const card = mk('div', 'aotd'), top = mk('div', 'aotd-top'), left = mk('div');
-  left.append(mk('h3', null, a.title), mk('div', 'by', a.artist || 'Unknown artist'));
+  const card = mk('div', 'aotd'), top = mk('div', 'aotd-top'), left = mk('div', 'aotd-lead'), txt = mk('div');
+  txt.append(mk('h3', null, a.title), mk('div', 'by', a.artist || 'Unknown artist'));
+  const art = mk('div', 'aotd-art'); if (toNum(a.id)) art.dataset.cv = String(toNum(a.id));
+  art.innerHTML = artSvg(a.title); left.append(art, txt);
   const rt = mk('div', 'big-rating tnum'); rt.innerHTML = `${esc(a.rating)}<small>/10</small>`;
   top.append(left, rt);
   const p = playedOf(a), info = ownInfo(a);
@@ -3628,6 +3891,822 @@ $('trkClose').addEventListener('click', () => $('tracksDlg').close());
 $('tracksDlg').addEventListener('click', e => { if (e.target === $('tracksDlg')) $('tracksDlg').close(); });
 $('tracksDlg').addEventListener('close', () => { trkUI.editing = trkUI.deleting = trkUI.clearing = null; });
 
+/* ---------- Playlists ---------- */
+// A pool of tracks (the Classical tab of this sheet, a pasted sheet link, or a CSV) is turned into rule-based playlists.
+// Everything is computed here in the page. The pool is only ever READ (get_values); the only thing this feature writes
+// is the 🎸 Playlists tab: id | name | purpose | source | created | tracks | minutes | rules | trackIds | notes.
+const TAB_PL = '🎸 Playlists', TAB_CLASSICAL = 'Classical';
+const PL_FIELDS = ['id', 'name', 'purpose', 'source', 'created', 'tracks', 'minutes', 'rules', 'trackIds', 'notes'];
+const SPOTIFY_ID = /^[0-9A-Za-z]{22}$/;
+const spUrl = id => 'https://open.spotify.com/track/' + id;
+const unq = v => String(v ?? '').trim().replace(/^'/, '');
+
+/* --- CSV (RFC 4180: quotes, commas and newlines inside quotes, BOM) --- */
+function parseCsv(text) {
+  text = String(text || '').replace(/^﻿/, '');
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\r' || c === '\n') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+/* --- keys and the Camelot wheel --- */
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const CAM_MAJOR = [8, 3, 10, 5, 12, 7, 2, 9, 4, 11, 6, 1], CAM_MINOR = [5, 12, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10];
+const camFrom = (pc, major) => (major ? CAM_MAJOR : CAM_MINOR)[pc] + (major ? 'B' : 'A');
+// keyRaw is a name ("D Major") or a number 0-11; modeRaw is 1 (major) / 0 (minor) when the sheet has a Mode column
+function plKeyInfo(keyRaw, modeRaw) {
+  const s = String(keyRaw ?? '').trim(), m = String(modeRaw ?? '').trim();
+  const modeMajor = m === '1' ? true : m === '0' ? false : null;
+  if (/^-?\d+$/.test(s)) {
+    const pc = +s;
+    if (pc < 0 || pc > 11) return { name: '', camelot: '' };
+    return { name: NOTE_NAMES[pc] + (modeMajor == null ? '' : modeMajor ? ' Major' : ' Minor'), camelot: modeMajor == null ? '' : camFrom(pc, modeMajor) };
+  }
+  const k = /^([A-Ga-g])\s*([#♯b♭]?)\s*(major|minor|maj|min|m)?$/i.exec(s);
+  if (!k) return { name: s, camelot: '' };
+  const q = (k[3] || '').toLowerCase(), major = q ? !(q.startsWith('min') || q === 'm') : (modeMajor == null ? true : modeMajor);
+  const pc = ({ C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[k[1].toUpperCase()] + ({ '#': 1, '♯': 1, 'b': -1, '♭': -1 }[k[2]] || 0) + 12) % 12;
+  return { name: s, camelot: camFrom(pc, major) };
+}
+const camParse = c => { const m = /^(\d{1,2})([AB])$/.exec(String(c || '')); return m ? [+m[1], m[2]] : null; };
+// 0 same key; 1 same number other letter, or next number (wrapping 12 to 1) same letter; otherwise wheel distance + 1
+function camDist(a, b) {
+  const dn = Math.min(Math.abs(a[0] - b[0]), 12 - Math.abs(a[0] - b[0]));
+  if (dn === 0) return a[1] === b[1] ? 0 : 1;
+  if (a[1] === b[1] && dn === 1) return 1;
+  return dn + (a[1] !== b[1] ? 1 : 0) + 1;
+}
+
+/* --- eras --- */
+const ERA_ORDER = ['medieval', 'renaissance', 'baroque', 'classical', 'classical–romantic', 'romantic', '20th century', 'contemporary'];
+const cmp = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+const eraNorm = e => norm(e).replace(/\s*[-‐‑‒—−]\s*/g, '–');
+// sortable text: known eras in the list's order, other eras alphabetically after them, blank last
+function eraKey(e) {
+  const k = eraNorm(e);
+  if (!k) return '3';
+  const i = ERA_ORDER.indexOf(k);
+  return i >= 0 ? '0' + pad(i) : '1' + k;
+}
+const PL_PAL = ['#6fb1f2', '#6cc18f', '#f2c46d', '#f29a7a', '#b79af2', '#58d0e0', '#ef88c4', '#e9d35a'];
+function plColor(v) {
+  const i = ERA_ORDER.indexOf(eraNorm(v));
+  if (i >= 0) return PL_PAL[i % PL_PAL.length];
+  let h = 0; for (const ch of String(v)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PL_PAL[h % PL_PAL.length];
+}
+const plPill = v => v ? `<span class="pill" style="--c:${plColor(v)}">${esc(v)}</span>` : '';
+
+/* --- normalising a pool into track objects --- */
+// Header synonyms, matched case-insensitively; the first synonym that exists in the header wins.
+const PL_COLS = {
+  pos: ['#'], title: ['song', 'track name', 'name', 'title'], artists: ['artist', 'artist name(s)', 'artist names', 'artists'],
+  composer: ['composer (dates)', 'composer'], era: ['era'], form: ['form'], mood: ['mood'], wf: ['work-friendly', 'work friendly', 'workfriendly'],
+  bpm: ['bpm', 'tempo'], camelot: ['camelot'], key: ['key', 'key (0-11)'], mode: ['mode', 'mode (0/1)'],
+  energy: ['energy', 'energy (0-1)'], dance: ['dance', 'danceability'], acoustic: ['acoustic', 'acousticness'],
+  instr: ['instrumental', 'instrumentalness'], valence: ['valence'], speech: ['speech', 'speechiness'], live: ['live', 'liveness'],
+  loud: ['loud (db)', 'loudness'], pop: ['popularity'], dur: ['duration', 'duration (ms)'], album: ['album', 'album name'],
+  albumDate: ['album date', 'album release date'], genres: ['genres', 'genre'], added: ['added at', 'added'],
+  uri: ['spotify track id', 'track id', 'track uri', 'spotify id', 'uri'], isrc: ['isrc'], explicit: ['explicit'], sig: ['time signature']
+};
+const PL_SCORES = [['energy', 'energy'], ['dance', 'danceability'], ['acoustic', 'acousticness'], ['instr', 'instrumentalness'], ['valence', 'valence'], ['speech', 'speechiness'], ['live', 'liveness']];
+const plNum = v => { const s = String(v ?? '').trim().replace(/,/g, ''); if (s === '') return null; const n = parseFloat(s); return Number.isFinite(n) ? n : null; };
+function plDur(v, ms) {
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  const m = s.match(/^(?:(\d+):)?(\d+):(\d{2})(?:\.\d+)?$/);
+  if (m) return (m[1] ? +m[1] * 3600 : 0) + +m[2] * 60 + +m[3];
+  const n = plNum(s);
+  return n == null ? null : Math.round(ms || n >= 10000 ? n / 1000 : n);
+}
+const plWf = v => { const s = norm(v); return /^(yes|y|true)$/.test(s) ? 'Yes' : s === 'maybe' ? 'Maybe' : /^(no|n|false)$/.test(s) ? 'No' : ''; };
+function plSpotifyId(v) {
+  const s = String(v ?? '').trim();
+  if (!s) return '';
+  const m = s.match(/(?:spotify:track:|open\.spotify\.com\/track\/)([0-9A-Za-z]+)/) || [null, s];
+  return m[1];
+}
+function plNormalise(rows) {
+  const head = (rows[0] || []).map(h => norm(h).replace(/\s+/g, ' '));
+  const col = {};
+  for (const k of Object.keys(PL_COLS)) { col[k] = -1; for (const s of PL_COLS[k]) { const i = head.indexOf(s); if (i >= 0) { col[k] = i; break; } } }
+  if (col.title < 0) return { error: 'I couldn\'t find a title column (Song, Track Name, Name or Title) in the first row.' };
+  const cell = (r, k) => col[k] >= 0 ? String(r[col[k]] ?? '').trim() : '';
+  const msCol = col.dur >= 0 && head[col.dur] === 'duration (ms)';
+  const tracks = [], seen = new Set();
+  rows.slice(1).forEach((r, n) => {
+    const title = cell(r, 'title');
+    if (!title) return;
+    const id = plSpotifyId(cell(r, 'uri'));
+    if (id && seen.has(id)) return;
+    if (id) seen.add(id);
+    const comp = cell(r, 'composer'), cm = comp.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    const info = plKeyInfo(cell(r, 'key'), cell(r, 'mode'));
+    const cam = /^(1[0-2]|[1-9])[AB]$/i.test(cell(r, 'camelot')) ? cell(r, 'camelot').toUpperCase() : info.camelot;
+    const t = {
+      _i: tracks.length, uid: id || 'row' + n, id, title, artists: cell(r, 'artists'), composer: cm ? cm[1] : comp, dates: cm ? cm[2] : '',
+      era: cell(r, 'era'), form: cell(r, 'form'), mood: cell(r, 'mood'), workFriendly: plWf(cell(r, 'wf')),
+      bpm: plNum(cell(r, 'bpm')), camelot: cam, key: info.name, mode: cell(r, 'mode'),
+      energy: plNum(cell(r, 'energy')), danceability: plNum(cell(r, 'dance')), acousticness: plNum(cell(r, 'acoustic')),
+      instrumentalness: plNum(cell(r, 'instr')), valence: plNum(cell(r, 'valence')), speechiness: plNum(cell(r, 'speech')), liveness: plNum(cell(r, 'live')),
+      loudness: plNum(cell(r, 'loud')), popularity: plNum(cell(r, 'pop')), durationSec: plDur(cell(r, 'dur'), msCol),
+      album: cell(r, 'album'), albumDate: cell(r, 'albumDate'), genres: cell(r, 'genres'), added: cell(r, 'added'), pos: cell(r, 'pos'),
+      isrc: cell(r, 'isrc'), explicit: cell(r, 'explicit'), timeSig: cell(r, 'sig')
+    };
+    t._hay = norm([t.title, t.artists, t.composer, t.album, t.era, t.form, t.mood, t.genres].join(' '));
+    tracks.push(t);
+  });
+  // 0-1 scores become 0-100 when every value in the column is 0-1
+  for (const [c, f] of PL_SCORES) {
+    const vals = tracks.map(t => t[f]).filter(v => v != null);
+    if (vals.length && (head[col[c]].includes('(0-1)') || vals.every(v => v <= 1))) for (const t of tracks) if (t[f] != null) t[f] = Math.round(t[f] * 1000) / 10;
+  }
+  const has = f => tracks.some(t => t[f] != null && t[f] !== '');
+  const report = [['composer', col.composer >= 0], ['era', col.era >= 0], ['form', col.form >= 0], ['mood', col.mood >= 0], ['work-friendly', col.wf >= 0],
+    ['BPM', col.bpm >= 0], ['key', col.key >= 0 || col.camelot >= 0], ['energy', col.energy >= 0], ['instrumental', col.instr >= 0], ['speech', col.speech >= 0],
+    ['duration', col.dur >= 0], ['popularity', col.pop >= 0], ['Spotify id', col.uri >= 0]];
+  const facet = (f, sorter) => {
+    const m = new Map();
+    for (const t of tracks) if (t[f]) m.set(t[f], (m.get(t[f]) || 0) + 1);
+    return [...m].sort(sorter);
+  };
+  const alpha = (a, b) => a[0].localeCompare(b[0]);
+  const who = t => t.composer || String(t.artists).split(',')[0].trim();
+  for (const t of tracks) t.who = who(t);
+  const whoMap = new Map();
+  for (const t of tracks) if (t.who) whoMap.set(t.who, (whoMap.get(t.who) || 0) + 1);
+  return {
+    tracks, byId: new Map(tracks.filter(t => t.id).map(t => [t.id, t])),
+    found: report.filter(x => x[1]).map(x => x[0]), missing: report.filter(x => !x[1]).map(x => x[0]),
+    facets: { era: facet('era', (a, b) => cmp(eraKey(a[0]), eraKey(b[0])) || alpha(a, b)), form: facet('form', alpha), mood: facet('mood', alpha) },
+    wf: ['Yes', 'Maybe', 'No'].filter(v => tracks.some(t => t.workFriendly === v)),
+    composers: [...whoMap].sort(alpha), composerIsReal: col.composer >= 0,
+    has: { era: has('era'), wf: has('workFriendly'), energy: has('energy'), bpm: has('bpm'), instr: has('instrumentalness'), speech: has('speechiness'), dur: has('durationSec'), pop: has('popularity'), key: has('camelot') }
+  };
+}
+
+/* --- rules, choosing tracks, ordering --- */
+const plDefaultRules = () => ({ preset: '', era: [], form: [], mood: [], wf: 'any', eMin: null, eMax: null, bMin: null, bMax: null, inst: null, speech: null, composer: '', maxLen: null, q: '', per: null, topEra: null, target: null, order: 'sheet' });
+const PL_PRESETS = {
+  focus: { n: 'Deep focus (work)', set: { wf: 'yes', inst: 70, speech: 10, eMax: 40, order: 'key', target: 90 } },
+  ramp: { n: 'Gentle ramp', set: { wf: 'yesmaybe', eMax: 60, order: 'energyUp', target: 60 } },
+  wind: { n: 'Wind-down', set: { eMax: 40, order: 'energyDown', target: 45 } },
+  era: { n: 'Era tour', set: { order: 'era', per: 3, target: 120 } },
+  beginner: { n: 'Beginner path', set: { topEra: 3, order: 'era', target: 90 } },
+  deep: { n: 'Composer deep dive', set: { order: 'form' } }
+};
+const PL_ORDERS = { sheet: 'Sheet order', energyUp: 'Energy low to high', energyDown: 'Energy high to low', key: 'Key flow', era: 'Era (chronological)', form: 'Form, then sheet order', shuffle: 'Shuffle' };
+const PL_TOLERANCE = 120;   // seconds either side of the target length
+
+function mulberry32(a) {
+  return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function plShuffle(list, rng) { const a = list.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+// a rule that needs a number a track doesn't have simply doesn't apply to that track
+function plMatches(t, r) {
+  if (r.era.length && !r.era.includes(t.era)) return false;
+  if (r.form.length && !r.form.includes(t.form)) return false;
+  if (r.mood.length && !r.mood.includes(t.mood)) return false;
+  if (r.wf === 'yes' && t.workFriendly !== 'Yes') return false;
+  if (r.wf === 'yesmaybe' && t.workFriendly !== 'Yes' && t.workFriendly !== 'Maybe') return false;
+  if (r.eMin != null && t.energy != null && t.energy < r.eMin) return false;
+  if (r.eMax != null && t.energy != null && t.energy > r.eMax) return false;
+  if (r.bMin != null && t.bpm != null && t.bpm < r.bMin) return false;
+  if (r.bMax != null && t.bpm != null && t.bpm > r.bMax) return false;
+  if (r.inst != null && t.instrumentalness != null && t.instrumentalness < r.inst) return false;
+  if (r.speech != null && t.speechiness != null && t.speechiness > r.speech) return false;
+  if (r.composer && t.who !== r.composer) return false;
+  if (r.maxLen != null && t.durationSec != null && t.durationSec > r.maxLen * 60) return false;
+  if (r.q && !t._hay.includes(norm(r.q))) return false;
+  return true;
+}
+const nl = v => v == null ? Infinity : v;
+function plOrder(list, mode, seed) {
+  const bySheet = (a, b) => a._i - b._i;
+  const l = list.slice();
+  switch (mode) {
+    case 'energyUp': return l.sort((a, b) => nl(a.energy) - nl(b.energy) || bySheet(a, b));
+    case 'energyDown': return l.sort((a, b) => (a.energy == null) - (b.energy == null) || (b.energy ?? 0) - (a.energy ?? 0) || bySheet(a, b));
+    case 'era': return l.sort((a, b) => cmp(eraKey(a.era), eraKey(b.era)) || bySheet(a, b));
+    case 'form': return l.sort((a, b) => (!a.form) - (!b.form) || a.form.localeCompare(b.form) || bySheet(a, b));
+    case 'shuffle': return plShuffle(l.sort(bySheet), mulberry32((seed ^ 0x9e3779b9) | 0));
+    case 'key': {
+      const keyed = l.filter(t => camParse(t.camelot)).sort(bySheet), rest = l.filter(t => !camParse(t.camelot)).sort(bySheet);
+      const byE = (a, b) => nl(a.energy) - nl(b.energy) || bySheet(a, b);
+      const out = [];
+      if (keyed.length) {
+        let cur = keyed.slice().sort(byE)[0];
+        keyed.splice(keyed.indexOf(cur), 1); out.push(cur);
+        while (keyed.length) {
+          const from = camParse(cur.camelot);
+          cur = keyed.slice().sort((a, b) => camDist(from, camParse(a.camelot)) - camDist(from, camParse(b.camelot)) || byE(a, b))[0];
+          keyed.splice(keyed.indexOf(cur), 1); out.push(cur);
+        }
+      }
+      return out.concat(rest);
+    }
+    default: return l.sort(bySheet);
+  }
+}
+// Returns { list, matched, matchedSec, notes }. Deterministic for a given seed.
+function plSelect(pool, rules, seed) {
+  const r = rules;
+  let cands = pool.tracks.filter(t => plMatches(t, r));
+  const matched = cands.length, matchedSec = cands.reduce((s, t) => s + (t.durationSec || 0), 0);
+  const lack = {};
+  const need = (on, k, f) => { if (on) lack[k] = cands.filter(t => t[f] == null).length; };
+  need(r.eMin != null || r.eMax != null, 'energy', 'energy'); need(r.bMin != null || r.bMax != null, 'BPM', 'bpm');
+  need(r.inst != null, 'instrumental', 'instrumentalness'); need(r.speech != null, 'speech', 'speechiness'); need(r.maxLen != null, 'length', 'durationSec');
+  if (r.topEra) {
+    const keep = new Set(), groups = new Map();
+    for (const t of cands) { if (!groups.has(t.era)) groups.set(t.era, []); groups.get(t.era).push(t); }
+    for (const g of groups.values()) g.sort((a, b) => (a.popularity == null) - (b.popularity == null) || (b.popularity ?? 0) - (a.popularity ?? 0) || a._i - b._i).slice(0, r.topEra).forEach(t => keep.add(t));
+    cands = cands.filter(t => keep.has(t));
+  }
+  const rng = mulberry32(seed | 0);
+  let pick = plShuffle(cands, rng);
+  if (r.per) { const n = new Map(); pick = pick.filter(t => { const c = n.get(t.who) || 0; n.set(t.who, c + 1); return c < r.per; }); }
+  let noLen = 0;
+  if (r.target) {
+    const want = r.target * 60, total = pick.reduce((s, t) => s + (t.durationSec || 0), 0);
+    if (total > want + PL_TOLERANCE) {
+      const out = []; let sum = 0;
+      for (const t of pick) {
+        if (t.durationSec == null) { noLen++; continue; }
+        if (sum + t.durationSec > want + PL_TOLERANCE) continue;
+        out.push(t); sum += t.durationSec;
+        if (sum >= want - PL_TOLERANCE) break;
+      }
+      pick = out;
+    }
+  }
+  return { list: plOrder(pick, r.order, seed), matched, matchedSec, lack, noLen, capped: r.per ? cands.length - pick.length : 0 };
+}
+
+/* --- text helpers --- */
+const plSecs = list => list.reduce((s, t) => s + (t.durationSec || 0), 0);
+const fmtLen = s => { if (s == null) return ''; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`; };
+function fmtTotal(sec) { const m = Math.round(sec / 60), h = Math.floor(m / 60); return h ? `${h} h ${m % 60} min` : `${m} min`; }
+function spokenTotal(sec) { const m = Math.round(sec / 60), h = Math.floor(m / 60), r = m % 60, p = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`; return h ? `${p(h, 'hour')} ${p(r, 'minute')}` : p(r, 'minute'); }
+const plCount = n => `${fmt(n)} track${n === 1 ? '' : 's'}`;
+const plLines = (list, f) => list.map(f).join('\n');
+const plNames = t => (t.artists ? t.artists + ' - ' : '') + t.title;
+
+/* --- state --- */
+const PL = {
+  view: 'browse', src: 'classical', pool: null, label: '', loading: false, loadError: '', tok: 0,
+  b: { q: '', f: { era: new Set(), form: new Set(), mood: new Set(), wf: new Set() }, sort: 'pos', dir: 1, open: null, limit: 200 },
+  rules: plDefaultRules(), seed: 1, result: [], res: null, custom: null,
+  saveOpen: false, renaming: null, deleting: null, sheetLink: '', sheetTab: ''
+};
+try { const c = JSON.parse(lsGet('sg-pool') || 'null'); if (c) { PL.sheetLink = String(c.link || ''); PL.sheetTab = String(c.tab || ''); } } catch (e) {}
+const plHas = k => !PL.pool || PL.pool.has[k];
+
+/* --- loading a pool --- */
+async function readRangeIn(sid, range) {
+  const res = await state.mcp.callTool(SERVER, 'get_values', { spreadsheetId: sid, range }, { cache: false });   // reads only: the pool is never written
+  const p = res.payload;
+  return (p && Array.isArray(p.values)) ? p.values : [];
+}
+function plSetPool(n, label) {
+  PL.pool = n; PL.label = label; PL.loadError = ''; PL.loading = false;
+  PL.rules = plDefaultRules(); PL.custom = null; PL.saveOpen = false;
+  PL.b.f = { era: new Set(), form: new Set(), mood: new Set(), wf: new Set() }; PL.b.q = ''; PL.b.open = null; PL.b.limit = 200;
+  $('plQ').value = '';
+  plBuildFacets(); plRebuild(false);
+  plRenderAll();
+  plSay(`${plCount(n.tracks.length)} loaded`);
+}
+async function plLoadPool() {
+  if (PL.src === 'csv') return;
+  const tok = ++PL.tok;
+  let sid = sheetId(), tab = TAB_CLASSICAL, label = 'Classical';
+  if (PL.src === 'sheet') {
+    sid = sheetIdFrom(PL.sheetLink); tab = PL.sheetTab.trim(); label = tab;
+    if (!sid) { PL.loadError = 'Paste the other sheet\'s full link from your browser\'s address bar.'; plRenderAll(); return; }
+    if (!tab) { PL.loadError = 'Type the name of the tab to read.'; plRenderAll(); return; }
+    lsSet('sg-pool', JSON.stringify({ link: PL.sheetLink, tab }));
+  } else if (!isLive()) {
+    PL.loadError = 'Classical is read from your sheet, so it needs the live connection. ' + connectHint() + ' You can also upload a CSV.';
+    plRenderAll(); return;
+  }
+  if (!state.mcp) { PL.loadError = 'Reading another sheet needs the live connection. ' + connectHint(); plRenderAll(); return; }
+  PL.loading = true; PL.loadError = ''; plRenderAll();
+  try {
+    const rows = await readRangeIn(sid, `'${tab.replace(/'/g, "''")}'!A1:AZ`);
+    if (tok !== PL.tok) return;
+    if (!rows.length) throw { code: 'tool_error', message: `the “${tab}” tab came back empty` };
+    const n = plNormalise(rows);
+    if (n.error) throw { code: 'tool_error', message: n.error };
+    plSetPool(n, label);
+  } catch (err) {
+    if (tok !== PL.tok) return;
+    PL.loading = false; PL.loadError = (err && err.code === 'tool_error' && err.message) || explain(err);
+    plRenderAll();
+  }
+}
+async function plLoadCsv(file) {
+  const tok = ++PL.tok;
+  try {
+    const rows = parseCsv(await file.text());
+    if (tok !== PL.tok) return;
+    const n = plNormalise(rows);
+    if (n.error) throw { message: n.error };
+    plSetPool(n, 'CSV: ' + file.name);
+  } catch (err) { PL.loading = false; PL.loadError = 'That file could not be read: ' + ((err && err.message) || 'unknown problem'); plRenderAll(); }
+}
+
+/* --- building the playlist --- */
+function plRebuild(announce = true) {
+  PL.custom = null;
+  if (!PL.pool) { PL.result = []; PL.res = null; return; }
+  PL.res = plSelect(PL.pool, PL.rules, PL.seed);
+  PL.result = PL.res.list;
+  if (announce) { plRenderRules(); plRenderResult(); plAnnounce(); }
+}
+function plAnnounce() { plSay(PL.result.length ? `${plCount(PL.result.length)}, ${spokenTotal(plSecs(PL.result))}` : 'No tracks match these rules'); }
+function plSay(msg) { $('plLive').textContent = msg; }
+function plApplyPreset(key) {
+  const p = PL_PRESETS[key]; if (!p || !PL.pool) return;
+  PL.rules = { ...plDefaultRules(), preset: key, ...p.set };
+  if (key === 'deep') {
+    const cur = PL.rules.composer = (PL.rules.composer && PL.pool.composers.some(c => c[0] === PL.rules.composer)) ? PL.rules.composer : '';
+    if (!cur) PL.rules.composer = PL.pool.composers.slice().sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || '';
+  }
+  plRebuild();
+}
+
+/* --- Browse --- */
+const PL_SORTS = {
+  pos: t => t._i, title: t => norm(t.title), who: t => norm(t.who), era: t => eraKey(t.era), form: t => norm(t.form) || null, mood: t => norm(t.mood) || null,
+  bpm: t => t.bpm, key: t => { const c = camParse(t.camelot); return c ? c[0] * 2 + (c[1] === 'B' ? 1 : 0) : null; }, energy: t => t.energy, dur: t => t.durationSec
+};
+const PL_HEADS = [['title', 'Title'], ['who', 'Composer / artists'], ['era', 'Era'], ['form', 'Form'], ['mood', 'Mood'], ['bpm', 'BPM', 1], ['key', 'Key', 1], ['energy', 'Energy', 1], ['dur', 'Length', 1]];
+function plBrowseList() {
+  const b = PL.b, q = norm(b.q);
+  const l = PL.pool.tracks.filter(t => (!b.f.era.size || b.f.era.has(t.era)) && (!b.f.form.size || b.f.form.has(t.form)) && (!b.f.mood.size || b.f.mood.has(t.mood)) && (!b.f.wf.size || b.f.wf.has(t.workFriendly)) && (!q || t._hay.includes(q)));
+  const f = PL_SORTS[b.sort] || PL_SORTS.pos;
+  return l.sort((x, y) => {
+    const a = f(x), c = f(y);
+    if (a == null || c == null) return (a == null) - (c == null) || x._i - y._i;
+    return (b.sort === 'era' ? cmp(a, c) : typeof a === 'string' ? a.localeCompare(c) : a - c) * b.dir || x._i - y._i;
+  });
+}
+function plDetail(t) {
+  const rows = [['Artists', t.artists], ['Composer', t.composer + (t.dates ? ` (${t.dates})` : '')], ['Era', t.era], ['Form', t.form], ['Mood', t.mood], ['Work-friendly', t.workFriendly],
+    ['BPM', t.bpm == null ? '' : Math.round(t.bpm)], ['Key', t.key], ['Camelot', t.camelot], ['Energy', t.energy], ['Danceability', t.danceability], ['Acousticness', t.acousticness],
+    ['Instrumentalness', t.instrumentalness], ['Valence', t.valence], ['Speechiness', t.speechiness], ['Liveness', t.liveness], ['Loudness (dB)', t.loudness], ['Popularity', t.popularity],
+    ['Length', fmtLen(t.durationSec)], ['Album', t.album], ['Album date', t.albumDate], ['Genres', t.genres], ['Added', t.added], ['Time signature', t.timeSig], ['Explicit', t.explicit], ['ISRC', t.isrc]]
+    .filter(([, v]) => v !== '' && v != null);
+  const link = SPOTIFY_ID.test(t.id) ? `<a class="btn" href="${spUrl(t.id)}" target="_blank" rel="noopener noreferrer">Open in Spotify</a>` : '<span class="muted small">No Spotify id for this track</span>';
+  return `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl><div class="acts">${link}</div>`;
+}
+function plRenderBrowse() {
+  const box = $('plBrowseBody');
+  if (!PL.pool) { box.hidden = true; $('plBrowseEmpty').hidden = false; return; }
+  box.hidden = false; $('plBrowseEmpty').hidden = true;
+  const all = PL.pool.tracks.length, list = plBrowseList(), shown = list.slice(0, PL.b.limit);
+  $('plCount').textContent = `${fmt(list.length)} of ${fmt(all)} tracks`;
+  setVal($('plSort'), PL.b.sort); $('plDir').setAttribute('aria-pressed', String(PL.b.dir < 0));
+  $('plHead').innerHTML = '<tr>' + PL_HEADS.map(([k, h, num]) => `<th scope="col" class="${num ? 'num' : ''}" data-k="${k}" aria-sort="${PL.b.sort === k ? (PL.b.dir > 0 ? 'ascending' : 'descending') : 'none'}"><button type="button" class="thbtn" data-fk="pl:sort:${k}">${h}</button></th>`).join('') + '</tr>';
+  const fk = (id, tag) => `pl:row:${id}`;
+  $('plBody').innerHTML = shown.map(t => {
+    const open = PL.b.open === t.uid;
+    const sub = t.composer ? t.artists.split(',').slice(1).join(',').trim() : '';
+    return `<tr class="row${open ? ' open' : ''}" data-uid="${esc(t.uid)}">` +
+      `<td class="c-title"><button type="button" class="rowbtn" aria-expanded="${open}" data-fk="${fk(t.uid)}"><span class="t">${esc(t.title)}</span></button></td>` +
+      `<td class="c-who">${esc(t.composer || t.artists)}${sub ? `<span class="muted small"> · ${esc(sub)}</span>` : ''}</td>` +
+      `<td class="c-era">${plPill(t.era)}</td><td class="c-form">${esc(t.form)}</td><td class="c-mood">${plPill(t.mood)}</td>` +
+      `<td class="c-bpm num" ${t.bpm == null ? '' : 'data-l="BPM"'}>${t.bpm == null ? '' : Math.round(t.bpm)}</td>` +
+      `<td class="c-key num" ${t.camelot || t.key ? 'data-l="Key"' : ''}>${esc(t.camelot || t.key)}</td>` +
+      `<td class="c-energy num" ${t.energy == null ? '' : 'data-l="Energy"'}>${t.energy == null ? '' : Math.round(t.energy)}</td>` +
+      `<td class="c-dur num">${fmtLen(t.durationSec)}</td></tr>` +
+      (open ? `<tr class="detail" data-uid="${esc(t.uid)}"><td colspan="9">${plDetail(t)}</td></tr>` : '');
+  }).join('');
+  $('plMore').hidden = list.length <= shown.length;
+  $('plMore').textContent = `Show ${Math.min(200, list.length - shown.length)} more`;
+  $('plNone').hidden = list.length > 0;
+}
+
+/* --- facets (chips built from the pool's own values) --- */
+function plChips(group, items, kind) {
+  return items.map(([v, n]) => `<button type="button" class="chip" aria-pressed="false" data-g="${group}" data-v="${esc(v)}" data-fk="pl:${kind}:${group}:${esc(v)}">${esc(v)}${n != null ? `<span class="n">${n}</span>` : ''}</button>`).join('');
+}
+function plBuildFacets() {
+  const p = PL.pool;
+  const fac = { era: p.facets.era, form: p.facets.form, mood: p.facets.mood };
+  const wf = p.wf.map(v => [v, p.tracks.filter(t => t.workFriendly === v).length]);
+  const set = (id, html, show) => { $(id).innerHTML = html; $(id).closest('.pl-fg').hidden = !show; };
+  set('plFEra', plChips('era', fac.era, 'b'), fac.era.length > 0); set('plFForm', plChips('form', fac.form, 'b'), fac.form.length > 0);
+  set('plFMood', plChips('mood', fac.mood, 'b'), fac.mood.length > 0); set('plFWf', plChips('wf', wf, 'b'), wf.length > 0);
+  $('rEra').innerHTML = plChips('era', fac.era, 'r'); $('rForm').innerHTML = plChips('form', fac.form, 'r'); $('rMood').innerHTML = plChips('mood', fac.mood, 'r');
+  $('rComposer').innerHTML = '<option value="">Any</option>' + p.composers.map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n})</option>`).join('');
+  $('rComposerL').firstChild.textContent = p.composerIsReal ? 'Composer' : 'Artist';
+}
+function plSyncChips() {
+  for (const g of ['era', 'form', 'mood', 'wf']) {
+    const id = { era: 'plFEra', form: 'plFForm', mood: 'plFMood', wf: 'plFWf' }[g];
+    $(id).querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(PL.b.f[g].has(c.dataset.v))));
+  }
+  for (const [g, id] of [['era', 'rEra'], ['form', 'rForm'], ['mood', 'rMood']]) $(id).querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(PL.rules[g].includes(c.dataset.v))));
+}
+
+/* --- rules panel --- */
+const setVal = (el, v) => { const s = v == null ? '' : String(v); if (el.value !== s) el.value = s; };
+const PL_INPUTS = { rEMin: 'eMin', rEMax: 'eMax', rBMin: 'bMin', rBMax: 'bMax', rInst: 'inst', rSpeech: 'speech', rMaxLen: 'maxLen', rPer: 'per', rTopEra: 'topEra', rTarget: 'target' };
+function plRenderRules() {
+  const r = PL.rules, p = PL.pool;
+  plSyncChips();
+  $('plPresets').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.preset === r.preset)));
+  for (const [id, k] of Object.entries(PL_INPUTS)) setVal($(id), r[k]);
+  setVal($('rWf'), r.wf); setVal($('rOrder'), r.order); setVal($('rComposer'), r.composer); setVal($('rQ'), r.q); setVal($('plSeed'), PL.seed);
+  // a filter whose data is absent from the pool is disabled, with a note
+  const off = (sel, gone) => document.querySelectorAll('#plRules ' + sel).forEach(w => { w.toggleAttribute('data-off', !!gone); w.querySelectorAll('input,select,button').forEach(i => { i.disabled = !!gone; }); });
+  const f = k => !p || p.has[k];
+  off('[data-need="era"]', p && !p.facets.era.length); off('[data-need="form"]', p && !p.facets.form.length); off('[data-need="mood"]', p && !p.facets.mood.length);
+  off('[data-need="wf"]', !f('wf')); off('[data-need="energy"]', !f('energy')); off('[data-need="bpm"]', !f('bpm')); off('[data-need="inst"]', !f('instr'));
+  off('[data-need="speech"]', !f('speech')); off('[data-need="dur"]', !f('dur')); off('[data-need="pop"]', !f('pop'));
+  const lacking = Object.entries((PL.res && PL.res.lack) || {}).filter(([, n]) => n > 0).map(([k, n]) => `${plCount(n)} ha${n === 1 ? 's' : 've'} no ${k} value, so that rule doesn't apply`).join('; ');
+  $('plLack').textContent = lacking ? 'Note: ' + lacking + '.' : '';
+  $('plPresetNote').textContent = r.preset ? `${PL_PRESETS[r.preset].n}: every rule below is still editable.` : '';
+}
+const NUM_RULE = v => { if (v === '' || v == null) return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+function plRuleChanged() { PL.rules.preset = ''; plRebuild(); }
+
+/* --- the result panel --- */
+const plCan = t => SPOTIFY_ID.test(t.id);
+function plRenderResult() {
+  const box = $('plResList'), list = PL.result, sec = plSecs(list);
+  $('plResHead').textContent = PL.pool ? `${plCount(list.length)} · ${fmtTotal(sec)}` : '';
+  const res = PL.res, bits = [];
+  if (PL.custom) bits.push(`Opened “${PL.custom.name}”. Changing any rule builds a new preview.`);
+  else if (res) {
+    bits.push(`${plCount(res.matched)} match${res.matched === 1 ? 'es' : ''} (${fmtTotal(res.matchedSec)})`);
+    if (PL.rules.target) bits.push(list.length < res.matched ? `${plCount(list.length)} picked to fit ${PL.rules.target} min` : `all of them fit ${PL.rules.target} min`);
+    if (PL.rules.per && res.capped > 0) bits.push(`max ${PL.rules.per} per ${PL.pool.composerIsReal ? 'composer' : 'artist'}`);
+    if (res.noLen) bits.push(`${plCount(res.noLen)} with no length left out`);
+  }
+  if (PL.custom && PL.custom.missing) bits.push(`${plCount(PL.custom.missing)} from this playlist ${PL.custom.missing === 1 ? 'isn\'t' : 'aren\'t'} in the current pool`);
+  $('plNotes').textContent = bits.join(' · ');
+  const skip = list.filter(t => !plCan(t)).length;
+  $('plSkip').textContent = skip ? `${skip} track${skip === 1 ? ' has' : 's have'} no Spotify id and ${skip === 1 ? 'is' : 'are'} skipped by Copy for Spotify and Save.` : '';
+  if (!PL.pool) { box.innerHTML = ''; }
+  else if (!list.length) box.innerHTML = '<li class="empty">No tracks match these rules. Loosen a filter.</li>';
+  else {
+    const shown = list.slice(0, 300);
+    box.innerHTML = shown.map((t, i) => {
+      const sub = t.composer || t.artists;
+      const e = t.energy == null ? '' : `<span class="pl-e" role="img" aria-label="Energy ${Math.round(t.energy)}"><i style="width:${Math.max(0, Math.min(100, t.energy))}%"></i></span>`;
+      return `<li data-uid="${esc(t.uid)}"><span class="no tnum">${i + 1}</span><div class="main"><div class="t">${esc(t.title)}</div>` +
+        `<div class="m"><span>${esc(sub)}</span>${plPill(t.era)}${plPill(t.mood)}${t.bpm == null ? '' : `<span class="tnum">${Math.round(t.bpm)} BPM</span>`}${t.camelot || t.key ? `<span class="tnum">${esc(t.camelot || t.key)}</span>` : ''}${e}<span class="tnum">${fmtLen(t.durationSec)}</span></div></div>` +
+        `<div class="acts"><button class="btn" type="button" data-act="up" data-fk="pl:res:up:${esc(t.uid)}" aria-label="Move up: ${esc(t.title)}"${i === 0 ? ' disabled' : ''}>Up</button>` +
+        `<button class="btn" type="button" data-act="down" data-fk="pl:res:down:${esc(t.uid)}" aria-label="Move down: ${esc(t.title)}"${i === list.length - 1 ? ' disabled' : ''}>Down</button>` +
+        `<button class="btn" type="button" data-act="remove" data-fk="pl:res:remove:${esc(t.uid)}" aria-label="Remove: ${esc(t.title)}">Remove</button></div></li>`;
+    }).join('') + (list.length > shown.length ? `<li class="empty">Showing the first ${shown.length} of ${fmt(list.length)}. Copy and Save still use all of them.</li>` : '');
+  }
+  const none = !list.length;
+  $('plCopySp').disabled = none; $('plCopyNames').disabled = none;
+  $('plSave').disabled = none || state.plMissing;
+  $('plSave').title = state.plMissing ? `Create the ${TAB_PL} tab first` : '';
+  $('plSaveNote').textContent = state.plMissing ? `Create the ${TAB_PL} tab first. Saving is switched off until it's there; everything else works.` : '';
+  $('plSaveForm').hidden = !PL.saveOpen || state.plMissing;
+}
+function plMove(uid, d) {
+  const i = PL.result.findIndex(t => t.uid === uid), j = i + d;
+  if (i < 0 || j < 0 || j >= PL.result.length) return;
+  [PL.result[i], PL.result[j]] = [PL.result[j], PL.result[i]];
+  const fk = activeFk(); plRenderResult(); restoreFocus(fk);
+  plSay(`Moved ${PL.result[j].title} to position ${j + 1}`);
+}
+function plRemove(uid) {
+  const i = PL.result.findIndex(t => t.uid === uid); if (i < 0) return;
+  const [t] = PL.result.splice(i, 1);
+  plRenderResult();
+  const next = $('plResList').querySelector(`li:nth-child(${Math.min(i + 1, PL.result.length)}) [data-act="remove"]`);
+  if (next) next.focus(); else $('plResH').focus();
+  plSay(`Removed ${t.title}. ${plCount(PL.result.length)}, ${spokenTotal(plSecs(PL.result))}`);
+}
+
+/* --- copy --- */
+// writeText is called straight from the click; if the browser refuses, the text is shown selected in a read-only box instead
+function plCopy(text, box, okMsg) {
+  let p;
+  try { p = navigator.clipboard.writeText(text); } catch (e) { p = Promise.reject(e); }
+  p.then(() => { box.hidden = true; toast(okMsg); plSay(okMsg); }, () => {
+    box.value = text; box.hidden = false; box.focus(); box.select();
+    plMsg('Couldn\'t copy automatically. The text is selected below: press Ctrl+C (Cmd+C on a Mac).', '');
+  });
+}
+function plMsg(text, kind) { const e = $('plMsg'); e.hidden = !text; e.textContent = text || ''; e.dataset.kind = kind || ''; }
+
+/* --- Saved playlists: the 🎸 Playlists tab --- */
+const plCol = (header, k) => header.findIndex(h => norm(h) === k.toLowerCase());
+function plParse(rows) {
+  const h = (rows[0] || []).map(norm), ix = k => h.indexOf(k.toLowerCase());
+  if (ix('id') < 0 || ix('name') < 0 || ix('trackIds') < 0) return null;
+  const g = (r, k) => ix(k) >= 0 ? unq(r[ix(k)]) : '';
+  return rows.slice(1).map((r, i) => {
+    const ids = g(r, 'trackIds').split(',').map(s => s.trim()).filter(s => SPOTIFY_ID.test(s));
+    return { id: String(toNum(g(r, 'id'))), name: g(r, 'name'), purpose: g(r, 'purpose'), source: g(r, 'source'), created: toDate(g(r, 'created')) || '',
+      tracks: g(r, 'tracks') ? toNum(g(r, 'tracks')) : ids.length, minutes: toNum(g(r, 'minutes')), rules: g(r, 'rules'), ids, notes: g(r, 'notes'), _row: i + 2 };
+  }).filter(p => toNum(p.id) > 0);   // rows with no id are deleted playlists
+}
+function plCell(k, v) {
+  if (k === 'id' || k === 'tracks') return toNum(v) > 0 ? toNum(v) : '';
+  if (k === 'minutes') return Math.round(toNum(v) * 10) / 10;
+  if (k === 'created') return toDate(v) || '';
+  v = String(v ?? '').trim();
+  return v ? "'" + v : '';
+}
+// Only the 🎸 Playlists tab is ever written by this feature
+function plWrite(tool, range, values) {
+  assertSheetTab(TAB_PL);
+  return state.mcp.callTool(SERVER, tool, { spreadsheetId: sheetId(), range: `${qt(TAB_PL)}!${range}`, values }, { cache: false });
+}
+const plQ = { chain: Promise.resolve(), pending: 0 };
+function plRun(fn) {
+  plQ.pending++; setStatus('live', `Saving playlists… (${plQ.pending})`);
+  const p = plQ.chain.then(fn);
+  plQ.chain = p.catch(() => {});
+  return p.finally(() => { plQ.pending--; if (!plQ.pending) setStatus('live', 'Playlists saved'); else setStatus('live', `Saving playlists… (${plQ.pending})`); });
+}
+const plErr = err => (err && err.code === 'tool_error' && err.message) || explain(err);
+async function plHeader() { return ((await readRange(`${qt(TAB_PL)}!A1:J1`))[0] || []).map(h => String(h).trim()); }
+const plHits = (col, id) => col.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(unq(r[0])) === toNum(id) ? i + 1 : 0).filter(Boolean);
+async function findPlaylistRow(id) {
+  const header = await plHeader(), idCol = plCol(header, 'id');
+  if (idCol < 0) throw { code: 'tool_error', message: `The ${TAB_PL} tab has no id column` };
+  const L = colLetter(idCol), hits = plHits(await readRange(`${qt(TAB_PL)}!${L}1:${L}`), id);
+  if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? `playlist id ${id} appears ${hits.length} times in ${TAB_PL}, so nothing was written` : `playlist id ${id} isn't in ${TAB_PL} any more, so nothing was written` };
+  return { header, row: hits[0] };
+}
+async function writePlaylistFields(id, fields) {
+  const { header, row } = await findPlaylistRow(id);
+  const cols = {};
+  for (const k of Object.keys(fields)) {
+    const c = plCol(header, k);
+    if (c < 0) throw { code: 'tool_error', message: `The ${TAB_PL} tab has no "${k}" column` };
+    cols[k] = c;
+  }
+  assertSheetTab(TAB_PL);
+  for (const [k, c] of Object.entries(cols)) await putCell(TAB_PL, colLetter(c), row, plCell(k, fields[k]));
+}
+// Delete = clear that row's ten cells with one update. The row stays, empty, so no other row moves.
+async function clearPlaylistRow(id) {
+  const { row } = await findPlaylistRow(id);
+  await plWrite('update_values', `A${row}:J${row}`, [Array(PL_FIELDS.length).fill('')]);
+}
+// One append for the whole row. New id = highest existing id (at least 7000) + 1, read right before appending.
+async function appendPlaylist(rec) {
+  const header = await plHeader(), idCol = plCol(header, 'id');
+  if (idCol < 0 || plCol(header, 'name') < 0 || plCol(header, 'trackIds') < 0) throw { code: 'tool_error', message: `The ${TAB_PL} tab has no header row with id, name and trackIds` };
+  const L = colLetter(idCol);
+  const ids = (await readRange(`${qt(TAB_PL)}!${L}2:${L}`)).map(r => toNum(unq(r[0])));
+  const id = Math.max(7000, ...ids) + 1;
+  // Sheets treats a blank (deleted) row as the end of the table, so append from the row after the last used one.
+  const lastRow = (await readRange(`${qt(TAB_PL)}!A1:J`)).length;
+  const full = { ...rec, id };
+  const row = header.map(h => { const k = PL_FIELDS.find(f => f.toLowerCase() === norm(h)); return k ? plCell(k, full[k]) : ''; });
+  const res = await plWrite('append_values', `A${lastRow + 1}:J`, [row]);
+  const hits = plHits(await readRange(`${qt(TAB_PL)}!${L}1:${L}`), id);
+  if (hits.length !== 1) throw { code: 'tool_error', message: hits.length ? `the new id ${id} appears ${hits.length} times, check the sheet` : `the new id ${id} couldn't be found after saving, check the sheet` };
+  return { ...rec, id: String(id), _row: rowFromAppend(res) || hits[0] };
+}
+// The rule set as compact JSON text. If it is too long the optional keys are dropped, so what is stored is always valid JSON.
+function plRulesText(rules) {
+  const r = { ...rules }; delete r.preset;
+  const out = { order: r.order, seed: PL.seed };
+  for (const [k, v] of Object.entries(r)) if (k !== 'order' && v != null && v !== '' && !(Array.isArray(v) && !v.length) && !(k === 'wf' && v === 'any')) out[k] = v;
+  if (rules.preset) out.preset = rules.preset;
+  const fits = o => JSON.stringify(o).length <= 1990;
+  for (const k of ['q', 'composer', 'mood', 'form', 'era', 'topEra', 'per', 'maxLen', 'bMin', 'bMax', 'speech', 'inst']) { if (fits(out)) break; delete out[k]; }
+  return JSON.stringify(out);
+}
+function plGuard(what) {
+  if (state.plMissing) { plMsg(`Create the ${TAB_PL} tab first.`, 'error'); return false; }
+  if (!isLive()) { plMsg(`${what} needs the live connection. ` + connectHint(), 'error'); return false; }
+  return true;
+}
+async function plSaveSubmit(e) {
+  e.preventDefault();
+  const name = $('plName').value.trim(), purpose = $('plPurpose').value.trim();
+  if (!name) { plMsg('Give the playlist a name first.', 'error'); $('plName').focus(); return; }
+  const list = PL.result.filter(plCan);
+  if (!list.length) { plMsg('None of these tracks has a Spotify id, so there is nothing to save.', 'error'); return; }
+  if (!plGuard('Saving')) return;
+  const btn = $('plSaveGo'); btn.disabled = true; btn.textContent = 'Saving…'; plMsg('');
+  const rec = { name, purpose, source: PL.label, created: today(), tracks: list.length, minutes: Math.round(plSecs(list) / 60 * 10) / 10, rules: plRulesText(PL.rules), ids: list.map(t => t.id), notes: '' };
+  const sheetRec = { ...rec, trackIds: rec.ids.join(',') };
+  try {
+    const saved = await plRun(() => appendPlaylist(sheetRec));
+    state.playlists.push({ ...saved, ids: rec.ids });
+    PL.saveOpen = false; $('plName').value = ''; $('plPurpose').value = '';
+    plMsg(`Saved “${name}” as playlist ${saved.id}.`, '');
+    toast(`Saved “${name}”`);
+    plRenderAll();
+  } catch (err) {
+    plMsg('Not saved: ' + plErr(err), 'error');
+    if (err && err.code === 'server_unavailable') refresh();
+  } finally { btn.disabled = false; btn.textContent = 'Save to sheet'; }
+}
+function plOpenSaved(p) {
+  if (!PL.pool) { plMsg('Load a track pool first (Classical, another sheet or a CSV), then open the playlist.', 'error'); return; }
+  const found = p.ids.map(id => PL.pool.byId.get(id)).filter(Boolean);
+  try { const r = JSON.parse(p.rules || 'null'); if (r && typeof r === 'object') { const { seed, ...rest } = r; PL.rules = { ...plDefaultRules(), ...rest }; if (seed) PL.seed = Number(seed) || PL.seed; } } catch (e) {}
+  PL.result = found; PL.res = null;
+  PL.custom = { name: p.name, missing: p.ids.length - found.length };
+  plMsg('');
+  PL.view = 'build'; plRenderAll();
+  plSay(`Opened ${p.name}: ${plCount(found.length)}, ${spokenTotal(plSecs(found))}` + (PL.custom.missing ? `. ${plCount(PL.custom.missing)} not in the current pool` : ''));
+}
+function plRenameSave(p, li) {
+  const name = li.querySelector('[data-f="name"]').value.trim(), purpose = li.querySelector('[data-f="purpose"]').value.trim();
+  if (!name) { plMsg('A playlist needs a name.', 'error'); return; }
+  const changed = {};
+  if (name !== p.name) changed.name = name;
+  if (purpose !== p.purpose) changed.purpose = purpose;
+  PL.renaming = null;
+  if (!Object.keys(changed).length) { plRenderSaved(); return; }
+  if (!plGuard('Renaming')) { plRenderSaved(); return; }
+  const prev = { name: p.name, purpose: p.purpose };
+  Object.assign(p, changed); plMsg(''); plRenderSaved();
+  plRun(() => writePlaylistFields(p.id, changed)).catch(err => {
+    Object.assign(p, prev); plRenderSaved();
+    plMsg(`Couldn't rename “${name}”: ${plErr(err)}`, 'error');
+    if (/isn't in/.test((err && err.message) || '')) refresh();
+  });
+}
+async function plDelete(p, btn) {
+  if (!plGuard('Deleting')) return;
+  btn.disabled = true;
+  try {
+    await plRun(() => clearPlaylistRow(p.id));
+    state.playlists = state.playlists.filter(x => x !== p); PL.deleting = null;
+    plMsg(`Deleted “${p.name}”.`, ''); plRenderSaved();
+  } catch (err) {
+    plMsg('Not deleted: ' + plErr(err), 'error'); btn.disabled = false;
+    if (/isn't in/.test((err && err.message) || '')) refresh();
+  }
+}
+function plRenderSaved() {
+  const ul = $('plSavedList'), list = state.playlists.slice().sort((a, b) => toNum(b.id) - toNum(a.id));
+  $('plSavedNote').textContent = state.plMissing ? `The ${TAB_PL} tab wasn't found, or it has no header row (id, name, purpose, source, created, tracks, minutes, rules, trackIds, notes). Create the ${TAB_PL} tab first. Saved playlists can't be shown or saved until it's there; everything else works as usual.` : '';
+  $('plSavedNote').hidden = !state.plMissing;
+  ul.textContent = '';
+  if (!list.length && !state.plMissing) ul.appendChild(mk('li', 'empty', 'No saved playlists yet. Build one, then press Save playlist.'));
+  for (const p of list) {
+    const li = mk('li', 'pl-saved'); li.dataset.id = p.id;
+    const main = mk('div', 'main');
+    if (PL.renaming === p.id) {
+      main.innerHTML = `<div class="pl-ren"><div class="field"><label>Name<input type="text" data-f="name" maxlength="120"></label></div><div class="field"><label>Purpose<input type="text" data-f="purpose" maxlength="240"></label></div></div>`;
+      main.querySelector('[data-f="name"]').value = p.name; main.querySelector('[data-f="purpose"]').value = p.purpose;
+    } else {
+      main.append(mk('div', 't', p.name || '(untitled)'));
+      if (p.purpose) main.append(mk('div', 'purpose', p.purpose));
+      main.append(mk('div', 'm tnum', [plCount(p.tracks), `${p.minutes} min`, p.source, p.created ? 'Created ' + fmtDate(p.created) : ''].filter(Boolean).join(' · ')));
+    }
+    li.appendChild(main);
+    const acts = mk('div', 'acts');
+    const b = (label, act, cls, aria) => { const x = mkBtn(label, cls || 'btn', null, { aria: aria ? `${label}: ${p.name}` : '' }); x.dataset.act = act; x.dataset.fk = `pl:saved:${act}:${p.id}`; acts.appendChild(x); return x; };
+    if (PL.renaming === p.id) { b('Save', 'rename-save', 'btn btn-primary'); b('Cancel', 'rename-cancel'); }
+    else if (PL.deleting === p.id) { acts.appendChild(mk('span', 'ask', 'Delete this playlist?')); b('Delete', 'delete-yes', 'btn btn-primary', 1); b('Keep', 'delete-no'); }
+    else { b('Open', 'open', 'btn', 1); b('Copy for Spotify', 'copy', 'btn', 1); b('Rename', 'rename', 'btn', 1); b('Delete', 'delete', 'btn', 1); }
+    li.appendChild(acts);
+    const ta = mk('textarea', 'pl-copybox'); ta.readOnly = true; ta.hidden = true; ta.rows = 4; ta.setAttribute('aria-label', 'Spotify links to copy'); li.appendChild(ta);
+    ul.appendChild(li);
+  }
+}
+
+/* --- screen --- */
+function plRenderSource() {
+  document.querySelectorAll('#plSrc button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === PL.src)));
+  $('plSrcSheet').hidden = PL.src !== 'sheet'; $('plSrcCsv').hidden = PL.src !== 'csv';
+  setVal($('plLink'), PL.sheetLink); setVal($('plTab'), PL.sheetTab);
+  $('plReload').hidden = PL.src === 'csv';
+  $('plReload').textContent = PL.src === 'sheet' ? 'Load' : 'Reload';
+  $('plReload').disabled = PL.loading;
+  const line = $('plLoadLine');
+  line.dataset.kind = PL.loadError ? 'error' : '';
+  if (PL.loading) line.textContent = 'Loading tracks…';
+  else if (PL.loadError) line.textContent = PL.loadError;
+  else if (PL.pool) line.textContent = `${plCount(PL.pool.tracks.length)} · found: ${PL.pool.found.join(', ') || 'none'} · missing: ${PL.pool.missing.join(', ') || 'none'}`;
+  else line.textContent = PL.src === 'csv' ? 'Choose a CSV file. Nothing is uploaded: it is read in this page.' : PL.src === 'sheet' ? 'Paste a Google Sheets link, type the tab name and press Load. It is only read, never changed.' : 'Reading the Classical tab…';
+  $('plSrcName').textContent = PL.pool ? `Pool: ${PL.label}` : '';
+}
+function plRenderAll() {
+  const fk = activeFk();
+  plRenderSource();
+  document.querySelectorAll('#plView button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === PL.view)));
+  $('plBrowse').hidden = PL.view !== 'browse'; $('plBuild').hidden = PL.view !== 'build'; $('plSaved').hidden = PL.view !== 'saved';
+  $('plSavedCount').textContent = state.playlists.length ? String(state.playlists.length) : '';
+  if (PL.pool) { plSyncChips(); }
+  if (PL.view === 'browse') plRenderBrowse();
+  else if (PL.view === 'build') { plRenderRules(); plRenderResult(); $('plBuildEmpty').hidden = !!PL.pool; $('plBuildBody').hidden = !PL.pool; }
+  else plRenderSaved();
+  if (fk) restoreFocus(fk);
+}
+function renderPlaylists() {
+  if (PL.src === 'classical' && !PL.pool && !PL.loading && !PL.loadError) plLoadPool();
+  else plRenderAll();
+}
+
+/* --- wiring --- */
+$('plView').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; PL.view = b.dataset.v; plMsg(''); plRenderAll(); });
+$('plSrc').addEventListener('click', e => {
+  const b = e.target.closest('button[data-s]'); if (!b || b.dataset.s === PL.src) return;
+  PL.src = b.dataset.s; PL.tok++; PL.loading = false; PL.loadError = ''; PL.pool = null; PL.result = []; PL.res = null; PL.custom = null;
+  if (PL.src === 'classical') plLoadPool(); else plRenderAll();
+});
+$('plLink').addEventListener('input', e => { PL.sheetLink = e.target.value; });
+$('plTab').addEventListener('input', e => { PL.sheetTab = e.target.value; });
+$('plReload').addEventListener('click', () => { PL.sheetLink = $('plLink').value.trim(); PL.sheetTab = $('plTab').value.trim(); PL.loadError = ''; plLoadPool(); });
+$('plSrcSheet').addEventListener('submit', e => { e.preventDefault(); $('plReload').click(); });
+$('plFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) plLoadCsv(f); });
+// Browse
+let plQT;
+$('plQ').addEventListener('input', e => { clearTimeout(plQT); plQT = setTimeout(() => { PL.b.q = e.target.value; PL.b.limit = 200; plRenderBrowse(); }, 120); });
+$('plBrowse').addEventListener('click', e => {
+  const c = e.target.closest('.chip[data-g]');
+  if (c) { const s = PL.b.f[c.dataset.g]; if (s.has(c.dataset.v)) s.delete(c.dataset.v); else s.add(c.dataset.v); PL.b.limit = 200; plSyncChips(); plRenderBrowse(); return; }
+  const th = e.target.closest('th[data-k]');
+  if (th) { const k = th.dataset.k; if (PL.b.sort === k) PL.b.dir *= -1; else { PL.b.sort = k; PL.b.dir = 1; } plRenderBrowse(); const fk = `pl:sort:${k}`; restoreFocus(fk); return; }
+  const tr = e.target.closest('tr.row');
+  if (tr && !e.target.closest('a')) { PL.b.open = PL.b.open === tr.dataset.uid ? null : tr.dataset.uid; const fk = `pl:row:${tr.dataset.uid}`; plRenderBrowse(); restoreFocus(fk); }
+});
+$('plSort').addEventListener('change', e => { PL.b.sort = e.target.value; PL.b.dir = 1; plRenderBrowse(); });
+$('plDir').addEventListener('click', () => { PL.b.dir *= -1; plRenderBrowse(); });
+$('plMore').addEventListener('click', () => { PL.b.limit += 200; plRenderBrowse(); });
+$('plClear').addEventListener('click', () => { PL.b.f = { era: new Set(), form: new Set(), mood: new Set(), wf: new Set() }; PL.b.q = ''; $('plQ').value = ''; plSyncChips(); plRenderBrowse(); });
+// Build: presets and rules
+$('plPresets').addEventListener('click', e => { const c = e.target.closest('.chip[data-preset]'); if (c) plApplyPreset(c.dataset.preset); });
+$('plReset').addEventListener('click', () => { PL.rules = plDefaultRules(); plRebuild(); });
+$('plRules').addEventListener('click', e => {
+  const c = e.target.closest('.chip[data-g]'); if (!c) return;
+  const a = PL.rules[c.dataset.g], i = a.indexOf(c.dataset.v);
+  if (i >= 0) a.splice(i, 1); else a.push(c.dataset.v);
+  plRuleChanged();
+});
+$('plRules').addEventListener('input', e => {
+  const id = e.target.id;
+  if (PL_INPUTS[id]) { PL.rules[PL_INPUTS[id]] = NUM_RULE(e.target.value); plRuleChanged(); }
+  else if (id === 'rQ') { PL.rules.q = e.target.value; plRuleChanged(); }
+});
+$('plRules').addEventListener('change', e => {
+  const id = e.target.id;
+  if (id === 'rWf') PL.rules.wf = e.target.value;
+  else if (id === 'rOrder') PL.rules.order = e.target.value;
+  else if (id === 'rComposer') PL.rules.composer = e.target.value;
+  else return;
+  plRuleChanged();
+});
+$('plSeed').addEventListener('input', e => { const n = Math.floor(Number(e.target.value)); if (Number.isFinite(n)) { PL.seed = n; plRebuild(); } });
+$('plShuffle').addEventListener('click', () => { PL.seed += 1; setVal($('plSeed'), PL.seed); plRebuild(); });
+// Build: result
+$('plResList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'), li = e.target.closest('li[data-uid]'); if (!b || !li) return;
+  if (b.dataset.act === 'up') plMove(li.dataset.uid, -1); else if (b.dataset.act === 'down') plMove(li.dataset.uid, 1); else if (b.dataset.act === 'remove') plRemove(li.dataset.uid);
+});
+$('plSave').addEventListener('click', () => {
+  PL.saveOpen = !PL.saveOpen; plRenderResult();
+  if (PL.saveOpen) { if (!$('plName').value) $('plName').value = PL.custom ? PL.custom.name : PL.rules.preset ? PL_PRESETS[PL.rules.preset].n : ''; $('plName').focus(); $('plName').select(); }
+});
+$('plSaveCancel').addEventListener('click', () => { PL.saveOpen = false; plRenderResult(); $('plSave').focus(); });
+$('plSaveForm').addEventListener('submit', plSaveSubmit);
+$('plCopySp').addEventListener('click', () => {
+  const ok = PL.result.filter(plCan);
+  if (!ok.length) { plMsg('None of these tracks has a Spotify id.', 'error'); return; }
+  plCopy(plLines(ok, t => spUrl(t.id)), $('plCopyBox'), `Copied ${plCount(ok.length).replace('tracks', 'links').replace('track', 'link')}`);
+});
+$('plCopyNames').addEventListener('click', () => plCopy(plLines(PL.result, plNames), $('plCopyBox'), `Copied ${PL.result.length} track name${PL.result.length === 1 ? '' : 's'}`));
+// Saved
+$('plSavedList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'), li = e.target.closest('li.pl-saved'); if (!b || !li) return;
+  const p = state.playlists.find(x => x.id === li.dataset.id); if (!p) return;
+  switch (b.dataset.act) {
+    case 'open': plOpenSaved(p); break;
+    case 'copy': plCopy(plLines(p.ids, id => spUrl(id)), li.querySelector('.pl-copybox'), `Copied ${p.ids.length} link${p.ids.length === 1 ? '' : 's'}`); break;
+    case 'rename': PL.renaming = p.id; PL.deleting = null; plRenderSaved(); $('plSavedList').querySelector(`li[data-id="${p.id}"] [data-f="name"]`).focus(); break;
+    case 'rename-cancel': PL.renaming = null; plRenderSaved(); break;
+    case 'rename-save': plRenameSave(p, li); break;
+    case 'delete': PL.deleting = p.id; PL.renaming = null; plRenderSaved(); break;
+    case 'delete-no': PL.deleting = null; plRenderSaved(); break;
+    case 'delete-yes': plDelete(p, b); break;
+  }
+});
+$('plSavedList').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.matches('[data-f]')) { e.preventDefault(); const li = e.target.closest('li.pl-saved'); li.querySelector('[data-act="rename-save"]').click(); }
+});
+
 /* ---------- tabs and rendering ---------- */
 // A tab needs an entry here, a tab button #tab-<name> and a panel #view-<name>.
 const TABS = {
@@ -3635,6 +4714,7 @@ const TABS = {
   collection: { render: renderCollection },
   log: { render: renderLogTab },
   plan: { render: renderPlan },
+  playlists: { render: renderPlaylists },
   dashboard: { render: renderDashboard },
   tools: { render: renderTools }
 };
@@ -3720,6 +4800,247 @@ $('albumForm').addEventListener('submit', saveAlbumDialog);
 $('dlgClose').addEventListener('click', () => $('albumDlg').close());
 $('dlgTracks').addEventListener('click', () => { if (editing) openTracks(editing); });
 
+/* ---------- cover art ----------
+   One image per album in a private Google Drive folder, named by the album id (1043.jpg, 1043.png ...). The folder id is kept in
+   🎸 Settings (coverFolder), never in the code. Only the covers on screen are fetched, shrunk to 256px and cached in this browser;
+   the generated sleeve (artSvg) stays as the fallback and the starting point everywhere. Nothing is written to the sheet but coverFolder. */
+const DRIVE = 'Google Drive';
+const cov = {
+  folder: '', files: null, mem: new Map(), failed: new Set(), pending: new Set(), queue: [], active: 0, epoch: 0, gen: 0,
+  st: 'none',      // none | listing | ok | noaccess | error
+  msg: '', io: null, mo: null
+};
+const cover = { msg: '' };
+const coverFolderFrom = v => {
+  v = String(v || '').trim();
+  const m = v.match(/\/folders\/([A-Za-z0-9_-]{10,})/) || v.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : /^[A-Za-z0-9_-]{20,}$/.test(v) ? v : '';
+};
+// IndexedDB: database sg-covers, key <folderId>/<albumId>, value { src, mod, name }. Every access is allowed to fail.
+let covDbP = null;
+function covDb() {
+  if (!covDbP) covDbP = new Promise((ok, no) => {
+    try {
+      const r = indexedDB.open('sg-covers', 1);
+      r.onupgradeneeded = () => { try { r.result.createObjectStore('c'); } catch (e) {} };
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); r.onblocked = () => no(new Error('blocked'));
+    } catch (e) { no(e); }
+  });
+  return covDbP;
+}
+const covReq = r => new Promise((ok, no) => { r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+async function covLoad(folder) {
+  const out = new Map();
+  try {
+    const st = (await covDb()).transaction('c').objectStore('c'), range = IDBKeyRange.bound(folder + '/', folder + '/￿');
+    const [keys, vals] = await Promise.all([covReq(st.getAllKeys(range)), covReq(st.getAll(range))]);
+    keys.forEach((k, i) => { const v = vals[i]; if (v && typeof v.src === 'string' && /^data:image\//.test(v.src)) out.set(String(k).slice(folder.length + 1), v); });
+  } catch (e) {}
+  return out;
+}
+async function covPut(folder, id, val) {
+  try { const tx = (await covDb()).transaction('c', 'readwrite'); tx.objectStore('c').put(val, folder + '/' + id); await new Promise(ok => { tx.oncomplete = ok; tx.onerror = ok; tx.onabort = ok; }); } catch (e) {}
+}
+// When the folder changes, whatever was cached for any other folder goes
+async function covDrop(folder) {
+  try {
+    const tx = (await covDb()).transaction('c', 'readwrite'), st = tx.objectStore('c');
+    st.openCursor().onsuccess = ev => { const c = ev.target.result; if (!c) return; if (!folder || !String(c.key).startsWith(folder + '/')) c.delete(); c.continue(); };
+    await new Promise(ok => { tx.oncomplete = ok; tx.onerror = ok; tx.onabort = ok; });
+  } catch (e) {}
+}
+// The folder's files -> Map(albumId -> { id, name, mod }). The name stem must be all digits; the extension is ignored; the newest file wins a tie.
+function coverMap(files) {
+  const m = new Map();
+  for (const f of files || []) {
+    const name = String(f.title || f.name || '');
+    const x = name.match(/^(\d+)(?:\.(jpe?g|png|webp))?$/i);
+    if (!x || (f.mimeType && !/^image\//.test(f.mimeType))) continue;
+    const id = String(Number(x[1])), t = Date.parse(f.modifiedTime) || 0, cur = m.get(id);
+    if (!cur || t > cur.t) m.set(id, { id: f.id, name, mod: String(f.modifiedTime || ''), t });
+  }
+  return m;
+}
+async function listCoverFiles(folder) {
+  const out = [];
+  let tok = '';
+  if (state.google) {
+    const q = encodeURIComponent(`'${folder}' in parents and trashed = false`);
+    for (let i = 0; i < 50; i++) {
+      const r = await google_.drive(`files?q=${q}&fields=nextPageToken,files(id,name,modifiedTime,mimeType)&pageSize=1000${tok ? '&pageToken=' + encodeURIComponent(tok) : ''}`);
+      for (const f of r.files || []) out.push({ id: f.id, title: f.name, modifiedTime: f.modifiedTime, mimeType: f.mimeType });
+      tok = r.nextPageToken || ''; if (!tok) break;
+    }
+    return out;
+  }
+  for (let i = 0; i < 50; i++) {   // the connector returns a few files a page and a token for the next
+    const input = { query: `parentId = '${folder}'`, excludeContentSnippets: true, pageSize: 100 };
+    if (tok) input.pageToken = tok;
+    const p = (await state.mcp.callTool(DRIVE, 'search_files', input, { cache: false })).payload || {};
+    out.push(...(p.files || []));
+    const next = p.nextPageToken || p.next_page_token || '';
+    if (!next || next === tok) break;
+    tok = next;
+  }
+  return out;
+}
+async function downloadCover(fileId) {
+  if (state.google) return { url: URL.createObjectURL(await google_.drive(`files/${encodeURIComponent(fileId)}?alt=media`, true)), revoke: true };
+  const p = (await state.mcp.callTool(DRIVE, 'download_file_content', { fileId }, { cache: false })).payload || {};
+  if (!p.content) throw new Error('no content');
+  return { url: `data:${p.mimeType || 'image/jpeg'};base64,${p.content}` };
+}
+// Centre-crop to a square, at most 256px, as a JPEG (a transparent PNG gets the dark shelf colour behind it)
+const shrinkCover = src => new Promise((ok, fail) => {
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h), out = Math.max(1, Math.min(256, side)), c = document.createElement('canvas');
+      c.width = c.height = out;
+      const g = c.getContext('2d'); g.fillStyle = '#14151f'; g.fillRect(0, 0, out, out);
+      g.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, out, out);
+      ok(c.toDataURL('image/jpeg', 0.82));
+    } catch (e) { fail(e); }
+  };
+  img.onerror = () => fail(new Error('not an image')); img.src = src;
+});
+function applyCover(el, src, fade) {
+  let img = el.querySelector(':scope > img.cvimg');
+  if (img) { if (img.getAttribute('src') !== src) img.src = src; }
+  else {
+    img = document.createElement('img'); img.className = 'cvimg'; img.alt = ''; img.draggable = false; img.decoding = 'async'; img.src = src;
+    if (!fade) img.classList.add('in');
+    el.insertBefore(img, el.firstChild);
+    if (fade) { void img.offsetWidth; img.classList.add('in'); }
+  }
+  el.classList.add('cv');
+}
+function stripCovers() {
+  document.querySelectorAll('[data-cv].cv').forEach(el => { el.classList.remove('cv'); el.querySelectorAll(':scope > img.cvimg').forEach(i => i.remove()); });
+  cov.epoch++;
+}
+// A sleeve (or strip, or tile) that carries data-cv: show what is cached now, and watch it for the screen when it has a file that needs downloading
+function covBind(el) {
+  el._cvg = cov.epoch;
+  const id = el.dataset.cv, hit = cov.mem.get(id), f = cov.files && cov.files.get(id);
+  if (hit && el.querySelector(':scope > img.cvimg') == null) applyCover(el, hit.src, false);
+  if (f && (!hit || hit.mod !== f.mod) && !cov.failed.has(id) && covIO()) { cov.io.unobserve(el); cov.io.observe(el); }
+}
+function covScan() {
+  if (!cov.folder && !cov.mem.size) return;
+  document.querySelectorAll('[data-cv]').forEach(el => { if (el._cvg !== cov.epoch) covBind(el); });
+}
+function covIO() {
+  if (cov.io) return cov.io;
+  if (!('IntersectionObserver' in window)) return null;
+  cov.io = new IntersectionObserver(es => {
+    for (const e of es) {
+      e.target._cvVis = e.isIntersecting;
+      if (!e.isIntersecting) continue;
+      const id = e.target.dataset.cv, f = cov.files && cov.files.get(id), hit = cov.mem.get(id);
+      if (!f || (hit && hit.mod === f.mod) || cov.failed.has(id) || cov.pending.has(id)) continue;
+      cov.pending.add(id); cov.queue.push(id);
+    }
+    covPump();
+  }, { rootMargin: '200px' });
+  return cov.io;
+}
+const covShown = id => [...document.querySelectorAll(`[data-cv="${id}"]`)].some(e => e._cvVis && e.isConnected);
+function covPump() {
+  const limit = state.google ? 3 : 2;   // a few at a time: each one is a download plus a decode
+  while (cov.active < limit && cov.queue.length) {
+    const id = cov.queue.shift();
+    if (!covShown(id)) { cov.pending.delete(id); continue; }   // scrolled away before its turn: it can queue again later
+    cov.active++; covFetch(id);
+  }
+}
+async function covFetch(id) {
+  const gen = cov.gen, folder = cov.folder, f = cov.files && cov.files.get(id);
+  let dl = null;
+  try {
+    if (!f) throw new Error('gone');
+    dl = await downloadCover(f.id);
+    const src = await shrinkCover(dl.url);
+    if (gen !== cov.gen) return;
+    const val = { src, mod: f.mod, name: f.name };
+    cov.mem.set(id, val);
+    document.querySelectorAll(`[data-cv="${id}"]`).forEach(el => applyCover(el, src, !el.classList.contains('cv')));
+    covPut(folder, id, val);
+  } catch (e) { if (gen === cov.gen) cov.failed.add(id); }   // that sleeve keeps its generated art
+  finally {
+    if (dl && dl.revoke) { try { URL.revokeObjectURL(dl.url); } catch (e) {} }
+    if (gen === cov.gen) { cov.active--; cov.pending.delete(id); renderCovers(); covPump(); }
+  }
+}
+// After a refresh or a change of folder: show the cached covers, list the folder (cheap), then let the sleeves on screen ask for downloads
+async function coverInit() {
+  const folder = state.settings.coverFolder || '', changed = folder !== cov.folder;
+  if (!changed && cov.st === 'listing') return;
+  const gen = changed ? ++cov.gen : cov.gen;
+  if (changed) {
+    if (cov.io) cov.io.disconnect();
+    cov.folder = folder; cov.files = null; cov.mem = new Map(); cov.failed = new Set(); cov.pending = new Set(); cov.queue = []; cov.active = 0;
+    stripCovers();
+    covDrop(folder);
+  }
+  cov.msg = '';
+  if (!folder) { cov.st = 'none'; renderCovers(); return; }
+  cov.st = 'listing'; renderCovers();
+  try {
+    if (changed) { const cached = await covLoad(folder); if (gen !== cov.gen) return; for (const [k, v] of cached) cov.mem.set(k, v); cov.epoch++; covScan(); renderCovers(); }
+    const files = await listCoverFiles(folder);
+    if (gen !== cov.gen) return;
+    cov.files = coverMap(files); cov.failed = new Set(); cov.st = 'ok';
+  } catch (err) {
+    if (gen !== cov.gen) return;
+    cov.files = null;
+    cov.st = state.google ? (err && (err.code === 'drive_access' || err.code === 'google_signin') ? 'noaccess' : 'error') : 'noaccess';
+    if (cov.st === 'error') cov.msg = "Couldn't read the cover folder. Check that it is shared and the link is right, then press Refresh.";
+  }
+  cov.epoch++; covScan(); renderCovers();
+}
+function renderCovers() {
+  const stat = document.getElementById('coverStat'), btn = document.getElementById('coverConnect');
+  if (!stat) return;
+  let t = '', hint = false;
+  if (cov.st === 'none') t = 'No cover folder set';
+  else if (cov.st === 'listing') t = 'Looking in the cover folder…';
+  else if (cov.st === 'ok') {
+    const ids = state.albums.filter(a => toNum(a.id)).map(a => String(toNum(a.id)));
+    t = `${ids.filter(i => cov.files && cov.files.has(i)).length} of ${ids.length} albums have a cover in the folder · ${ids.filter(i => cov.mem.has(i)).length} loaded`;
+  } else if (cov.st === 'noaccess') { t = state.google ? 'Press Connect again to allow read-only access to Google Drive.' : 'Allow Google Drive for this page, then press Refresh.'; hint = state.google; }
+  else t = cov.msg;
+  stat.textContent = cover.msg || t;
+  btn.hidden = !(hint && !cover.msg);
+}
+async function saveCover(clear) {
+  const inp = $('coverLink');
+  let id = '';
+  if (!clear) {
+    id = coverFolderFrom(inp.value);
+    if (!id) { cover.msg = "That doesn't look like a Drive folder link."; renderCovers(); return; }
+  }
+  if (!isLive()) { cover.msg = 'Saving needs the live connection. ' + connectHint(); renderCovers(); return; }
+  if (state.busy) return;
+  state.busy = true; cover.msg = '';
+  try {
+    await saveSetting('coverFolder', id);
+    state.settings.coverFolder = id; inp.value = '';
+    state.busy = false; renderCovers(); coverInit();
+  } catch (err) {
+    state.busy = false;
+    cover.msg = 'Not saved: ' + ((err && err.code === 'tool_error' && err.message) || explain(err)); renderCovers();
+  }
+}
+$('coverSave').addEventListener('click', () => saveCover(false));
+$('coverClear').addEventListener('click', () => saveCover(true));
+$('coverLink').addEventListener('keydown', e => { if (e.key === 'Enter') saveCover(false); });
+$('coverLink').addEventListener('input', () => { if (cover.msg) { cover.msg = ''; renderCovers(); } });
+$('coverConnect').addEventListener('click', () => googleConnect());
+// Sleeves are drawn all over the place and redrawn often: pick up new ones as they appear, before they are painted
+try { new MutationObserver(() => covScan()).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+
+
 /* ---------- Google Sheets direct (GitHub Pages and other hosts outside claude.ai) ----------
    Same calls as the claude.ai connector, sent straight to the Sheets API with a Google sign-in.
    Writes use USER_ENTERED, like the connector, so ' prefixes, numbers and dates behave the same.
@@ -3747,6 +5068,14 @@ const google_ = {
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw { code: 'tool_error', message: (body.error && body.error.message) || 'HTTP ' + res.status };
     return { payload: body };
+  },
+  // Google Drive (read-only), for the cover art. 401/403 means this sign-in doesn't have the Drive scope yet: not an app error.
+  async drive(path, asBlob) {
+    if (!this.valid()) throw { code: 'google_signin' };
+    const res = await fetch('https://www.googleapis.com/drive/v3/' + path, { headers: { Authorization: 'Bearer ' + this.tok().t } });
+    if (res.status === 401 || res.status === 403) throw { code: 'drive_access' };
+    if (!res.ok) throw { code: 'tool_error', message: 'Drive HTTP ' + res.status };
+    return asBlob ? res.blob() : res.json();
   }
 };
 function googleSignedOut() {
@@ -3769,7 +5098,7 @@ function googleConnect() {
   if (!(window.google && google.accounts && google.accounts.oauth2)) { loadGis().then(googleConnect, err => notice(err.message, 'error')); return; }
   try {
     if (!google_.client) google_.client = google.accounts.oauth2.initTokenClient({
-      client_id: id, scope: 'https://www.googleapis.com/auth/spreadsheets',
+      client_id: id, scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
       callback: r => {
         if (r.error) { notice('Google sign-in failed: ' + r.error, 'error'); return; }
         lsSet(google_.tokKey, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in - 120) * 1000 }));
@@ -3811,7 +5140,7 @@ $('gForm').addEventListener('submit', e => {
 });
 
 /* ---------- boot ---------- */
-window.__sg = { state, render: renderAll };
+window.__sg = { state, render: renderAll, cov };
 setLogDay(null);
 initLook();
 applyLogVisibility();
