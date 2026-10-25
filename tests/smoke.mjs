@@ -16,6 +16,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(process.env.APP_HTML || join(here, '..', 'app.html'));
 const OUT = join(here, 'out');
 const FIXTURE = JSON.parse(readFileSync(join(here, 'fixture-albums.json'), 'utf8'));
+const FIXTURE_CL = JSON.parse(readFileSync(join(here, 'fixture-classical.json'), 'utf8'));   // 80 made-up tracks (gen-classical-fixture.mjs)
 const VIEWPORTS = [
   { name: 'laptop', width: 1280, height: 900 },
   { name: 'phone', width: 390, height: 844 },
@@ -37,7 +38,14 @@ const S4 = { onDay: [], quiet: '', stale: '', release: 'Test Album 060 LP' };
 // Sheet columns of 🎸: D Status, F Format, Q Favourite, R Labelled (only in the second seed variant)
 const COLS = { rating: 1, status: 3, format: 5, release: 6, year: 7, id: 9, fav: 16, labelled: 17 };
 const S5 = { fav: [], nope: [], soon: [] };   // what buildSeed added for the shelves, by title
-function buildSeed({ labelled = false } = {}) {
+const PL_HEADER = ['id', 'name', 'purpose', 'source', 'created', 'tracks', 'minutes', 'rules', 'trackIds', 'notes'];
+const POOL2_ID = 'POOL2_SHEET_ID_0123456789abcdefghij';   // a second spreadsheet, read-only, tab "Pool 2"
+const POOL2_IDS = ['4uLU6hMCjMI75M1A2tKUQC', '1301WleyT35CMS5qAo0gAf', '7ouMYWpwJ422jRcDASZB7P', '0VjIjW4GlUZAMYd2vXMi3b', '3KkXRkHbMCARz0aVfEt68P'];
+const POOL2 = [
+  ['Track URI', 'Track Name', 'Artist Name(s)', 'Album Name', 'Album Release Date', 'Duration (ms)', 'Popularity', 'Explicit', 'Added At', 'Genres', 'Danceability', 'Energy', 'Key', 'Loudness', 'Mode', 'Speechiness', 'Acousticness', 'Instrumentalness', 'Liveness', 'Valence', 'Tempo', 'Time Signature'],
+  ...POOL2_IDS.map((id, i) => [`spotify:track:${id}`, `Pool Two Song ${i + 1}`, `Pool Artist ${i + 1};Guest`, 'Pool Album', '2020-01-0' + (i + 1), String(180000 + i * 30000), String(40 + i), 'false', '2024-01-01T00:00:00Z', 'ambient', '0.3', String(0.2 + i * 0.1), String(i * 2), '-12.5', String(i % 2), '0.05', '0.8', '0.9', '0.1', '0.4', String(70 + i * 10), '4'])
+];
+function buildSeed({ labelled = false, noPlaylists = false } = {}) {
   const albums = FIXTURE.values.map(r => [...r]);   // a copy: FIXTURE itself stays the fixed reference. [header, ...rows]; id is column J (index 9)
   // New columns after the fixture's A:O. P (Buy link) is added inside the page, so it is left blank here.
   albums[0].push('', 'Favourite');
@@ -107,6 +115,10 @@ function buildSeed({ labelled = false } = {}) {
       ['5006', '1002', 'Test Album 002 LP', 'A', '1', 'Prelude', '1:30', isoDay(2), ''],
       ['5007', '1002', 'Test Album 002 LP', 'A', '2', 'Postlude', '2:10', isoDay(1), ''],
     ],
+    // Playlists: header row only. The Classical tab is read-only test data; Pool 2 lives in a second spreadsheet.
+    ...(noPlaylists ? {} : { '🎸 Playlists': [PL_HEADER] }),
+    'Classical': FIXTURE_CL.values.map(r => [...r]),
+    __pool2: POOL2,
   };
 }
 
@@ -115,13 +127,17 @@ function buildSeed({ labelled = false } = {}) {
 // object whose callTool(server, tool, args, opts) resolves to { payload }.
 function installStub(seed) {
   const PREFIX = '🎸';
+  const OTHER_ID = 'POOL2_SHEET_ID_0123456789abcdefghij';   // the second spreadsheet: read-only, one tab "Pool 2"
   const tabs = {};
+  const other = { 'Pool 2': (seed.__pool2 || []).map(r => r.map(c => String(c))) };
+  seed = Object.fromEntries(Object.entries(seed).filter(([k]) => k !== '__pool2'));
   for (const [name, rows] of Object.entries(seed)) {
     tabs[name] = rows.map(r => r.map(c => (c == null ? '' : String(c))));
   }
   const firstTab = Object.keys(seed)[0];
   window.__writes = [];
   window.__reads = [];
+  window.__readSheets = [];   // [{ sid, range }] for every read, so tests can see which spreadsheet was read
   window.__forbidden = [];
   window.__errors = [];
   window.__sheet = tabs;
@@ -177,18 +193,22 @@ function installStub(seed) {
     return { text, sheet, colon, c1, r1, c2: c2 || '', r2: r2 || '' };
   }
 
-  // Guard + locate the tab. Anything outside the 🎸 tabs is refused and recorded.
-  function target(range, tool) {
+  // Guard + locate the tab. Any WRITE outside the 🎸 tabs is refused and recorded (that includes the Classical tab and
+  // the second spreadsheet). A READ is allowed on the 🎸 tabs, on Classical, and on "Pool 2" of the second spreadsheet only.
+  function target(range, tool, sid) {
     const p = parse(range);
-    if (typeof p.sheet !== 'string' || !p.sheet.startsWith(PREFIX)) {
-      window.__forbidden.push({ tool, range: p.text, sheet: p.sheet });
-      throw new Error(`Access denied: tab ${JSON.stringify(p.sheet)} is outside the 🎸 tabs`);
+    const write = tool !== 'get_values', second = sid === OTHER_ID;
+    const allowed = typeof p.sheet === 'string' && (second ? !write && p.sheet === 'Pool 2' : (p.sheet.startsWith(PREFIX) || (!write && p.sheet === 'Classical')));
+    if (!allowed) {
+      window.__forbidden.push({ tool, range: p.text, sheet: p.sheet, second });
+      throw new Error(`Access denied: ${write ? 'writing' : 'reading'} tab ${JSON.stringify(p.sheet)} is not allowed`);
     }
-    if (!(p.sheet in tabs)) {
+    const store = second ? other : tabs;
+    if (!(p.sheet in store)) {
       window.__errors.push({ tool, range: p.text, sheet: p.sheet });
       throw new Error(`No such tab: ${JSON.stringify(p.sheet)}`);
     }
-    const rows = tabs[p.sheet];
+    const rows = store[p.sheet];
     const maxRow = Math.max(rows.length - 1, 0);
     const maxCol = Math.max(0, ...rows.map(r => r.length - 1));
     const sc = p.c1 ? colToNum(p.c1) : 0;
@@ -213,7 +233,8 @@ function installStub(seed) {
       }
       if (tool === 'get_values') {
         window.__reads.push(args.range);
-        const t = target(args.range, tool);
+        window.__readSheets.push({ sid: args.spreadsheetId, range: args.range });
+        const t = target(args.range, tool, args.spreadsheetId);
         const last = Math.min(t.er, t.rows.length - 1);
         let values = [];
         for (let r = t.sr; r <= last; r++) {
@@ -225,14 +246,14 @@ function installStub(seed) {
         return { payload: { range: args.range, majorDimension: 'ROWS', values } };
       }
       if (tool === 'update_values') {
-        const t = target(args.range, tool);
+        const t = target(args.range, tool, args.spreadsheetId);
         const vals = Array.isArray(args.values) ? args.values : [];
         vals.forEach((row, i) => (Array.isArray(row) ? row : [row]).forEach((v, j) => setCell(t.rows, t.sr + i, t.sc + j, v == null ? '' : String(v))));
         window.__writes.push({ tool, range: args.range, sheet: t.sheet, values: JSON.parse(JSON.stringify(vals)) });
         return { payload: { spreadsheetId: args.spreadsheetId, updatedRange: args.range, updatedCells: vals.reduce((n, r) => n + (Array.isArray(r) ? r.length : 1), 0) } };
       }
       if (tool === 'append_values') {
-        const t = target(args.range, tool);
+        const t = target(args.range, tool, args.spreadsheetId);
         // Like Google Sheets: the table starts at the range's first row and ends at the first fully blank row;
         // new rows go there and overwrite whatever follows (so a blank row mid-table is a trap for A1 appends).
         let start = t.sr;
@@ -626,12 +647,12 @@ const MOOD_RULES = {
   'Old favourite': r => parseFloat(r[COL.rating]) >= 9,
   'Anything': () => true,
 };
-const FIVE = ['Home', 'Collection', 'Plan', 'Dashboard', 'Tools'];
-const SIX = ['Home', 'Collection', 'Log', 'Plan', 'Dashboard', 'Tools'];   // with the listening log switched on
+const TABS6 = ['Home', 'Collection', 'Plan', 'Playlists', 'Dashboard', 'Tools'];
+const TABS7 = ['Home', 'Collection', 'Log', 'Plan', 'Playlists', 'Dashboard', 'Tools'];   // with the listening log switched on
 
 // A fresh page on the live stub, already on the given tab
-async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion, showLog, touch } = {}) {
-  const ctx = await openContext(browser, vp, seed, { reducedMotion, showLog, touch });
+async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion, showLog, touch, clipboard } = {}) {
+  const ctx = await openContext(browser, vp, seed, { reducedMotion, showLog, touch, clipboard });
   if (clockTo) await ctx.context.clock.setFixedTime(clockTo);
   await ctx.page.goto(url);
   await ctx.page.waitForLoadState('load');
@@ -646,7 +667,7 @@ async function layoutTests(browser, vp, seed, url) {
   const n = vp.name, laptop = vp.width >= 1000;
   const { context, page, problems } = await freshPage(browser, vp, seed, url, 'log', { showLog: true });
   await page.evaluate(() => { window.__writes.length = 0; });
-  for (const t of ['home', 'collection', 'log', 'plan', 'dashboard', 'tools']) {
+  for (const t of ['home', 'collection', 'log', 'plan', 'playlists', 'dashboard', 'tools']) {
     await page.locator(`#tab-${t}`).click();
     await page.waitForTimeout(250);
     const o = await page.evaluate(overflow);
@@ -711,7 +732,7 @@ async function toolsTests(browser, vp, seed, url) {
 
   // Six pills with the log on, in order, all reachable; the bar scrolls inside itself rather than the page
   const labels = await page.locator('nav.tabs .tab:visible').allTextContents();
-  record(n, 'Tabs: with the log on, six pills in order Home, Collection, Log, Plan, Dashboard, Tools', labels.join() === SIX.join(), labels.join());
+  record(n, 'Tabs: with the log on, seven pills in order Home, Collection, Log, Plan, Playlists, Dashboard, Tools', labels.join() === TABS7.join(), labels.join());
   await page.locator('#tab-tools').click();
   const reach = await page.evaluate(() => { const nav = document.querySelector('nav.tabs').getBoundingClientRect(), b = document.getElementById('tab-tools').getBoundingClientRect(); return { inside: b.left >= nav.left - 1 && b.right <= nav.right + 1, sw: document.documentElement.scrollWidth, iw: innerWidth }; });
   record(n, 'Tabs: the last pill is brought into view and the page does not scroll sideways', reach.inside && reach.sw <= reach.iw, JSON.stringify(reach));
@@ -2268,7 +2289,7 @@ async function logSwitchTests(browser, vp, seed, url) {
   const rows = fxSeedRows(seed);
   const vis = sel => page.locator(sel).isVisible();
   let labels = await page.locator('nav.tabs .tab:visible').allTextContents();
-  record(n, 'Log switch: by default there are five tabs - Home, Collection, Plan, Dashboard, Tools', labels.join() === FIVE.join() && !(await vis('#tab-log')), labels.join());
+  record(n, 'Log switch: by default there are six tabs - Home, Collection, Plan, Playlists, Dashboard, Tools', labels.join() === TABS6.join() && !(await vis('#tab-log')), labels.join());
   record(n, 'Log switch: the Look panel has "Show listening log", off by default, and nothing is stored', (await page.locator('#lookLog').isChecked()) === false && (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === null);
   record(n, 'Log switch: Tools hides Nudges, Goal planner and Year in review, and keeps Lucky dip, Do I own this?, Recommendations and Look', !(await vis('#nudPanel')) && !(await vis('#goalPanel')) && !(await vis('#yirPanel')) && (await vis('#dipH')) && (await vis('#ownH')) && (await vis('#recsH')) && (await vis('#lookH')));
   const dipBtns = await page.locator('#dipCard button').allTextContents();
@@ -2318,7 +2339,7 @@ async function logSwitchTests(browser, vp, seed, url) {
   await page.locator('#lookLog').check();
   await settle(page);
   labels = await page.locator('nav.tabs .tab:visible').allTextContents();
-  record(n, 'Log switch: turning it on adds the Log tab after Collection', labels.join() === SIX.join(), labels.join());
+  record(n, 'Log switch: turning it on adds the Log tab after Collection', labels.join() === TABS7.join(), labels.join());
   record(n, 'Log switch: it is remembered in sg-showlog', (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === '1');
   record(n, 'Log switch: Nudges, Goal planner and Year in review come back', (await vis('#nudPanel')) && (await vis('#goalPanel')) && (await vis('#yirPanel')) && (await page.locator('#nudgeBox').textContent()).length > 0);
   const dipBtns2 = await page.locator('#dipCard button').allTextContents();
@@ -2341,6 +2362,503 @@ async function logSwitchTests(browser, vp, seed, url) {
   await context.close();
 }
 
+// ---------- Playlists ----------
+// Independent view of the made-up Classical fixture, used to check the app's answers without using the app's own code.
+const PLH = FIXTURE_CL.values[0], plx = k => PLH.indexOf(k);
+const secOf = s => { const p = String(s).split(':').map(Number); return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1]; };
+const numOr = v => (v === '' ? null : Number(v));
+const CT = FIXTURE_CL.values.slice(1).map((r, i) => {
+  const g = k => r[plx(k)];
+  return { i, uid: g('Spotify Track Id') || 'row' + i, id: g('Spotify Track Id'), title: g('Song'), artists: g('Artist'), composer: g('Composer (dates)').replace(/ \(.*\)$/, ''), era: g('Era'), form: g('Form'), mood: g('Mood'),
+    wf: g('Work-friendly'), bpm: numOr(g('BPM')), cam: g('Camelot'), energy: numOr(g('Energy')), inst: numOr(g('Instrumental')), speech: numOr(g('Speech')), pop: numOr(g('Popularity')), sec: secOf(g('Duration')) };
+});
+const CTBY = new Map(CT.map(t => [t.uid, t]));
+const ERA_LIST = ['Medieval', 'Renaissance', 'Baroque', 'Classical', 'Classical–Romantic', 'Romantic', '20th century', 'Contemporary'];
+const eraRank = e => { const i = ERA_LIST.indexOf(e); return i >= 0 ? i : e ? 100 : 1000; };
+function wheelDist(a, b) {
+  const p = c => [parseInt(c, 10), c.slice(-1)], [n1, l1] = p(a), [n2, l2] = p(b);
+  let dn = Math.abs(n1 - n2); dn = Math.min(dn, 12 - dn);
+  if (dn === 0) return l1 === l2 ? 0 : 1;
+  if (l1 === l2 && dn === 1) return 1;
+  return dn + (l1 === l2 ? 0 : 1) + 1;
+}
+const pathDist = list => list.slice(1).reduce((s, t, k) => s + wheelDist(list[k].cam, t.cam), 0);
+// does a track obey the rules f? (a rule that needs a number the track lacks does not apply to it)
+function obeys(t, f) {
+  if (f.era && !f.era.includes(t.era)) return false;
+  if (f.form && !f.form.includes(t.form)) return false;
+  if (f.wf === 'yes' && t.wf !== 'Yes') return false;
+  if (f.wf === 'yesmaybe' && t.wf === 'No') return false;
+  if (f.eMax != null && t.energy != null && t.energy > f.eMax) return false;
+  if (f.eMin != null && t.energy != null && t.energy < f.eMin) return false;
+  if (f.bMax != null && t.bpm != null && t.bpm > f.bMax) return false;
+  if (f.inst != null && t.inst != null && t.inst < f.inst) return false;
+  if (f.speech != null && t.speech != null && t.speech > f.speech) return false;
+  if (f.maxLen != null && t.sec > f.maxLen * 60) return false;
+  if (f.composer && t.composer !== f.composer) return false;
+  return true;
+}
+const plResult = page => page.evaluate(() => [...document.querySelectorAll('#plResList > li[data-uid]')].map(li => li.dataset.uid));
+const plTotal = uids => uids.reduce((s, u) => s + CTBY.get(u).sec, 0);
+const plView = async (page, v) => { await page.locator(`#plView [data-v="${v}"]`).click(); await page.waitForTimeout(80); };
+async function plSet(page, id, v) {
+  const el = page.locator('#' + id);
+  if ((await el.evaluate(e => e.tagName)) === 'SELECT') await el.selectOption(String(v)); else await el.fill(String(v));
+  await page.waitForTimeout(40);
+}
+const plReset = async page => { await page.locator('#plReset').click(); await page.waitForTimeout(40); };
+const plWaitPool = page => page.waitForFunction(() => /tracks · found:/.test(document.getElementById('plLoadLine').textContent), null, { timeout: 8000 });
+const plWrites = page => page.evaluate(() => window.__writes);
+async function plOpenPage(browser, vp, seed, url, opts = {}) {
+  const ctx = await freshPage(browser, vp, seed, url, 'playlists', { clipboard: true, ...opts });
+  await plWaitPool(ctx.page);
+  return ctx;
+}
+const plVals = (page, ids) => page.evaluate(ids => Object.fromEntries(ids.map(i => [i, document.getElementById(i).value])), ids);
+async function plSaveAs(page, name, purpose) {
+  await page.locator('#plSave').click();
+  await page.locator('#plName').fill(name); await page.locator('#plPurpose').fill(purpose);
+  await page.locator('#plSaveGo').click();
+  await page.waitForFunction(n => /^Saved/.test(document.getElementById('plMsg').textContent) && document.getElementById('plMsg').textContent.includes(n), name, { timeout: 8000 });
+}
+
+async function playlistsTests(browser, vp, seed, url) {
+  const n = vp.name, laptop = vp.width >= 1000;
+  const { context, page, problems } = await plOpenPage(browser, vp, seed, url);
+  await page.evaluate(() => { window.__writes.length = 0; });
+
+  // The tab, the loader line
+  const labels = await page.locator('nav.tabs .tab:visible').allTextContents();
+  record(n, 'Playlists: the tab sits between Plan and Dashboard', labels.join() === TABS6.join(), labels.join());
+  const line = (await page.locator('#plLoadLine').textContent()).trim();
+  record(n, 'Playlists: the loader line counts the tracks and lists found and missing columns', line === '80 tracks · found: composer, era, form, mood, work-friendly, BPM, key, energy, instrumental, speech, duration, popularity, Spotify id · missing: none', line);
+  const rd = await page.evaluate(() => window.__readSheets.filter(r => /Classical/.test(r.range)));
+  record(n, 'Playlists: Classical is read (get_values only) from the main sheet', rd.length === 1 && rd[0].sid.startsWith('TEST_SHEET_ID'), JSON.stringify(rd));
+
+  // ---- normalisation (pure functions in the page)
+  const nz = await page.evaluate(() => {
+    const H = ['Track URI', 'Track Name', 'Artist Name(s)', 'Duration (ms)', 'Energy (0-1)', 'Key (0-11)', 'Mode (0/1)', 'Tempo', 'Valence', 'Speechiness'];
+    const A = plNormalise([H, ['spotify:track:4uLU6hMCjMI75M1A2tKUQC', 'One', 'A, B', '241000', '0.5', '2', '1', '120', '0.25', '0.1'], ['spotify:track:1301WleyT35CMS5qAo0gAf', 'Two', 'C', '61500', '0.8', '9', '0', '', '', ''],
+      ['spotify:track:4uLU6hMCjMI75M1A2tKUQC', 'Dup', 'D', '1000', '0.1', '0', '1', '90', '', ''], ['spotify:track:aaaaaaaaaaaaaaaaaaaaaa', '', 'No title', '1000', '', '', '', '', '', '']]);
+    const B = plNormalise([['Song', 'Artist', 'Composer (dates)', 'Duration', 'Energy', 'Key', 'Camelot', 'Spotify Track Id'], ['X', 'Antonio Vivaldi, Orch', 'Antonio Vivaldi (1678–1741)', '1:02:03', '85', 'D Major', '', 'abcdefghijklmnopqrstuv'], ['Y', 'Z', 'Plain Name', '1:19', '10', 'A minor', '10b', ''], ['W', 'Q', '', '', '', 'F# Minor', '', '']]);
+    const C = plNormalise([['Name', 'Energy'], ['a', '0.4'], ['b', '1']]), D = plNormalise([['Name', 'Energy'], ['a', '0.4'], ['b', '85']]);
+    const t = A.tracks;
+    return {
+      count: t.length, id0: t[0].id, id1: t[1].id, sec0: t[0].durationSec, sec1: t[1].durationSec, e0: t[0].energy, e1: t[1].energy, cam0: t[0].camelot, cam1: t[1].camelot, key0: t[0].key, bpm1: t[1].bpm, val1: t[1].valence, val0: t[0].valence, artists0: t[0].artists,
+      b0: { sec: B.tracks[0].durationSec, comp: B.tracks[0].composer, dates: B.tracks[0].dates, cam: B.tracks[0].camelot, key: B.tracks[0].key, id: B.tracks[0].id }, b1: { sec: B.tracks[1].durationSec, cam: B.tracks[1].camelot, key: B.tracks[1].key, comp: B.tracks[1].composer, dates: B.tracks[1].dates, sec2: B.tracks[1].durationSec },
+      b2: { cam: B.tracks[2].camelot, sec: B.tracks[2].durationSec, energy: B.tracks[2].energy }, c: C.tracks.map(x => x.energy), d: D.tracks.map(x => x.energy), found: A.found, missing: A.missing,
+      csv: parseCsv('﻿a,b,c\r\n"x, y","line1\nline2","he said ""hi"""\r\n1,2,3\r\n\r\n')
+    };
+  });
+  record(n, 'Playlists: normalise: Track URI gives the id, a row with no title is skipped, a repeated id keeps one row', nz.count === 2 && nz.id0 === '4uLU6hMCjMI75M1A2tKUQC' && nz.id1 === '1301WleyT35CMS5qAo0gAf', JSON.stringify([nz.count, nz.id0]));
+  record(n, 'Playlists: normalise: Duration (ms) and m:ss / h:mm:ss become seconds', nz.sec0 === 241 && nz.sec1 === 62 && nz.b0.sec === 3723 && nz.b1.sec === 79, JSON.stringify([nz.sec0, nz.sec1, nz.b0.sec, nz.b1.sec]));
+  record(n, 'Playlists: normalise: 0-1 scores scale to 0-100, a column holding 85 does not', nz.e0 === 50 && nz.e1 === 80 && nz.val0 === 25 && nz.c.join() === '40,100' && nz.d.join() === '0.4,85', JSON.stringify([nz.e0, nz.e1, nz.val0, nz.c, nz.d]));
+  record(n, 'Playlists: normalise: Camelot from Key (0-11) and Mode, from a key name, and an explicit Camelot is kept', nz.cam0 === '10B' && nz.cam1 === '8A' && nz.key0 === 'D Major' && nz.b0.cam === '10B' && nz.b1.cam === '10B' && nz.b2.cam === '11A', JSON.stringify([nz.cam0, nz.cam1, nz.b0.cam, nz.b1.cam, nz.b2.cam]));
+  record(n, 'Playlists: normalise: missing numbers stay null and composer name and dates are kept apart', nz.bpm1 === null && nz.b2.sec === null && nz.b2.energy === null && nz.b0.comp === 'Antonio Vivaldi' && nz.b0.dates === '1678–1741' && nz.b1.comp === 'Plain Name' && nz.b1.dates === '', JSON.stringify(nz.b2));
+  record(n, 'Playlists: normalise: found and missing columns are reported', nz.found.includes('energy') && nz.found.includes('Spotify id') && nz.missing.includes('era') && nz.missing.includes('composer'), nz.missing.join());
+  record(n, 'Playlists: CSV parser handles quotes, commas and newlines inside quotes, doubled quotes, CRLF, a BOM and blank lines', JSON.stringify(nz.csv) === JSON.stringify([['a', 'b', 'c'], ['x, y', 'line1\nline2', 'he said "hi"'], ['1', '2', '3']]), JSON.stringify(nz.csv));
+
+  // ---- Browse
+  await plView(page, 'browse');
+  record(n, 'Browse: the counter says "80 of 80 tracks"', (await page.locator('#plCount').textContent()).trim() === '80 of 80 tracks');
+  const chipsOk = await page.evaluate(() => ({ era: [...document.querySelectorAll('#plFEra .chip')].map(c => c.dataset.v), wf: [...document.querySelectorAll('#plFWf .chip')].map(c => c.dataset.v) }));
+  const eras = [...new Set(CT.map(t => t.era))].sort((a, b) => eraRank(a) - eraRank(b) || a.localeCompare(b));
+  record(n, 'Browse: filter chips are built from the pool (eras in chronological order, work-friendly Yes/Maybe/No)', chipsOk.era.join() === eras.join() && chipsOk.wf.join() === 'Yes,Maybe,No', chipsOk.era.join());
+  await page.locator('#plFEra .chip[data-v="Baroque"]').click();
+  const baro = CT.filter(t => t.era === 'Baroque');
+  record(n, 'Browse: an Era chip filters and the counter follows', (await page.locator('#plCount').textContent()).trim() === `${baro.length} of 80 tracks`, await page.locator('#plCount').textContent());
+  const topForm = [...baro.reduce((m, t) => m.set(t.form, (m.get(t.form) || 0) + 1), new Map())].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  await page.locator(`#plFForm .chip[data-v="${topForm}"]`).click();
+  const bf = baro.filter(t => t.form === topForm);
+  record(n, 'Browse: Era and Form chips combine (AND)', (await page.locator('#plCount').textContent()).trim() === `${bf.length} of 80 tracks`, `${bf.length} expected`);
+  await page.locator('#plClear').click();
+  await page.locator('#plQ').fill('Test Composer C'); await page.waitForTimeout(300);
+  record(n, 'Browse: the search box filters by composer', (await page.locator('#plCount').textContent()).trim() === `${CT.filter(t => t.composer === 'Test Composer C').length} of 80 tracks`, await page.locator('#plCount').textContent());
+  await page.locator('#plClear').click(); await page.waitForTimeout(50);
+  record(n, 'Browse: Clear filters restores 80 of 80', (await page.locator('#plCount').textContent()).trim() === '80 of 80 tracks' && (await page.locator('#plQ').inputValue()) === '');
+  await page.locator('#plSort').selectOption('energy'); await page.waitForTimeout(60);
+  const en = await page.locator('#plBody td.c-energy').allTextContents();
+  const enNum = en.filter(Boolean).map(Number), blanksLast = en.findIndex(x => x === '') === -1 || en.slice(en.findIndex(x => x === '')).every(x => x === '');
+  record(n, 'Browse: sorting by energy goes low to high with tracks lacking energy last', enNum.every((v, k) => k === 0 || enNum[k - 1] <= v) && blanksLast && enNum.length === 76, `${enNum.length} with energy`);
+  await page.locator('#plDir').click(); await page.waitForTimeout(60);
+  const en2 = (await page.locator('#plBody td.c-energy').allTextContents()).filter(Boolean).map(Number);
+  record(n, 'Browse: reversing the sort goes high to low', en2.every((v, k) => k === 0 || en2[k - 1] >= v));
+  if (laptop) {
+    await page.locator('#plHead th[data-k="title"] button').click(); await page.waitForTimeout(60);
+    const ti = await page.locator('#plBody .c-title .t').allTextContents();
+    record(n, 'Browse: clicking a column header sorts by it (aria-sort set)', ti.every((v, k) => k === 0 || ti[k - 1].localeCompare(v) <= 0) && (await page.locator('#plHead th[data-k="title"]').getAttribute('aria-sort')) === 'ascending');
+  }
+  await page.locator('#plSort').selectOption('pos'); await page.locator('#plDir').evaluate(b => b.getAttribute('aria-pressed') === 'true' && b.click()); await page.waitForTimeout(60);
+  // expanding a row: all fields and the Open in Spotify link
+  const withId = CT.find(t => t.id), noId = CT.find(t => !t.id);
+  await page.locator(`tr.row[data-uid="${withId.uid}"] .rowbtn`).click();
+  const a = page.locator(`tr.detail a`);
+  const attrs = await a.evaluate(e => ({ href: e.getAttribute('href'), target: e.target, rel: e.rel, text: e.textContent.trim(), tag: e.tagName }));
+  record(n, 'Browse: an expanded row has a real Open in Spotify link (new tab, noopener noreferrer)', attrs.tag === 'A' && attrs.href === `https://open.spotify.com/track/${withId.id}` && attrs.target === '_blank' && /noopener/.test(attrs.rel) && /noreferrer/.test(attrs.rel) && attrs.text === 'Open in Spotify', JSON.stringify(attrs));
+  const dt = await page.locator('tr.detail dt').allTextContents();
+  record(n, 'Browse: the detail row lists the track\'s fields', ['Composer', 'Era', 'Form', 'Energy', 'Camelot', 'Length', 'Album'].every(k => dt.includes(k)), dt.join());
+  await page.locator(`tr.row[data-uid="${withId.uid}"] .rowbtn`).click();
+  await page.locator(`tr.row[data-uid="${noId.uid}"] .rowbtn`).click();
+  record(n, 'Browse: a track with no Spotify id has no link', (await page.locator('tr.detail a').count()) === 0 && /No Spotify id/.test(await page.locator('tr.detail').textContent()));
+  await page.locator(`tr.row[data-uid="${noId.uid}"] .rowbtn`).click();
+  let o = await page.evaluate(overflow);
+  record(n, 'Playlists: no sideways scroll on Browse', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  await page.locator('#plSort').selectOption('pos');
+  await page.screenshot({ path: join(OUT, `${vp.name}-playlists-browse.png`), fullPage: true });
+
+  // ---- Build: presets
+  await plView(page, 'build');
+  const presets = {
+    focus: { rWf: 'yes', rInst: '70', rSpeech: '10', rEMax: '40', rOrder: 'key', rTarget: '90', rEMin: '', rPer: '' },
+    ramp: { rWf: 'yesmaybe', rEMax: '60', rOrder: 'energyUp', rTarget: '60', rInst: '' },
+    wind: { rWf: 'any', rEMax: '40', rOrder: 'energyDown', rTarget: '45' },
+    era: { rOrder: 'era', rPer: '3', rTarget: '120', rEMax: '' },
+    beginner: { rTopEra: '3', rOrder: 'era', rTarget: '90', rPer: '' },
+    deep: { rOrder: 'form', rTarget: '' }
+  };
+  for (const [k, want] of Object.entries(presets)) {
+    await page.locator(`#plPresets [data-preset="${k}"]`).click(); await page.waitForTimeout(60);
+    const got = await plVals(page, Object.keys(want));
+    const pressed = await page.locator(`#plPresets [data-preset="${k}"]`).getAttribute('aria-pressed');
+    record(n, `Build: preset "${k}" fills the documented rules`, Object.entries(want).every(([id, v]) => got[id] === v) && pressed === 'true', JSON.stringify(got));
+  }
+  const deepComp = (await page.locator('#rComposer').inputValue());
+  const deepRes = await plResult(page);
+  const deepForms = deepRes.map(u => CTBY.get(u).form);
+  record(n, 'Build: Composer deep dive picks a composer, lists all of theirs, ordered by form then sheet order',
+    deepComp !== '' && deepRes.length === CT.filter(t => t.composer === deepComp).length && deepRes.every(u => CTBY.get(u).composer === deepComp)
+    && deepRes.every((u, k) => k === 0 || CTBY.get(deepRes[k - 1]).form < CTBY.get(u).form || (CTBY.get(deepRes[k - 1]).form === CTBY.get(u).form && CTBY.get(deepRes[k - 1]).i < CTBY.get(u).i)), `${deepComp}: ${deepForms.join()}`);
+
+  // preset results obey their own documented rules
+  await page.locator('#plPresets [data-preset="focus"]').click(); await page.waitForTimeout(60);
+  let res = await plResult(page);
+  record(n, 'Build: Deep focus gives work-friendly Yes, instrumental >= 70, speech <= 10, energy <= 40, about 90 minutes', res.length > 5 && res.every(u => obeys(CTBY.get(u), { wf: 'yes', inst: 70, speech: 10, eMax: 40 })) && Math.abs(plTotal(res) - 5400) <= 120, `${res.length} tracks, ${plTotal(res) / 60} min`);
+  await page.locator('#plPresets [data-preset="era"]').click(); await page.waitForTimeout(60);
+  res = await plResult(page);
+  const perComp = res.reduce((m, u) => m.set(CTBY.get(u).composer, (m.get(CTBY.get(u).composer) || 0) + 1), new Map());
+  record(n, 'Build: Era tour keeps at most 3 per composer, runs in era order and lands within 2 minutes of 120', [...perComp.values()].every(c => c <= 3) && res.every((u, k) => k === 0 || eraRank(CTBY.get(res[k - 1]).era) <= eraRank(CTBY.get(u).era)) && Math.abs(plTotal(res) - 7200) <= 120, `${res.length} tracks, ${plTotal(res) / 60} min`);
+  await page.locator('#plPresets [data-preset="beginner"]').click(); await page.waitForTimeout(60);
+  res = await plResult(page);
+  const topPop = era => CT.filter(t => t.era === era).sort((a, b) => b.pop - a.pop || a.i - b.i).slice(0, 3).map(t => t.uid);
+  record(n, 'Build: Beginner path is the top 3 by popularity per era, in era order', eras.every(e => topPop(e).every(u => res.includes(u))) && res.length === eras.length * 3 && res.every((u, k) => k === 0 || eraRank(CTBY.get(res[k - 1]).era) <= eraRank(CTBY.get(u).era)), `${res.length} tracks`);
+
+  // ---- Build: filters and target length
+  await plReset(page);
+  res = await plResult(page);
+  record(n, 'Build: with no rules the preview is every track and the header says so', res.length === 80 && (await page.locator('#plResHead').textContent()).startsWith('80 tracks · '), await page.locator('#plResHead').textContent());
+  await page.locator('#rEra [data-v="Baroque"]').click(); await page.locator('#rEra [data-v="Romantic"]').click();
+  await plSet(page, 'rBMax', 130); await plSet(page, 'rMaxLen', 8); await plSet(page, 'rEMax', 70);
+  const f1 = { era: ['Baroque', 'Romantic'], bMax: 130, maxLen: 8, eMax: 70 };
+  res = await plResult(page);
+  const want1 = CT.filter(t => obeys(t, f1)).map(t => t.uid);
+  record(n, 'Build: Era chips, BPM, track length and energy filters give exactly the tracks that obey them', res.length > 3 && JSON.stringify([...res].sort()) === JSON.stringify([...want1].sort()), `${res.length} vs ${want1.length}`);
+  const lacking = CT.filter(t => obeys(t, f1) && (t.energy == null)).length + 0;
+  const lackTxt = await page.locator('#plLack').textContent();
+  record(n, 'Build: the UI says how many matching tracks lacked the data for a rule', (lacking === 0 ? !/energy/.test(lackTxt) : new RegExp(`${lacking} tracks? ha(s|ve) no energy value`).test(lackTxt)) || /no (BPM|energy)/.test(lackTxt), lackTxt);
+  await plReset(page);
+  await plSet(page, 'rWf', 'yesmaybe'); await plSet(page, 'rEMax', 60); await plSet(page, 'rInst', 50); await plSet(page, 'rTarget', 60);
+  const f2 = { wf: 'yesmaybe', eMax: 60, inst: 50 };
+  res = await plResult(page);
+  record(n, 'Build: a target length of 60 lands within 2 minutes and every track obeys every filter', res.length > 3 && Math.abs(plTotal(res) - 3600) <= 120 && res.every(u => obeys(CTBY.get(u), f2)), `${res.length} tracks, ${plTotal(res) / 60} min`);
+  const head = (await page.locator('#plResHead').textContent()).trim();
+  const mins = Math.round(plTotal(res) / 60), hm = mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`;
+  record(n, 'Build: the header reads like "23 tracks · 1 h 31 min"', head === `${res.length} tracks · ${hm}`, head);
+  const live = (await page.locator('#plLive').textContent()).trim(), sm = mins % 60, sh = Math.floor(mins / 60);
+  record(n, 'Build: a live region announces the result', live === `${res.length} tracks, ${sh ? `${sh} hour${sh === 1 ? '' : 's'} ` : ''}${sm} minute${sm === 1 ? '' : 's'}`, live);
+  const grp = await page.locator('#rEra').getAttribute('role');
+  record(n, 'Build: the rule controls have labels', await page.evaluate(() => [...document.querySelectorAll('#plRules input, #plRules select')].every(e => (e.labels && e.labels.length) || e.getAttribute('aria-label'))) && grp === 'group');
+
+  // ---- seeds
+  const seed1 = await plResult(page);
+  await plSet(page, 'rTarget', 61); await plSet(page, 'rTarget', 60);
+  record(n, 'Build: the same seed gives the same playlist', JSON.stringify(await plResult(page)) === JSON.stringify(seed1) && (await page.locator('#plSeed').inputValue()) === '1');
+  await page.locator('#plShuffle').click(); await page.waitForTimeout(60);
+  const seed2 = await plResult(page);
+  record(n, 'Build: Shuffle again changes the seed and the pick', (await page.locator('#plSeed').inputValue()) === '2' && JSON.stringify(seed2) !== JSON.stringify(seed1) && Math.abs(plTotal(seed2) - 3600) <= 120, `${seed2.length} tracks`);
+  await plSet(page, 'plSeed', 1);
+  record(n, 'Build: typing the seed back restores the first playlist', JSON.stringify(await plResult(page)) === JSON.stringify(seed1));
+
+  // ---- orders
+  await plReset(page);
+  await plSet(page, 'rOrder', 'energyUp'); res = (await plResult(page)).map(u => CTBY.get(u));
+  const eUp = res.filter(t => t.energy != null).map(t => t.energy);
+  record(n, 'Build: Energy low to high is non-decreasing (tracks with no energy last)', eUp.length === 76 && eUp.every((v, k) => k === 0 || eUp[k - 1] <= v) && res.slice(76).every(t => t.energy == null));
+  await plSet(page, 'rOrder', 'energyDown'); res = (await plResult(page)).map(u => CTBY.get(u));
+  const eDn = res.filter(t => t.energy != null).map(t => t.energy);
+  record(n, 'Build: Energy high to low is non-increasing (tracks with no energy last)', eDn.length === 76 && eDn.every((v, k) => k === 0 || eDn[k - 1] >= v) && res.slice(76).every(t => t.energy == null));
+  await plSet(page, 'rOrder', 'era'); res = (await plResult(page)).map(u => CTBY.get(u));
+  record(n, 'Build: Era (chronological) follows Baroque, Classical, Classical–Romantic, Romantic, 20th century', res.every((t, k) => k === 0 || eraRank(res[k - 1].era) <= eraRank(t.era)) && new Set(res.map(t => t.era)).size === 5);
+  await plSet(page, 'rOrder', 'key'); res = (await plResult(page)).map(u => CTBY.get(u));
+  const keyed = res.filter(t => t.cam), unkeyed = res.filter(t => !t.cam);
+  const lowE = Math.min(...CT.filter(t => t.cam && t.energy != null).map(t => t.energy));
+  record(n, 'Build: Key flow starts at the lowest-energy track and tracks without a Camelot key go last', keyed[0].energy === lowE && res.slice(keyed.length).every(t => !t.cam) && unkeyed.length === 3 && JSON.stringify(unkeyed.map(t => t.i)) === JSON.stringify(unkeyed.map(t => t.i).sort((x, y) => x - y)), `first energy ${keyed[0].energy}, lowest ${lowE}`);
+  const sheetKeyed = CT.filter(t => t.cam);
+  record(n, 'Build: Key flow total wheel distance is not worse than sheet order', pathDist(keyed) <= pathDist(sheetKeyed), `${pathDist(keyed)} vs ${pathDist(sheetKeyed)}`);
+  await plSet(page, 'rOrder', 'shuffle'); const sh1 = await plResult(page);
+  await page.locator('#plShuffle').click(); await page.waitForTimeout(60); const sh2 = await plResult(page);
+  record(n, 'Build: Shuffle order is a permutation that changes with the seed', sh1.length === 80 && JSON.stringify(sh1) !== JSON.stringify(sh2) && JSON.stringify([...sh1].sort()) === JSON.stringify([...sh2].sort()));
+  await plReset(page);
+  await plSet(page, 'rPer', 2); res = (await plResult(page)).map(u => CTBY.get(u));
+  const pc = res.reduce((m, t) => m.set(t.composer, (m.get(t.composer) || 0) + 1), new Map());
+  record(n, 'Build: max 2 per composer is respected', [...pc.values()].every(c => c === 2) && pc.size === 10 && res.length === 20, `${res.length} tracks`);
+
+  // ---- tweak the preview
+  await plReset(page);
+  const base = await plResult(page);
+  await page.locator('#plResList > li:nth-child(1) [data-act="down"]').click();
+  let r2 = await plResult(page);
+  record(n, 'Build: Down moves a track down one place', r2[0] === base[1] && r2[1] === base[0] && r2.length === 80);
+  await page.locator('#plResList > li:nth-child(2) [data-act="up"]').click();
+  record(n, 'Build: Up moves it back', JSON.stringify(await plResult(page)) === JSON.stringify(base));
+  await page.locator('#plResList > li:nth-child(1) [data-act="remove"]').click();
+  r2 = await plResult(page);
+  record(n, 'Build: Remove drops the track and the header updates', r2.length === 79 && r2[0] === base[1] && (await page.locator('#plResHead').textContent()).startsWith('79 tracks'), await page.locator('#plResHead').textContent());
+  const aria = await page.locator('#plResList > li:nth-child(1) [data-act="up"]').getAttribute('aria-label');
+  record(n, 'Build: the row buttons have descriptive labels', /^Move up: /.test(aria));
+  o = await page.evaluate(overflow);
+  record(n, 'Playlists: no sideways scroll on Build', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  if (laptop) {
+    const g = await page.evaluate(() => { const a = document.getElementById('plRules').getBoundingClientRect(), b = document.querySelector('.pl-res').getBoundingClientRect(); return { w: [a.width, b.width], top: [a.top, b.top], h: [a.height, b.height] }; });
+    record(n, 'Build: rules and result panels are two equal columns of equal height on a laptop', Math.abs(g.w[0] - g.w[1]) <= 2 && Math.abs(g.top[0] - g.top[1]) <= 2 && Math.abs(g.h[0] - g.h[1]) <= 2, JSON.stringify(g));
+  } else {
+    const g = await page.evaluate(() => { const a = document.getElementById('plRules').getBoundingClientRect(), b = document.querySelector('.pl-res').getBoundingClientRect(); return { stacked: b.top >= a.bottom - 1, sameLeft: Math.abs(a.left - b.left) <= 1 }; });
+    record(n, 'Build: the panels stack in one column on a phone', g.stacked && g.sameLeft, JSON.stringify(g));
+  }
+
+  // ---- copy
+  await plReset(page);
+  const urls = CT.filter(t => t.id).map(t => `https://open.spotify.com/track/${t.id}`);
+  await page.locator('#plCopySp').click(); await page.waitForTimeout(120);
+  const clip = await page.evaluate(() => navigator.clipboard.readText());
+  record(n, 'Copy for Spotify: puts one open.spotify.com/track link per line on the clipboard, in order', clip === urls.join('\n'), `${clip.split('\n').length} lines`);
+  record(n, 'Copy for Spotify: tracks with no id are skipped and counted', /^3 tracks have no Spotify id/.test((await page.locator('#plSkip').textContent()).trim()), await page.locator('#plSkip').textContent());
+  record(n, 'Copy for Spotify: the paste helper text is shown', (await page.locator('#plHelper').textContent()).trim() === "In Spotify's desktop app, open a playlist and paste (Ctrl+V, or Cmd+V on a Mac). Not tested here: tell me if it doesn't work." && await page.locator('#plHelper').isVisible());
+  await page.locator('#plCopyNames').click(); await page.waitForTimeout(120);
+  const clip2 = await page.evaluate(() => navigator.clipboard.readText());
+  record(n, 'Copy track names: "Artist - Title" lines', clip2 === CT.map(t => `${t.artists} - ${t.title}`).join('\n'), clip2.split('\n')[0]);
+  await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { value: () => Promise.reject(new Error('blocked')), configurable: true }); });
+  await page.locator('#plCopySp').click(); await page.waitForTimeout(150);
+  const fb = await page.evaluate(() => { const t = document.getElementById('plCopyBox'); return { vis: !t.hidden && t.getBoundingClientRect().height > 0, value: t.value, ro: t.readOnly, sel: t.selectionEnd - t.selectionStart, len: t.value.length, focused: document.activeElement === t }; });
+  record(n, 'Copy for Spotify: if the clipboard refuses, the links appear selected in a read-only box', fb.vis && fb.ro && fb.value === urls.join('\n') && fb.sel === fb.len && fb.focused, JSON.stringify({ ...fb, value: fb.value.length }));
+  record(n, 'Playlists: nothing was written to the sheet while building and copying', (await plWrites(page)).length === 0);
+
+  // ---- Save, Saved, Open
+  await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { value: t => navigator.clipboard.constructor.prototype.writeText.call(navigator.clipboard, t), configurable: true }); });
+  await page.locator('#plPresets [data-preset="ramp"]').click(); await page.waitForTimeout(60);
+  const ramp = (await plResult(page)).map(u => CTBY.get(u));
+  await page.locator('#plSave').click();
+  record(n, 'Save: the form opens with the preset name filled in', (await page.locator('#plName').inputValue()) === 'Gentle ramp' && await page.locator('#plSaveForm').isVisible());
+  const readsBefore = await page.evaluate(() => window.__reads.length);
+  await page.locator('#plName').fill("Quiet mornings"); await page.locator('#plPurpose').fill('Easy start, no words');
+  await page.locator('#plSaveGo').click();
+  await page.waitForFunction(() => /^Saved/.test(document.getElementById('plMsg').textContent), null, { timeout: 8000 });
+  const w = await plWrites(page);
+  const withIds = ramp.filter(t => t.id);
+  const row = w[0] && w[0].values && w[0].values[0];
+  const rulesObj = (() => { try { return JSON.parse(String(row[7]).replace(/^'/, '')); } catch (e) { return null; } })();
+  record(n, 'Save: appends exactly one row to 🎸 Playlists and writes nothing else', w.length === 1 && w[0].tool === 'append_values' && w[0].sheet === '🎸 Playlists' && w[0].appendedAtRow === 2 && row.length === 10, JSON.stringify(w.map(x => [x.tool, x.sheet, x.appendedAtRow])));
+  record(n, 'Save: the row has the typed name and purpose, text with a leading apostrophe', row[1] === "'Quiet mornings" && row[2] === "'Easy start, no words" && row[3] === "'Classical" && row[9] === '', JSON.stringify(row.slice(0, 4)));
+  record(n, 'Save: id is a number >= 7001, created is today, tracks and minutes are numbers', row[0] === 7001 && row[4] === isoDay(0) && row[5] === withIds.length && row[6] === Math.round(withIds.reduce((s, t) => s + t.sec, 0) / 60 * 10) / 10 && typeof row[6] === 'number', JSON.stringify([row[0], row[4], row[5], row[6]]));
+  record(n, 'Save: trackIds are the Spotify ids joined by commas, in preview order', row[8] === "'" + withIds.map(t => t.id).join(','), String(row[8]).slice(0, 50));
+  record(n, 'Save: rules are stored as compact JSON text with the order and target', !!rulesObj && rulesObj.order === 'energyUp' && rulesObj.target === 60 && rulesObj.wf === 'yesmaybe' && String(row[7]).startsWith("'{") && String(row[7]).length <= 2001, String(row[7]).slice(0, 80));
+  const reads = await page.evaluate(b => window.__reads.slice(b), readsBefore);
+  record(n, 'Save: the id column is read right before and again after the append', reads.includes("'🎸 Playlists'!A2:A") && reads.includes("'🎸 Playlists'!A1:A"), reads.join(' | '));
+  record(n, 'Save: the form closes and a message confirms', !(await page.locator('#plSaveForm').isVisible()) && /Quiet mornings/.test(await page.locator('#plMsg').textContent()));
+  await page.locator('#plView [data-v="saved"]').click(); await page.waitForTimeout(80);
+  const saved = await page.locator('#plSavedList > li').allTextContents();
+  record(n, 'Saved: lists the playlist with name, purpose, track count, minutes and created date', saved.length === 1 && /Quiet mornings/.test(saved[0]) && /Easy start, no words/.test(saved[0]) && new RegExp(`${withIds.length} tracks`).test(saved[0]) && /min/.test(saved[0]) && /Created/.test(saved[0]), saved[0]);
+  // a second playlist row typed straight into the sheet, with one id that is not in the pool
+  const ghostIds = [withIds[0].id, 'ZZZZZZZZZZZZZZZZZZZZZZ'];
+  await page.evaluate(g => { window.__sheet['🎸 Playlists'].push(['7050', "Ghost", '', 'Classical', '2026-01-01', '2', '5', '', g.join(','), '']); }, ghostIds);
+  await page.locator('#refreshBtn').click();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent.startsWith('Live') && document.querySelectorAll('#plSavedList > li').length === 2, null, { timeout: 8000 });
+  await page.locator('#plSavedList li[data-id="7050"] [data-act="open"]').click(); await page.waitForTimeout(100);
+  const gh = await plResult(page);
+  record(n, 'Saved: Open loads the ids into Build and flags an id that is missing from the pool', gh.length === 1 && gh[0] === withIds[0].uid && /1 track from this playlist isn't in the current pool/.test(await page.locator('#plNotes').textContent()) && await page.locator('#plBuild').isVisible(), await page.locator('#plNotes').textContent());
+  await page.locator('#plView [data-v="saved"]').click(); await page.waitForTimeout(60);
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="open"]').click(); await page.waitForTimeout(100);
+  record(n, 'Saved: Open reloads the saved tracks in their saved order, with the saved rules', JSON.stringify(await plResult(page)) === JSON.stringify(withIds.map(t => t.uid)) && (await page.locator('#rOrder').inputValue()) === 'energyUp');
+  await page.locator('#plView [data-v="saved"]').click(); await page.waitForTimeout(60);
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="copy"]').click(); await page.waitForTimeout(120);
+  record(n, 'Saved: Copy for Spotify copies that playlist\'s links', (await page.evaluate(() => navigator.clipboard.readText())) === withIds.map(t => `https://open.spotify.com/track/${t.id}`).join('\n'));
+
+  // ---- rename writes one cell at a time
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="rename"]').click();
+  await page.locator('#plSavedList li[data-id="7001"] [data-f="name"]').fill('Calm mornings');
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="rename-save"]').click(); await page.waitForTimeout(150);
+  let rw = await plWrites(page);
+  record(n, 'Rename: changing only the name writes only the name cell', rw.length === 1 && rw[0].range === "'🎸 Playlists'!B2" && JSON.stringify(rw[0].values) === JSON.stringify([["'Calm mornings"]]), JSON.stringify(rw));
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="rename"]').click();
+  await page.locator('#plSavedList li[data-id="7001"] [data-f="purpose"]').fill('Work, gently');
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="rename-save"]').click(); await page.waitForTimeout(150);
+  rw = await plWrites(page);
+  record(n, 'Rename: changing only the purpose writes only the purpose cell', rw.length === 2 && rw[1].range === "'🎸 Playlists'!C2" && JSON.stringify(rw[1].values) === JSON.stringify([["'Work, gently"]]) && /Calm mornings/.test(await page.locator('#plSavedList li[data-id="7001"]').textContent()), JSON.stringify(rw[1]));
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="rename"]').click();
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="rename-save"]').click(); await page.waitForTimeout(100);
+  record(n, 'Rename: saving with nothing changed writes nothing', (await plWrites(page)).length === 2);
+  o = await page.evaluate(overflow);
+  record(n, 'Playlists: no sideways scroll on Saved', o.sw <= o.iw, `scrollWidth ${o.sw} vs ${o.iw}`);
+  await page.screenshot({ path: join(OUT, `${vp.name}-playlists-saved.png`), fullPage: true });
+
+  // screenshot of Build with a preset
+  await plView(page, 'build');
+  await page.locator('#plPresets [data-preset="focus"]').click(); await page.waitForTimeout(100);
+  await page.screenshot({ path: join(OUT, `${vp.name}-playlists-build.png`), fullPage: true });
+
+  const forbidden = await page.evaluate(() => window.__forbidden);
+  const allWrites = await plWrites(page);
+  record(n, 'Playlists: no write ever touched Classical or another sheet, and nothing was accessed outside the allowed tabs', forbidden.length === 0 && allWrites.every(x => x.sheet === '🎸 Playlists'), JSON.stringify(forbidden));
+  record(n, 'Playlists: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// Delete: in-page confirm, one update over A:J, and the next save lands below the last used row
+async function playlistsDeleteTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await plOpenPage(browser, vp, seed, url);
+  await plView(page, 'build');
+  await plSaveAs(page, 'First', 'one');
+  await page.locator('#plPresets [data-preset="wind"]').click(); await page.waitForTimeout(60);
+  await plSaveAs(page, 'Second', 'two');
+  const sheetNow = await page.evaluate(() => window.__sheet['🎸 Playlists'].map(r => r[0]));
+  record(n, 'Delete: two saves get ids 7001 and 7002 in rows 2 and 3', sheetNow.join() === 'id,7001,7002', sheetNow.join());
+  await plView(page, 'saved');
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="delete"]').click();
+  const ask = await page.locator('#plSavedList li[data-id="7001"]').textContent();
+  record(n, 'Delete: asks in the page first (no confirm dialog) and writes nothing yet', /Delete this playlist\?/.test(ask) && (await plWrites(page)).length === 0);
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="delete-no"]').click();
+  record(n, 'Delete: Keep leaves everything alone', (await plWrites(page)).length === 0 && (await page.locator('#plSavedList > li').count()) === 2);
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="delete"]').click();
+  await page.locator('#plSavedList li[data-id="7001"] [data-act="delete-yes"]').click();
+  await page.waitForFunction(() => document.querySelectorAll('#plSavedList > li').length === 1, null, { timeout: 8000 });
+  const dw = await plWrites(page);
+  record(n, 'Delete: one update over A2:J2 of ten empty strings', dw.length === 1 && dw[0].tool === 'update_values' && dw[0].range === "'🎸 Playlists'!A2:J2" && JSON.stringify(dw[0].values) === JSON.stringify([Array(10).fill('')]), JSON.stringify(dw));
+  const rowsNow = await page.evaluate(() => window.__sheet['🎸 Playlists'].map(r => r.every(c => c === '') ? 'empty' : r[0]));
+  record(n, 'Delete: the row stays, empty, and the other playlist did not move', rowsNow.join() === 'id,empty,7002', rowsNow.join());
+  await plView(page, 'build');
+  await page.locator('#plPresets [data-preset="ramp"]').click(); await page.waitForTimeout(60);
+  await plSaveAs(page, 'Third', 'three');
+  const sw = await plWrites(page);
+  const last = sw[sw.length - 1];
+  const after = await page.evaluate(() => window.__sheet['🎸 Playlists'].map(r => r.every(c => c === '') ? 'empty' : r[0]));
+  record(n, 'Delete: the next save appends below the last used row and never touches the cleared one', sw.length === 2 && last.tool === 'append_values' && last.appendedAtRow === 4 && after.join() === 'id,empty,7002,7003', `${after.join()} at row ${last.appendedAtRow}`);
+  await plView(page, 'saved');
+  record(n, 'Delete: Saved shows the two remaining playlists, newest first', (await page.locator('#plSavedList > li .t').allTextContents()).join() === 'Third,Second');
+  record(n, 'Delete: no write touched anything but 🎸 Playlists', (await page.evaluate(() => window.__forbidden)).length === 0 && sw.every(x => x.sheet === '🎸 Playlists'));
+  record(n, 'Delete: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// The 🎸 Playlists tab is missing: Saved says so, Save is off, everything else still works
+async function playlistsMissingTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await plOpenPage(browser, vp, buildSeed({ noPlaylists: true }), url);
+  await plView(page, 'saved');
+  const note = await page.locator('#plSavedNote').textContent();
+  record(n, 'No Playlists tab: Saved is empty with a friendly notice', /Create the 🎸 Playlists tab first/.test(note) && (await page.locator('#plSavedList > li').count()) === 0, note.slice(0, 80));
+  await plView(page, 'build');
+  record(n, 'No Playlists tab: Save is disabled with the reason, and Copy still works', (await page.locator('#plSave').isDisabled()) && /Create the 🎸 Playlists tab first/.test(await page.locator('#plSaveNote').textContent()) && !(await page.locator('#plCopySp').isDisabled()));
+  await plView(page, 'browse');
+  record(n, 'No Playlists tab: Browse still lists the pool', (await page.locator('#plCount').textContent()).trim() === '80 of 80 tracks');
+  record(n, 'No Playlists tab: nothing is written and there are no console errors', (await plWrites(page)).length === 0 && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// Another sheet, and CSV upload
+async function playlistsSourceTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await plOpenPage(browser, vp, seed, url);
+  await page.locator('#plSrc [data-s="sheet"]').click();
+  record(n, 'Another sheet: the link and tab inputs appear, empty at first', await page.locator('#plLink').isVisible() && (await page.locator('#plLink').inputValue()) === '');
+  await page.locator('#plLink').fill(`https://docs.google.com/spreadsheets/d/${POOL2_ID}/edit#gid=0`);
+  await page.locator('#plTab').fill('No Such Tab');
+  await page.locator('#plReload').click(); await page.waitForTimeout(200);
+  record(n, 'Another sheet: a tab that does not exist gives a plain message', /Couldn't reach|No such tab|problem/i.test(await page.locator('#plLoadLine').textContent()) && (await page.locator('#plLoadLine').getAttribute('data-kind')) === 'error', await page.locator('#plLoadLine').textContent());
+  // the stub (rightly) refused that read and recorded it; clear the record so the checks below are about the real load
+  record(n, 'Another sheet: the stub refused a read of any tab but "Pool 2" on the second spreadsheet', (await page.evaluate(() => window.__forbidden.length)) === 1);
+  await page.evaluate(() => { window.__forbidden.length = 0; window.__readSheets.length = 0; });
+  await page.locator('#plTab').fill('Pool 2');
+  await page.locator('#plReload').click(); await plWaitPool(page);
+  const line = (await page.locator('#plLoadLine').textContent()).trim();
+  record(n, 'Another sheet: loads the rows, scales 0-1 scores and reports found and missing columns', line === '5 tracks · found: BPM, key, energy, instrumental, speech, duration, popularity, Spotify id · missing: composer, era, form, mood, work-friendly', line);
+  const rs = await page.evaluate(() => window.__readSheets.filter(r => r.sid.startsWith('POOL2')));
+  record(n, 'Another sheet: read with get_values from the second spreadsheet id only', rs.length >= 1 && rs.every(r => /Pool 2/.test(r.range)), JSON.stringify(rs.slice(0, 2)));
+  const mem = await page.evaluate(() => JSON.parse(localStorage.getItem('sg-pool') || 'null'));
+  record(n, 'Another sheet: the link and tab are remembered in sg-pool', !!mem && mem.link.includes(POOL2_ID) && mem.tab === 'Pool 2', JSON.stringify(mem));
+  await plView(page, 'browse');
+  record(n, 'Another sheet: Browse hides filters whose data is absent and shows the count', (await page.locator('#plCount').textContent()).trim() === '5 of 5 tracks' && !(await page.locator('#plFEra').isVisible()) && !(await page.locator('#plFWf').isVisible()));
+  await plView(page, 'build');
+  const dis = await page.evaluate(() => ({ wf: document.getElementById('rWf').disabled, era: document.querySelector('#rEra').closest('.pl-f').hasAttribute('data-off'), e: document.getElementById('rEMax').disabled }));
+  record(n, 'Another sheet: Build disables the rules whose data is absent (era, work-friendly) and keeps energy', dis.wf && dis.era && !dis.e, JSON.stringify(dis));
+  await plSet(page, 'rEMax', 50);
+  const r = await plResult(page);
+  record(n, 'Another sheet: an energy rule on the scaled scores works (0.2 to 0.6 became 20 to 60)', r.length === 4 && r.every(u => POOL2_IDS.includes(u)), r.join());
+  await page.locator('#plCopySp').click(); await page.waitForTimeout(120);
+  record(n, 'Another sheet: Copy for Spotify uses the ids from Track URI', (await page.evaluate(() => navigator.clipboard.readText())) === r.map(u => `https://open.spotify.com/track/${u}`).join('\n'));
+  const ok = await page.evaluate(() => window.__forbidden.length === 0 && window.__writes.length === 0);
+  record(n, 'Another sheet: nothing is written to either sheet', ok);
+
+  // CSV upload, Spotify-export style, with a BOM, quoted commas, a newline and doubled quotes inside quotes
+  const hdr = 'Track URI,Track Name,Artist Name(s),Album Name,Album Release Date,Duration (ms),Popularity,Explicit,Added At,Genres,Danceability,Energy,Key,Loudness,Mode,Speechiness,Acousticness,Instrumentalness,Liveness,Valence,Tempo,Time Signature';
+  const csvRow = (id, name, art, ms, en, key, mode) => `spotify:track:${id},${name},${art},"Album, The",2019-05-01,${ms},55,false,2024-02-02T00:00:00Z,"rock, indie",0.5,${en},${key},-9.1,${mode},0.04,0.2,0.0,0.1,0.6,128,4`;
+  const csv = '﻿' + [hdr,
+    csvRow('4uLU6hMCjMI75M1A2tKUQC', '"Hello, World"', '"Ann, Bob"', 180000, 0.3, 2, 1),
+    csvRow('1301WleyT35CMS5qAo0gAf', '"Say ""Hi"""', 'Carl', 240000, 0.8, 9, 0),
+    csvRow('7ouMYWpwJ422jRcDASZB7P', '"Two\nLines"', 'Dee', 200000, 0.55, 0, 1),
+    csvRow('0VjIjW4GlUZAMYd2vXMi3b', '', 'Nobody', 100000, 0.5, 1, 1),
+    csvRow('3KkXRkHbMCARz0aVfEt68P', 'Plain Song', 'Eve', 150000, 0.1, 5, 1),
+    csvRow('3KkXRkHbMCARz0aVfEt68P', 'Plain Song again', 'Eve', 150000, 0.1, 5, 1)].join('\r\n') + '\r\n';
+  await page.locator('#plSrc [data-s="csv"]').click();
+  await page.locator('#plFile').setInputFiles({ name: 'spotify-export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf8') });
+  await plWaitPool(page);
+  const cl = (await page.locator('#plLoadLine').textContent()).trim();
+  record(n, 'CSV upload: loads a Spotify-style file (BOM, quoted commas, newlines) and says which columns it found', cl === '4 tracks · found: BPM, key, energy, instrumental, speech, duration, popularity, Spotify id · missing: composer, era, form, mood, work-friendly', cl);
+  await plView(page, 'browse');
+  const titles = await page.locator('#plBody .c-title .t').allTextContents();
+  record(n, 'CSV upload: Browse shows the parsed titles intact', titles.join('|') === 'Hello, World|Say "Hi"|Two\nLines|Plain Song' && (await page.locator('#plCount').textContent()).trim() === '4 of 4 tracks', JSON.stringify(titles));
+  await plView(page, 'build');
+  await plSet(page, 'rOrder', 'energyDown');
+  const cr = await plResult(page);
+  record(n, 'CSV upload: builds a playlist from it (energy high to low, 0-1 scaled)', cr.join() === '1301WleyT35CMS5qAo0gAf,7ouMYWpwJ422jRcDASZB7P,4uLU6hMCjMI75M1A2tKUQC,3KkXRkHbMCARz0aVfEt68P', cr.join());
+  await plSet(page, 'rTarget', 6);
+  const tr = await plResult(page);
+  const secs = { '4uLU6hMCjMI75M1A2tKUQC': 180, '1301WleyT35CMS5qAo0gAf': 240, '7ouMYWpwJ422jRcDASZB7P': 200, '3KkXRkHbMCARz0aVfEt68P': 150 };
+  const tt = tr.reduce((s, u) => s + secs[u], 0);
+  record(n, 'CSV upload: a target length applies to it', tr.length >= 1 && tt <= 480 && tt >= 240, `${tr.length} tracks, ${tt}s`);
+  record(n, 'CSV upload: no writes, no console errors', (await plWrites(page)).length === 0 && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
+// The stub's own rule, and the app's write guard
+async function playlistsGuardTests(browser, vp, seed, url) {
+  const n = vp.name;
+  const { context, page, problems } = await plOpenPage(browser, vp, seed, url);
+  const r = await page.evaluate(async () => {
+    const mcp = await window.claude.use('mcp'), out = {};
+    const call = async (tool, args) => { try { await mcp.callTool('Google Sheets', tool, args); return 'ok'; } catch (e) { return 'refused'; } };
+    out.writeClassical = await call('update_values', { spreadsheetId: 'TEST_SHEET_ID_0123456789abcdefghijklmnop', range: "'Classical'!A1", values: [['x']] });
+    out.appendClassical = await call('append_values', { spreadsheetId: 'TEST_SHEET_ID_0123456789abcdefghijklmnop', range: "'Classical'!A1", values: [['x']] });
+    out.writePool2 = await call('update_values', { spreadsheetId: 'POOL2_SHEET_ID_0123456789abcdefghij', range: "'Pool 2'!A1", values: [['x']] });
+    out.readSecret = await call('get_values', { spreadsheetId: 'TEST_SHEET_ID_0123456789abcdefghijklmnop', range: "'Secrets'!A1:B2" });
+    out.readPool2Other = await call('get_values', { spreadsheetId: 'POOL2_SHEET_ID_0123456789abcdefghij', range: "'Other'!A1:B2" });
+    out.readClassical = await call('get_values', { spreadsheetId: 'TEST_SHEET_ID_0123456789abcdefghijklmnop', range: "'Classical'!A1:B2" });
+    out.readPool2 = await call('get_values', { spreadsheetId: 'POOL2_SHEET_ID_0123456789abcdefghij', range: "'Pool 2'!A1:B2" });
+    out.guard = (() => { try { assertSheetTab('Classical'); return 'allowed'; } catch (e) { return 'refused'; } })();
+    out.guardOk = (() => { try { assertSheetTab('🎸 Playlists'); return 'allowed'; } catch (e) { return 'refused'; } })();
+    out.put = await (async () => { try { await putCell('Classical', 'A', 2, 'x'); return 'ok'; } catch (e) { return 'refused'; } })();
+    out.forbidden = window.__forbidden.length;
+    out.writes = window.__writes.length;
+    return out;
+  });
+  record(n, 'Guard: the stub refuses any write to Classical or the second sheet, and reads outside the allowed tabs', r.writeClassical === 'refused' && r.appendClassical === 'refused' && r.writePool2 === 'refused' && r.readSecret === 'refused' && r.readPool2Other === 'refused' && r.forbidden === 5, JSON.stringify(r));
+  record(n, 'Guard: reading Classical and Pool 2 is allowed', r.readClassical === 'ok' && r.readPool2 === 'ok');
+  record(n, 'Guard: the app refuses to write to a tab that does not start with 🎸', r.guard === 'refused' && r.guardOk === 'allowed' && r.put === 'refused' && r.writes === 0, JSON.stringify([r.guard, r.guardOk, r.put, r.writes]));
+  record(n, 'Guard: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
 // ---------- runner ----------
 const results = [];
 const record = (vp, name, ok, detail = '') => {
@@ -2354,8 +2872,9 @@ const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.u
 const CHART_LOCAL = join(here, 'node_modules', 'chart.js', 'dist', 'chart.umd.js');
 const HAVE_CHART = existsSync(CHART_LOCAL);
 
-async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false, touch = false } = {}) {
+async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false, touch = false, clipboard = false } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}), ...(touch ? { hasTouch: true, isMobile: vp.width < 560 } : {}) });
+  if (clipboard) await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await context.clock.install({ time: RUN_START });
   let externalBlocked = 0;
   await context.route('**/*', route => {
@@ -2404,7 +2923,7 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl) {
     const bar = await page.evaluate(DISCOVER);
     record(vp.name, 'tab pill bar discovered', bar.found && bar.tabs.length > 0,
       bar.found ? `${bar.tabs.length} tabs${bar.usingRoleTab ? ' (role=tab)' : ' (all buttons in bar)'}: ${bar.tabs.map(t => t.label).join(', ')}` : 'no tab bar found');
-    record(vp.name, 'tabs: Home, Collection, Plan, Dashboard, Tools (no Log tab by default)', bar.tabs.map(t => t.label).join() === FIVE.join(), bar.tabs.map(t => t.label).join());
+    record(vp.name, 'tabs: Home, Collection, Plan, Playlists, Dashboard, Tools (no Log tab by default)', bar.tabs.map(t => t.label).join() === TABS6.join(), bar.tabs.map(t => t.label).join());
     record(vp.name, 'Home is the tab shown on load', (await page.locator('#tab-home').getAttribute('aria-selected')) === 'true' && await page.locator('#view-home').isVisible());
 
     const seenSlugs = new Set();
@@ -2475,6 +2994,11 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl) {
   await run('tracks', () => tracksTests(browser, vp, seed, wrapperUrl));
   await run('look', () => lookTests(browser, vp, seed, wrapperUrl));
   await run('layout', () => layoutTests(browser, vp, seed, wrapperUrl));
+  await run('playlists', () => playlistsTests(browser, vp, seed, wrapperUrl));
+  await run('playlists', () => playlistsDeleteTests(browser, vp, seed, wrapperUrl));
+  await run('playlists', () => playlistsMissingTests(browser, vp, seed, wrapperUrl));
+  await run('playlists', () => playlistsSourceTests(browser, vp, seed, wrapperUrl));
+  await run('playlists', () => playlistsGuardTests(browser, vp, seed, wrapperUrl));
 }
 
 async function main() {

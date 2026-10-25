@@ -25,7 +25,10 @@ See [ROADMAP.md](ROADMAP.md).
 
 ## What's in the app
 
-- Tabs: Home, Collection, Plan, Dashboard, Tools. The listening log is hidden unless "Show listening log" is switched on in Tools
+- Tabs: Home, Collection, Plan, Playlists, Dashboard, Tools.
+- **Playlists** builds playlists from a pool of tracks (the `Classical` tab, read-only; another sheet and tab; or an uploaded CSV): Browse the pool,
+  Build with presets and rules (era, form, mood, work-friendly, energy, BPM, composer, target length; ordered by energy, key flow, era or shuffle),
+  and Save to `🎸 Playlists`. "Copy for Spotify" copies track links in order to paste into a Spotify playlist. The listening log is hidden unless "Show listening log" is switched on in Tools
   (this browser only); its code and the `🎸 Log` tab are kept for the later MP3 player.
 - **Collection** shows the albums as shelves. A shelf is a label; the label is worked out from the album's row, first match wins:
   Didn't like (Status) → Owned (Status Owned, or Format Vinyl (Owned)) → Vinyl wish list (Status Purchase, or Format Vinyl (Wanted))
