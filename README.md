@@ -65,6 +65,16 @@ See [ROADMAP.md](ROADMAP.md).
   - New tracks (and albums) are appended below the last used row, so a cleared row is never refilled or overwritten.
 - 🎸 itself is unchanged.
 
+### 2026-10-25 (Favourites)
+
+- Backup: full copy of 🎸 kept as `🎸 backup 2026-10-25`.
+- 🎸 gained column Q, `Favourite`: a date (yyyy-mm-dd). A date means favourited that day; blank means not a favourite.
+  Tapping the guitar pick writes today's date or clears the cell, so one cell changes. It doesn't depend on the rating.
+  Every kind of thing gets its own `Favourite` column in its own tab (albums now; artists, tracks and shows when those tabs exist),
+  and the Home page gathers them all.
+- Status dropdown: "Didn't like" added (chip style kept).
+- Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact.
+
 ## Look
 
 - Dark, with a marbled coloured record behind solid panels. Approved preview: `design/music-collection-preview.html`.
