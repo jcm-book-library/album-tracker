@@ -482,12 +482,12 @@ div.hbar{padding:3px 6px}
 /* detail strip under a shelf */
 .s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
 .s-dcover{position:relative;width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
-/* cover art: the picture sits over the generated sleeve, which fades away except its initials badge */
+/* cover art: the picture sits over the generated sleeve, which fades away entirely (initials badge included) */
 [data-cv]{position:relative}
 .cvimg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;opacity:0;transition:opacity .35s ease}
 .cvimg.in{opacity:1}
 [data-cv].cv svg{position:relative}
-[data-cv].cv svg > :not(.bdg){opacity:0;transition:opacity 0s .4s}
+[data-cv].cv svg > *{opacity:0;transition:opacity 0s .4s}
 .s-it.slice .cvimg{left:calc(var(--s) * var(--ox) / -100);width:var(--s);height:var(--s);max-width:none}
 .cover-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 260px;min-width:0}
 .cover-ctl input{flex:1 1 200px}
