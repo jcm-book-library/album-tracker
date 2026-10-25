@@ -48,9 +48,15 @@ Started 2026-10-18.
 - Format-shifting music you own for private use is generally allowed in Australia; sharing the recordings isn't.
 
 ### Cover art (GitHub Pages only)
-- Album covers kept as image files in your Google Drive (never in the public repo), loaded by the GitHub Pages version after Google sign-in. The sign-in would also ask for read access to that Drive folder.
-- The claude.ai artifact can't show them (it blocks images from other sites), so it keeps the generated record graphics.
-- Reuse whatever approach the sports-logos project settles on, so both work the same way.
+- Covers are image files in a private Google Drive folder (never in the public repo), loaded by the GitHub Pages version after Google sign-in.
+  The sign-in will also ask for read-only access to Drive. The claude.ai artifact can't show them (it blocks images from other sites),
+  so it keeps the generated record sleeves.
+- File format: one JPEG per album, square (1:1), about 600 x 600 px (300 minimum, 1000 maximum), under about 200 KB, no transparency.
+- File name: the album's `id` from the 🎸 tab plus `.jpg`, e.g. `1043.jpg`. The id never changes, so a rename or a retitled album can't break the link.
+- The app asks for the folder link once and keeps it in that browser only. It loads only the covers on screen, keeps them cached in the browser,
+  and falls back to the generated sleeve when a file is missing.
+- Needs the same Google account for the sheet and the folder, or the folder shared with the account used to sign in.
+- Reuse whatever approach the sports-logos project settled on, so both work the same way.
 
 ### Not planned
 - Running on hardware MP3 players (iPod-style devices can't run web apps).
