@@ -39,6 +39,35 @@ const S4 = { onDay: [], quiet: '', stale: '', release: 'Test Album 060 LP' };
 const COLS = { rating: 1, status: 3, format: 5, release: 6, year: 7, id: 9, fav: 16, labelled: 17 };
 const S5 = { fav: [], nope: [], soon: [] };   // what buildSeed added for the shelves, by title
 const PL_HEADER = ['id', 'name', 'purpose', 'source', 'created', 'tracks', 'minutes', 'rules', 'trackIds', 'notes'];
+const ART_HEADER = ['id', 'name', 'knownAs', 'established', 'origin', 'bio', 'influences', 'favourite', 'status', 'notes'];
+const LNK_HEADER = ['id', 'artistId', 'otherId', 'otherName', 'type', 'note'];
+const RES_HEADER = ['id', 'artistId', 'kind', 'title', 'url', 'note'];
+const ARTX = {};   // what buildSeed made for the artist tabs (ids by name, which artists have no page, the favourite)
+// 🎸 Artists, 🎸 Links and 🎸 Resources, made up to match the fixture's "Test Artist NN" names:
+//  - Test Artist 16 has two aliases (17 and "The Test Artist 18"), so those albums belong to 16 and 17/18 get no page of their own
+//  - Test Artist 70, 71 and 72 have albums but no page; "Nobody Yet Band" has a page but no albums
+//  - a blank row sits inside each tab, so an append has to go below the last used row, not into the gap
+function buildArtistTabs(albums, { noArtists, noLinks, noResources } = {}) {
+  const names = [...new Set(albums.slice(1).map(r => r[2]).filter(Boolean))].sort();
+  const noPage = ['Test Artist 70', 'Test Artist 71', 'Test Artist 72'], aliased = ['Test Artist 17', 'Test Artist 18'];
+  const have = [...names.filter(n => !noPage.includes(n) && !aliased.includes(n)), 'Nobody Yet Band'];
+  const ids = Object.fromEntries(have.map((n, i) => [n, String(2001 + i)]));
+  const blank = n => Array(n).fill('');
+  const rows = [ART_HEADER];
+  have.forEach((n, i) => {
+    const r = blank(10); r[0] = ids[n]; r[1] = n; r[8] = n === 'Test Artist 34' ? 'done' : n === 'Test Artist 27' ? '' : 'draft';
+    if (n === 'Test Artist 16') r[2] = 'Test Artist 17; The Test Artist 18';
+    if (n === 'Test Artist 34') { r[3] = '1987'; r[4] = 'Testville, Australia'; r[5] = 'A made-up band.\nSecond line of the bio.'; r[6] = 'Test Artist 27, Test Artist 16'; r[9] = 'Unbroken' + 'y'.repeat(150); }
+    if (n === 'Test Artist 27') r[7] = isoDay(4);
+    rows.push(r);
+    if (i === 4) rows.push(blank(10));
+  });
+  const L = (id, a, o, on, type, note) => [String(id), ids[a], o ? ids[o] : '', on || '', type, note || ''];
+  const links = [LNK_HEADER, L(3001, 'Test Artist 34', 'Test Artist 27', '', 'Member', 'since the start'), L(3002, 'Test Artist 34', null, 'Some Session Player', 'Collaboration', ''), blank(6), L(3003, 'Test Artist 27', 'Test Artist 16', '', 'Influenced by', '')];
+  const res = [RES_HEADER, ['4001', ids['Test Artist 34'], 'Book', 'The Test Book', '', 'chapter 3'], blank(6), ['4002', ids['Test Artist 34'], 'Article', 'An Article', 'https://example.com/article', ''], ['4003', ids['Test Artist 34'], 'Website', 'Odd site', 'javascript:alert(1)', 'not a link']];
+  Object.assign(ARTX, { ids, names: have, noPage, aliased, fav: 'Test Artist 27', lastArt: rows.length, lastLnk: links.length, lastRes: res.length });
+  return { ...(noArtists ? {} : { '🎸 Artists': rows }), ...(noLinks ? {} : { '🎸 Links': links }), ...(noResources ? {} : { '🎸 Resources': res }) };
+}
 const POOL2_ID = 'POOL2_SHEET_ID_0123456789abcdefghij';   // a second spreadsheet, read-only, tab "Pool 2"
 const POOL2_IDS = ['4uLU6hMCjMI75M1A2tKUQC', '1301WleyT35CMS5qAo0gAf', '7ouMYWpwJ422jRcDASZB7P', '0VjIjW4GlUZAMYd2vXMi3b', '3KkXRkHbMCARz0aVfEt68P'];
 const POOL2 = [
@@ -57,7 +86,7 @@ function buildDrive() {
   add('drv-warning', 'Warning.jpg'); add('drv-notes', 'notes.txt', T0, 'text/plain'); add('drv-1051b', '1051b.jpg'); add('drv-nodigits', '10x5.png');
   return { files, reject: false, failIds: [] };
 }
-function buildSeed({ labelled = false, noPlaylists = false, covers = false } = {}) {
+function buildSeed({ labelled = false, noPlaylists = false, covers = false, noArtists = false, noLinks = false, noResources = false } = {}) {
   const albums = FIXTURE.values.map(r => [...r]);   // a copy: FIXTURE itself stays the fixed reference. [header, ...rows]; id is column J (index 9)
   // New columns after the fixture's A:O. P (Buy link) is added inside the page, so it is left blank here.
   albums[0].push('', 'Favourite');
@@ -130,6 +159,7 @@ function buildSeed({ labelled = false, noPlaylists = false, covers = false } = {
     ],
     // Playlists: header row only. The Classical tab is read-only test data; Pool 2 lives in a second spreadsheet.
     ...(noPlaylists ? {} : { '🎸 Playlists': [PL_HEADER] }),
+    ...buildArtistTabs(albums, { noArtists, noLinks, noResources }),
     'Classical': FIXTURE_CL.values.map(r => [...r]),
     __pool2: POOL2,
     __drive: buildDrive(),
@@ -154,6 +184,7 @@ function installStub(seed) {
   window.__reads = [];
   window.__readSheets = [];   // [{ sid, range }] for every read, so tests can see which spreadsheet was read
   window.__forbidden = [];
+  window.__failNext = 0;   // tests set this to make the next N writes fail
   window.__errors = [];
   window.__sheet = tabs;
   window.__driveCalls = [];   // every call made to the Google Drive connector: { tool, args }
@@ -301,6 +332,7 @@ function installStub(seed) {
         while (values.length && values[values.length - 1].length === 0) values.pop();
         return { payload: { range: args.range, majorDimension: 'ROWS', values } };
       }
+      if ((tool === 'update_values' || tool === 'append_values') && window.__failNext > 0) { window.__failNext--; throw { code: 'tool_error', message: 'Injected failure' }; }
       if (tool === 'update_values') {
         const t = target(args.range, tool, args.spreadsheetId);
         const vals = Array.isArray(args.values) ? args.values : [];
@@ -703,8 +735,8 @@ const MOOD_RULES = {
   'Old favourite': r => parseFloat(r[COL.rating]) >= 9,
   'Anything': () => true,
 };
-const TABS6 = ['Home', 'Collection', 'Plan', 'Playlists', 'Dashboard', 'Tools'];
-const TABS7 = ['Home', 'Collection', 'Log', 'Plan', 'Playlists', 'Dashboard', 'Tools'];   // with the listening log switched on
+const TABS6 = ['Home', 'Collection', 'Artists', 'Plan', 'Playlists', 'Dashboard', 'Tools'];
+const TABS7 = ['Home', 'Collection', 'Artists', 'Log', 'Plan', 'Playlists', 'Dashboard', 'Tools'];   // with the listening log switched on
 
 // A fresh page on the live stub, already on the given tab
 async function freshPage(browser, vp, seed, url, tab, { clockTo, reducedMotion, showLog, touch, clipboard } = {}) {
@@ -788,7 +820,7 @@ async function toolsTests(browser, vp, seed, url) {
 
   // Six pills with the log on, in order, all reachable; the bar scrolls inside itself rather than the page
   const labels = await page.locator('nav.tabs .tab:visible').allTextContents();
-  record(n, 'Tabs: with the log on, seven pills in order Home, Collection, Log, Plan, Playlists, Dashboard, Tools', labels.join() === TABS7.join(), labels.join());
+  record(n, 'Tabs: with the log on, eight pills in order Home, Collection, Artists, Log, Plan, Playlists, Dashboard, Tools', labels.join() === TABS7.join(), labels.join());
   await page.locator('#tab-tools').click();
   const reach = await page.evaluate(() => { const nav = document.querySelector('nav.tabs').getBoundingClientRect(), b = document.getElementById('tab-tools').getBoundingClientRect(); return { inside: b.left >= nav.left - 1 && b.right <= nav.right + 1, sw: document.documentElement.scrollWidth, iw: innerWidth }; });
   record(n, 'Tabs: the last pill is brought into view and the page does not scroll sideways', reach.inside && reach.sw <= reach.iw, JSON.stringify(reach));
@@ -2345,7 +2377,7 @@ async function logSwitchTests(browser, vp, seed, url) {
   const rows = fxSeedRows(seed);
   const vis = sel => page.locator(sel).isVisible();
   let labels = await page.locator('nav.tabs .tab:visible').allTextContents();
-  record(n, 'Log switch: by default there are six tabs - Home, Collection, Plan, Playlists, Dashboard, Tools', labels.join() === TABS6.join() && !(await vis('#tab-log')), labels.join());
+  record(n, 'Log switch: by default there are seven tabs - Home, Collection, Artists, Plan, Playlists, Dashboard, Tools', labels.join() === TABS6.join() && !(await vis('#tab-log')), labels.join());
   record(n, 'Log switch: the Look panel has "Show listening log", off by default, and nothing is stored', (await page.locator('#lookLog').isChecked()) === false && (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === null);
   record(n, 'Log switch: Tools hides Nudges, Goal planner and Year in review, and keeps Lucky dip, Do I own this?, Recommendations and Look', !(await vis('#nudPanel')) && !(await vis('#goalPanel')) && !(await vis('#yirPanel')) && (await vis('#dipH')) && (await vis('#ownH')) && (await vis('#recsH')) && (await vis('#lookH')));
   const dipBtns = await page.locator('#dipCard button').allTextContents();
@@ -2395,7 +2427,7 @@ async function logSwitchTests(browser, vp, seed, url) {
   await page.locator('#lookLog').check();
   await settle(page);
   labels = await page.locator('nav.tabs .tab:visible').allTextContents();
-  record(n, 'Log switch: turning it on adds the Log tab after Collection', labels.join() === TABS7.join(), labels.join());
+  record(n, 'Log switch: turning it on adds the Log tab after Artists', labels.join() === TABS7.join(), labels.join());
   record(n, 'Log switch: it is remembered in sg-showlog', (await page.evaluate(() => localStorage.getItem('sg-showlog'))) === '1');
   record(n, 'Log switch: Nudges, Goal planner and Year in review come back', (await vis('#nudPanel')) && (await vis('#goalPanel')) && (await vis('#yirPanel')) && (await page.locator('#nudgeBox').textContent()).length > 0);
   const dipBtns2 = await page.locator('#dipCard button').allTextContents();
@@ -3025,8 +3057,8 @@ async function coverTests(browser, vp, seed, seedC, url) {
   record(n, 'Covers: the cover is decorative (alt="", draggable=false) and the button keeps its aria-label', withCover.every(x => x.alt === '' && x.drag === false) && await page.evaluate(sel => [...document.querySelectorAll(sel)].every(b => /album, label /.test(b.getAttribute('aria-label') || '') && !b.querySelector('img[alt]:not([alt=""])')), `${shelfSel('hear')} .s-standing .s-art[data-cv]`));
   const missing = hearStand.filter(x => !want.has(x.id));
   record(n, `Covers: a sleeve whose id has no file keeps its generated art (${missing.length} here)`, missing.every(x => !x.img), JSON.stringify(missing.map(x => x.id)));
-  const layers = await page.evaluate(sel => { const el = document.querySelector(sel), svg = el.querySelector('svg'), img = el.querySelector('img.cvimg'), b = svg.querySelector('.bdg'); const kids = [...svg.children].filter(k => !k.classList.contains('bdg')); return { order: !!(img.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING), pos: getComputedStyle(svg).position, badge: !!b, badgeOp: b && getComputedStyle(b).opacity, kidsOp: kids.map(k => getComputedStyle(k).opacity), chip: !!el.closest('.s-lift').querySelector('.s-chip') }; }, `${shelfSel('hear')} .s-standing .s-art.cv`);
-  record(n, 'Covers: the initials badge stays on top of the cover (svg above the picture, only the badge left visible)', layers.order && layers.pos !== 'static' && layers.badge && layers.badgeOp === '1' && layers.kidsOp.every(o => o === '0'), JSON.stringify(layers));
+  const layers = await page.evaluate(sel => { const el = document.querySelector(sel), svg = el.querySelector('svg'), img = el.querySelector('img.cvimg'), b = svg.querySelector('.bdg'); const kids = [...svg.children]; return { order: !!(img.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING), pos: getComputedStyle(svg).position, badge: !!b, badgeOp: b && getComputedStyle(b).opacity, kidsOp: kids.map(k => getComputedStyle(k).opacity), chip: !!el.closest('.s-lift').querySelector('.s-chip') }; }, `${shelfSel('hear')} .s-standing .s-art.cv`);
+  record(n, 'Covers: the generated sleeve, initials badge included, is fully hidden behind the cover (svg above the picture, every layer at opacity 0)', layers.order && layers.pos !== 'static' && layers.badge && layers.badgeOp === '0' && layers.kidsOp.every(o => o === '0'), JSON.stringify(layers));
   // crop: odd ids are 600x300 PNGs (green | red | blue), even ids 300x600 JPEGs (yellow / magenta / cyan)
   const odd = withCover.find(x => +x.id % 2 === 1 && +x.id !== 1050), even = withCover.find(x => +x.id % 2 === 0 && +x.id !== 1050);
   if (odd) { const p = await pixelAt(page, odd.src, [[0.06, 0.5], [0.5, 0.5], [0.94, 0.5]]); record(n, `Covers: a landscape PNG (${odd.id}) is centre-cropped to a square (green sliver, red middle, blue sliver)`, p.w === p.h && closeRgb(p.px[0], GREEN) && closeRgb(p.px[1], RED) && closeRgb(p.px[2], BLUE), JSON.stringify(p)); } else record(n, 'Covers: a landscape sample was on screen', false, 'none');
@@ -3431,6 +3463,322 @@ async function openContext(browser, vp, seed, { blockChart = false, reducedMotio
   return { context, page, problems, blocked: () => externalBlocked };
 }
 
+// ---------- Artists tab: 🎸 Artists, 🎸 Links, 🎸 Resources ----------
+const AK = s => s.toLowerCase().replace(/\s+/g, ' ').replace(/^the /, '');
+const artRowsOf = page => page.evaluate(() => [...document.querySelectorAll('#artRows .art-row')].map(li => ({ id: li.dataset.id, name: li.querySelector('.nm').childNodes[0].textContent, meta: li.querySelector('.m').textContent, draft: !!li.querySelector('.art-tag'), pressed: li.querySelector('.pickbtn-sm').getAttribute('aria-pressed') })));
+const artWrites = page => page.evaluate(() => window.__writes.map(w => ({ tool: w.tool, sheet: w.sheet, range: w.range, values: w.values, at: w.appendedAtRow })));
+const artSheet = (page, tab) => page.evaluate(t => window.__sheet[t].map(r => [...r]), tab);
+const artRowNo = (rows, id) => rows.findIndex((r, i) => i > 0 && r[0] === String(id)) + 1;
+const artOverflow = async (page, n, what) => { const o = await page.evaluate(overflow); record(n, `Artists: no sideways scroll (${what})`, o.sw <= o.iw, `${o.sw} vs ${o.iw}`); };
+// How many albums (and owned ones) the seed gives an artist: the artist's name or any alias
+function artExpect(seed, keys) {
+  const rows = fxSeedRows(seed).filter(r => keys.map(AK).includes(AK(r[2] || '')));
+  return { n: rows.length, own: rows.filter(r => labelFor(r) === 'owned').length };
+}
+async function artOpenPage(browser, vp, seed, url) {
+  const ctx = await freshPage(browser, vp, seed, url, 'artists');
+  await ctx.page.waitForSelector('#artRows .art-row, #artMsg:not([hidden])', { timeout: 8000 });
+  return ctx;
+}
+const artOpenDetail = async (page, id) => { await page.evaluate(i => document.querySelector(`#artRows [data-ap="open"][data-id="${i}"]`).click(), id); await page.waitForSelector('#artDetail:not([hidden])'); };
+
+async function artistsTests(browser, vp, seed, url) {
+  const n = vp.name, ids = ARTX.ids;
+  const { context, page, problems } = await artOpenPage(browser, vp, seed, url);
+  record(n, 'Artists: the tab is selected and its panel shows', (await page.locator('#tab-artists').getAttribute('aria-selected')) === 'true' && await page.locator('#view-artists').isVisible());
+  record(n, 'Artists: the tab remembers itself (sg-tab)', (await page.evaluate(() => localStorage.getItem('sg-tab'))) === 'artists');
+  const rows = await artRowsOf(page);
+  record(n, 'Artists: one row per artist page, A to Z by default (the blank row in the sheet is skipped)', rows.length === ARTX.names.length && rows.map(r => r.name).join('|') === [...ARTX.names].sort((a, b) => AK(a).localeCompare(AK(b))).map(x => x).join('|'), `${rows.length} rows`);
+  record(n, 'Artists: the count line says how many', (await page.locator('#artCount').textContent()) === `${ARTX.names.length} artists`);
+  const t34 = rows.find(r => r.name === 'Test Artist 34'), e34 = artExpect(seed, ['Test Artist 34']);
+  record(n, 'Artists: album and owned counts come from the collection', t34.meta === `${e34.n} albums · ${e34.own} owned`, t34.meta);
+  const t16 = rows.find(r => r.name === 'Test Artist 16'), e16 = artExpect(seed, ['Test Artist 16', 'Test Artist 17', 'Test Artist 18']);
+  record(n, 'Artists: albums by an alias count for the artist', t16.meta === `${e16.n} albums · ${e16.own} owned` && e16.n > artExpect(seed, ['Test Artist 16']).n, t16.meta);
+  const nobody = rows.find(r => r.name === 'Nobody Yet Band');
+  record(n, 'Artists: an artist with no albums shows 0', nobody.meta === '0 albums · 0 owned', nobody.meta);
+  record(n, 'Artists: "draft" tag on draft and blank status, not on done', !t34.draft && rows.find(r => r.name === ARTX.fav).draft && nobody.draft);
+  record(n, 'Artists: favourite pick pressed only for the favourite', rows.filter(r => r.pressed === 'true').map(r => r.name).join() === ARTX.fav);
+  const gapN = fxSeedRows(seed).filter(r => ARTX.noPage.includes(r[2])).length;
+  record(n, 'Artists: "N albums have no artist page yet" counts albums with no page (aliases, blank and Various excluded)', (await page.locator('#artGapText').textContent()) === `${gapN} albums have no artist page yet`, await page.locator('#artGapText').textContent());
+  // Various / no artist belong to nobody
+  await page.evaluate(() => { state.albums.push({ ...state.albums[0], id: '9998', title: 'Comp', artist: 'Various' }, { ...state.albums[0], id: '9999', title: 'Comp 2', artist: 'Various Artists' }); render(); });
+  record(n, 'Artists: "Various" and blank artists never need a page', (await page.locator('#artGapText').textContent()) === `${gapN} albums have no artist page yet`);
+  await page.evaluate(() => { state.albums = state.albums.filter(a => a.id !== '9998' && a.id !== '9999'); render(); });
+
+  // sort, filter, search
+  await page.locator('#artSort').selectOption('most');
+  const most = await artRowsOf(page), counts = most.map(r => +r.meta.split(' ')[0]);
+  record(n, 'Artists: Most albums puts the biggest first, never out of order', most[0].name === 'Test Artist 34' && counts.every((c, i) => i === 0 || counts[i - 1] >= c), most.slice(0, 3).map(r => r.name + ' ' + r.meta).join(' | '));
+  await page.locator('#artSort').selectOption('fav');
+  record(n, 'Artists: Favourites first', (await artRowsOf(page))[0].name === ARTX.fav);
+  await page.locator('#artSort').selectOption('az');
+  await page.locator('#artFav').click();
+  const fr = await artRowsOf(page);
+  record(n, 'Artists: the Favourites chip shows only favourites', fr.length === 1 && fr[0].name === ARTX.fav && (await page.locator('#artFav').getAttribute('aria-pressed')) === 'true' && (await page.locator('#artCount').textContent()) === `1 of ${ARTX.names.length}`);
+  await page.locator('#artFav').click();
+  await page.locator('#artQ').fill('the test artist 18');
+  const sr = await artRowsOf(page);
+  record(n, 'Artists: search finds an artist by alias', sr.length === 1 && sr[0].name === 'Test Artist 16', sr.map(r => r.name).join());
+  await page.locator('#artQ').fill('nobody');
+  record(n, 'Artists: search by name', (await artRowsOf(page)).map(r => r.name).join() === 'Nobody Yet Band');
+  await page.locator('#artQ').fill('zzzz');
+  record(n, 'Artists: empty state when nothing matches', (await page.locator('#artRows .empty').textContent()) === 'No artist matches that.' && (await artRowsOf(page)).length === 0);
+  await page.locator('#artQ').fill('');
+
+  // detail view
+  await artOverflow(page, n, 'list');
+  const tap = await page.evaluate(() => [...document.querySelectorAll('#artRows .art-open, #artRows .pickbtn-sm, #artFav, #artSort, #artGap .btn')].map(b => Math.round(b.getBoundingClientRect().height)));
+  record(n, 'Artists: list tap targets are at least 40px high', tap.length > 10 && tap.every(h => h >= 40), `min ${Math.min(...tap)}`);
+  await page.evaluate(() => window.scrollTo(0, 400));
+  const y0 = await page.evaluate(() => scrollY);
+  await artOpenDetail(page, ids['Test Artist 34']);
+  record(n, 'Artists: opening a row shows the detail and hides the list', !(await page.locator('#artList').isVisible()) && (await page.locator('#artName').textContent()).startsWith('Test Artist 34'));
+  const dt = await page.locator('#artDetail .art-dl').textContent();
+  record(n, 'Artists: fields shown as text', /1987/.test(dt) && /Testville, Australia/.test(dt) && /A made-up band\./.test(dt) && /done/.test(dt) && /Test Artist 27, Test Artist 16/.test(dt), dt.slice(0, 120));
+  const alb = await page.locator('#artDetail .art-alb').count();
+  record(n, 'Artists: the detail lists the artist\'s albums', alb === e34.n, `${alb}`);
+  const heads = await page.locator('#artDetail .art-sec h4').allTextContents();
+  const member = page.locator('#artDetail [data-link="3001"]'), collab = page.locator('#artDetail [data-link="3002"]');
+  record(n, 'Artists: relationships grouped by type, the other artist linked when it has a page', heads.includes('Member') && heads.includes('Collaboration') && (await member.locator('.art-link').textContent()) === 'Test Artist 27' && (await member.locator('.note').textContent()) === 'since the start');
+  record(n, 'Artists: a name with no page is plain text, not a link', (await collab.locator('.art-link').count()) === 0 && (await collab.locator('.main').textContent()).includes('Some Session Player'));
+  const lnkA = await page.evaluate(() => [...document.querySelectorAll('#artDetail a')].map(a => ({ t: a.textContent, href: a.getAttribute('href'), target: a.target, rel: a.rel })));
+  record(n, 'Artists: resources grouped by kind; only an http(s) url becomes a link (new tab, noopener noreferrer)', lnkA.length === 1 && lnkA[0].t === 'An Article' && lnkA[0].href === 'https://example.com/article' && lnkA[0].target === '_blank' && lnkA[0].rel === 'noopener noreferrer', JSON.stringify(lnkA));
+  const resText = await page.locator('#artDetail [data-res]').allTextContents();
+  record(n, 'Artists: a Book with no url is plain text; a non-http url is shown as text, never linked', resText.some(t => t.startsWith('The Test Book') && /chapter 3/.test(t)) && resText.some(t => /Odd site/.test(t) && /javascript:alert\(1\)/.test(t)) && (await page.locator('#artDetail a[href^="javascript"]').count()) === 0);
+  const rh = await page.locator('#artDetail .art-sec h3').allTextContents();
+  record(n, 'Artists: Resources sits under Relationships', rh.join() === 'Albums,Relationships,Resources');
+  await artOverflow(page, n, 'detail with a very long unbroken note');
+  const tap2 = await page.evaluate(() => [...document.querySelectorAll('#artDetail button, #artDetail a')].map(b => Math.round(b.getBoundingClientRect().height)));
+  record(n, 'Artists: detail tap targets are at least 40px high', tap2.every(h => h >= 40), `min ${Math.min(...tap2)}`);
+  // reverse labels: 27 is a member of 34 (3001) and influenced by 16 (3003); 16 sees "Influenced" for 27
+  await page.locator('#artDetail [data-link="3001"] .art-link').click();
+  const h27 = await page.locator('#artDetail .art-sec h4').allTextContents();
+  record(n, 'Artists: the other side shows the reverse label (Member becomes "Member of")', (await page.locator('#artName').textContent()).startsWith('Test Artist 27') && h27.includes('Member of') && h27.includes('Influenced by') && (await page.locator('#artDetail [data-link="3001"] .art-link').textContent()) === 'Test Artist 34', h27.join());
+  await page.locator('#artDetail [data-link="3003"] .art-link').click();
+  const h16 = await page.locator('#artDetail .art-sec h4').allTextContents();
+  record(n, 'Artists: Influenced by reads "Influenced" on the other page', h16.join() === 'Influenced' && (await page.locator('#artDetail [data-link="3003"] .art-link').textContent()) === 'Test Artist 27', h16.join());
+  // an album opens the same edit dialog as other lists
+  await page.locator('#artDetail .art-alb').first().click();
+  record(n, 'Artists: clicking an album opens it', await page.locator('#albumDlg').evaluate(d => d.open) && /Edit album/.test(await page.locator('#dlgTitle').textContent()));
+  await page.keyboard.press('Escape');
+  // back: list, search and scroll kept, focus on the row
+  await page.locator('#artDetail [data-ap="back"]').click();
+  const foc = await page.evaluate(() => document.activeElement && document.activeElement.dataset.fk);
+  const y1 = await page.evaluate(() => scrollY);
+  record(n, 'Artists: Back returns to the list with scroll kept and focus on the row of the artist last viewed', (await page.locator('#artList').isVisible()) && Math.abs(y1 - y0) < 3 && foc === `art:row:${ids['Test Artist 16']}:open`, `y ${y0} -> ${y1}, focus ${foc}`);
+  await page.locator('#artQ').fill('nobody');
+  await artOpenDetail(page, ids['Nobody Yet Band']);
+  await page.locator('#artDetail [data-ap="back"]').click();
+  record(n, 'Artists: Back keeps the search', (await page.locator('#artQ').inputValue()) === 'nobody' && (await artRowsOf(page)).length === 1);
+  await page.locator('#artQ').fill('');
+
+  // sample mode: no connection, sample artists, writes switched off with the usual hint
+  await page.evaluate(() => { const s = snapshotState(); state.mcp = null; state.live = false; state.artists = s.artists; state.links = s.links; state.resources = s.resources; state.albums = s.albums; render(); });
+  const samp = await artRowsOf(page);
+  record(n, 'Artists: without a sheet a small sample list shows, with a note', samp.length === 5 && samp[0].name === 'Burial' && await page.locator('#artSample').isVisible(), samp.map(r => r.name).join());
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#artRows .pickbtn-sm').first().click();
+  const nt = await page.locator('#notice').textContent();
+  record(n, 'Artists: sample mode switches writes off with the connect hint', /needs the live connection/.test(nt) && (await artWrites(page)).length === 0, nt);
+  const forbidden = await page.evaluate(() => window.__forbidden);
+  record(n, 'Artists: no access outside 🎸 tabs', forbidden.length === 0, JSON.stringify(forbidden.slice(0, 2)));
+  record(n, 'Artists: reading and browsing write nothing', (await artWrites(page)).length === 0);
+  record(n, 'Artists: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+
+  // missing tabs
+  {
+    const c = await artOpenPage(browser, vp, buildSeed({ noArtists: true }), url);
+    const msg = await c.page.locator('#artMsg').textContent();
+    record(n, 'Artists missing tab: says "Create the 🎸 Artists tab first." and shows no list', /^Create the 🎸 Artists tab first\./.test(msg) && (await c.page.locator('#artRows li').count()) === 0 && !(await c.page.locator('#artGap').isVisible()), msg);
+    await artOverflow(c.page, n, 'missing Artists tab');
+    const o = await c.page.evaluate(() => (document.getElementById('tab-collection').click(), document.getElementById('view-collection').hidden));
+    record(n, 'Artists missing tab: the rest of the app still works', o === false && c.problems.length === 0, c.problems.slice(0, 2).join(' | '));
+    await c.context.close();
+  }
+  for (const [flag, tab, sel, other] of [['noLinks', '🎸 Links', 'Relationships', '[data-res]'], ['noResources', '🎸 Resources', 'Resources', '[data-link]']]) {
+    const c = await artOpenPage(browser, vp, buildSeed({ [flag]: true }), url);
+    await artOpenDetail(c.page, ARTX.ids['Test Artist 34']);
+    const txt = await c.page.locator('#artDetail').textContent();
+    record(n, `Artists missing tab: without ${tab} the artist page still works and says "Create the ${tab} tab first."`, txt.includes(`Create the ${tab} tab first.`) && (await c.page.locator(`#artDetail ${other}`).count()) > 0 && /Testville/.test(txt) && (await c.page.locator(`#artDetail [data-ap="${flag === 'noLinks' ? 'relNew' : 'resNew'}"]`).count()) === 0, sel);
+    record(n, `Artists missing tab (${tab}): no console errors`, c.problems.length === 0, c.problems.slice(0, 2).join(' | '));
+    await c.context.close();
+  }
+}
+
+async function artistWritesTests(browser, vp, seed, url) {
+  const n = vp.name, ids = ARTX.ids, ART = '🎸 Artists', LNK = '🎸 Links', RES = '🎸 Resources';
+  const { context, page, problems } = await artOpenPage(browser, vp, seed, url);
+  const today = await page.evaluate(() => today());
+  const pressed = id => page.locator(`#artRows [data-ap="pick"][data-id="${id}"]`).getAttribute('aria-pressed');
+  // favourite pick: one cell, the favourite date, nothing else
+  const nid = ids['Nobody Yet Band'];
+  await page.evaluate(() => { window.__writes.length = 0; window.__reads.length = 0; });
+  await page.locator(`#artRows [data-ap="pick"][data-id="${nid}"]`).click();
+  record(n, 'Artists pick: the screen changes at once', (await pressed(nid)) === 'true');
+  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Artists saved');
+  let sh = await artSheet(page, ART), row = artRowNo(sh, nid), w = await artWrites(page);
+  record(n, 'Artists pick: writes only the favourite cell (H) of that row, as today\'s date', w.length === 1 && w[0].tool === 'update_values' && w[0].range === `'🎸 Artists'!H${row}` && w[0].values[0][0] === today && sh[row - 1][7] === today, JSON.stringify(w));
+  const rd = await page.evaluate(() => window.__reads);
+  record(n, 'Artists pick: the row was found by id right before the write', rd.includes("'🎸 Artists'!A1:A") && rd.includes("'🎸 Artists'!A1:J1"), rd.join(' ; '));
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator(`#artRows [data-ap="pick"][data-id="${nid}"]`).click();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Artists saved');
+  sh = await artSheet(page, ART); w = await artWrites(page);
+  record(n, 'Artists pick: picking again clears just that cell', w.length === 1 && w[0].range === `'🎸 Artists'!H${row}` && w[0].values[0][0] === '' && sh[row - 1][7] === '' && (await pressed(nid)) === 'false', JSON.stringify(w));
+  // the pill on the detail page uses the same helper
+  await artOpenDetail(page, nid);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#artDetail .s-pickbtn').click();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Artists saved');
+  w = await artWrites(page);
+  record(n, 'Artists pick: the detail pill writes the same single cell', w.length === 1 && w[0].range === `'🎸 Artists'!H${row}` && (await page.locator('#artDetail .s-pickbtn').getAttribute('aria-pressed')) === 'true');
+  await page.locator('#artDetail .s-pickbtn').click();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Artists saved');
+  await page.locator('#artDetail [data-ap="back"]').click();
+  // a failed write puts it back and says why
+  await page.evaluate(() => { window.__failNext = 1; window.__writes.length = 0; });
+  await page.locator(`#artRows [data-ap="pick"][data-id="${nid}"]`).click();
+  await page.waitForFunction(() => /Couldn't save the favourite/.test(document.getElementById('artMsg').textContent));
+  record(n, 'Artists pick: a failed write reverts the pick and shows the reason', (await pressed(nid)) === 'false' && /Injected failure/.test(await page.locator('#artMsg').textContent()) && (await artSheet(page, ART))[row - 1][7] === '');
+  record(n, 'Artists pick: the album tab is never written by this feature', (await artWrites(page)).every(x => x.sheet === ART));
+
+  // edit: changed cells only, and the row is found by id even if the sheet shifted
+  const id34 = ids['Test Artist 34'];
+  await artOpenDetail(page, id34);
+  await page.locator('#artDetail [data-ap="edit"]').click();
+  record(n, 'Artists edit: Edit turns the fields into a form with focus in it', (await page.locator('#artDetail form').count()) === 1 && (await page.evaluate(() => document.activeElement.id)) === 'ae-name');
+  await page.locator('#ae-origin').fill('Somewhere else');
+  await page.keyboard.press('Escape');
+  const sh0 = await artSheet(page, ART);
+  record(n, 'Artists edit: Escape closes the form, discards the change, writes nothing, and focus returns to Edit', (await page.locator('#artDetail form').count()) === 0 && /Testville/.test(await page.locator('#artDetail .art-dl').textContent()) && (await page.evaluate(() => document.activeElement.dataset.fk)) === 'art:edit' && (await artWrites(page)).length === 0);
+  await page.locator('#artDetail [data-ap="edit"]').click();
+  await page.locator('#artDetail [data-ap="editCancel"]').click();
+  await page.locator('#artDetail [data-ap="edit"]').click();
+  await page.locator('#artDetail form button[type="submit"]').click();
+  record(n, 'Artists edit: Save with nothing changed writes nothing', (await artWrites(page)).length === 0 && (await page.locator('#artDetail form').count()) === 0);
+  // shift the sheet: insert a blank row above, so the stored row number is now wrong
+  await page.evaluate(() => { window.__sheet['🎸 Artists'].splice(1, 0, ['', '', '', '', '', '', '', '', '', '']); });
+  await page.locator('#artDetail [data-ap="edit"]').click();
+  await page.locator('#ae-origin').fill('New Town, Australia');
+  await page.locator('#ae-established').fill('1990');
+  await page.locator('#ae-status').selectOption('draft');
+  await page.locator('#artDetail form button[type="submit"]').click();
+  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Artists saved');
+  sh = await artSheet(page, ART); row = artRowNo(sh, id34); w = await artWrites(page);
+  const want = [`E${row}`, `D${row}`, `I${row}`].sort();
+  record(n, 'Artists edit: finds the row by id (sheet shifted) and writes only the three changed cells', JSON.stringify(w.map(x => x.range.replace("'🎸 Artists'!", '')).sort()) === JSON.stringify(want) && w.every(x => x.tool === 'update_values'), JSON.stringify(w.map(x => [x.range, x.values[0][0]])));
+  const byR = k => w.find(x => x.range.endsWith(k + row)).values[0][0];
+  record(n, 'Artists edit: number as a number, text prefixed with \', other cells untouched', byR('D') === 1990 && typeof byR('D') === 'number' && byR('E') === "'New Town, Australia" && byR('I') === "'draft" && sh[row - 1][1] === 'Test Artist 34' && sh[row - 1][5] === sh0[row - 2][5], JSON.stringify(w.map(x => x.values[0][0])));
+  record(n, 'Artists edit: the page shows the saved values', /1990/.test(await page.locator('#artDetail .art-dl').textContent()) && /New Town/.test(await page.locator('#artDetail .art-dl').textContent()));
+  await page.locator('#artDetail [data-ap="edit"]').click();
+  await page.locator('#ae-established').fill('12');
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#artDetail form button[type="submit"]').click();
+  record(n, 'Artists edit: a bad year is refused with a message and no write', /year/.test(await page.locator('#artMsg').textContent()) && (await artWrites(page)).length === 0);
+  await page.locator('#artDetail [data-ap="editCancel"]').click();
+  await page.evaluate(() => { window.__sheet['🎸 Artists'].splice(1, 1); });
+
+  // add relationship
+  await page.evaluate(() => { window.__writes.length = 0; window.__reads.length = 0; });
+  const lastL = (await artSheet(page, LNK)).length;
+  await page.locator('#artDetail [data-ap="relNew"]').click();
+  record(n, 'Artists links: the form has a type select, an artist typeahead and a note, focus in it', (await page.locator('#ar-type option').allTextContents()).join() === 'Member,Former member,Side project,Collaboration,Previously known as,Influenced by' && (await page.locator('#artNames option').count()) === ARTX.names.length - 1 && (await page.evaluate(() => document.activeElement.id)) === 'ar-other');
+  await page.locator('#ar-type').selectOption('Side project'); await page.locator('#ar-other').fill('Test Artist 16'); await page.locator('#ar-note').fill('a one-off');
+  await page.locator('#artDetail form button[type="submit"]').click();
+  await page.waitForSelector('#artDetail [data-link="3004"]');
+  w = await artWrites(page); sh = await artSheet(page, LNK);
+  record(n, 'Artists links: appends below the last used row (past the blank row), new id max+1', w.length === 1 && w[0].tool === 'append_values' && w[0].at === lastL + 1 && w[0].range === `'🎸 Links'!A${lastL + 1}:F` && JSON.stringify(sh[lastL]) === JSON.stringify(['3004', id34, ids['Test Artist 16'], '', "'Side project", "'a one-off"]), JSON.stringify([w.map(x => [x.range, x.at]), sh[lastL]]));
+  const rd2 = await page.evaluate(() => window.__reads);
+  record(n, 'Artists links: the new id is read back and verified after the append', rd2[rd2.length - 1] === "'🎸 Links'!A1:A" && rd2.includes("'🎸 Links'!A2:A"), rd2.slice(-4).join(' ; '));
+  record(n, 'Artists links: the blank row in the middle was not filled', sh.filter(r => r.every(c => c === '')).length === 1);
+  record(n, 'Artists links: the page shows it under its type, linked', (await page.locator('#artDetail [data-link="3004"] .art-link').textContent()) === 'Test Artist 16');
+  // free text name, not in the database
+  await page.locator('#artDetail [data-ap="relNew"]').click();
+  await page.locator('#ar-other').fill('Brand New Person');
+  await page.locator('#artDetail form button[type="submit"]').click();
+  await page.waitForSelector('#artDetail [data-link="3005"]');
+  sh = await artSheet(page, LNK);
+  record(n, 'Artists links: a name with no page is stored as otherName with a blank otherId', sh[lastL + 1][0] === '3005' && sh[lastL + 1][2] === '' && sh[lastL + 1][3] === "'Brand New Person" && sh[lastL + 1][4] === "'Member", JSON.stringify(sh[lastL + 1]));
+  await page.locator('#artDetail [data-ap="relNew"]').click();
+  await page.locator('#ar-other').fill('test artist 34'); await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#artDetail form button[type="submit"]').click();
+  record(n, 'Artists links: an artist can\'t be linked to itself (no write)', /themselves/.test(await page.locator('#artMsg').textContent()) && (await artWrites(page)).length === 0);
+  await page.keyboard.press('Escape');
+  record(n, 'Artists links: Escape closes the form and focus returns to Add relationship', (await page.locator('#artDetail form').count()) === 0 && (await page.evaluate(() => document.activeElement.dataset.fk)) === 'art:relnew');
+
+  // delete + Undo (link)
+  const delOne = async (tab, kind, id, sel) => {
+    await page.evaluate(() => { window.__writes.length = 0; });
+    const before = await artSheet(page, tab), r = artRowNo(before, id);
+    await page.locator(`${sel} [data-ap="${kind}"]`).click();
+    await page.waitForFunction(i => !document.querySelector(i), sel);
+    await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Artists saved');
+    const w = await artWrites(page), after = await artSheet(page, tab);
+    return { r, w, after, before };
+  };
+  let d = await delOne(LNK, 'relDel', 3002, '#artDetail [data-link="3002"]');
+  record(n, 'Artists links delete: one update clears that row\'s six cells, row stays empty', d.w.length === 1 && d.w[0].tool === 'update_values' && d.w[0].range === `'🎸 Links'!A${d.r}:F${d.r}` && JSON.stringify(d.w[0].values) === JSON.stringify([Array(6).fill('')]) && d.after[d.r - 1].every(c => c === '') && d.after.length === d.before.length, JSON.stringify(d.w));
+  record(n, 'Artists links delete: a toast offers Undo', (await page.locator('#toasts .toast', { hasText: 'Deleted' }).locator('button', { hasText: 'Undo' }).count()) === 1);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#toasts .toast button', { hasText: 'Undo' }).last().click();
+  await page.waitForSelector('#artDetail [data-link="3002"]');
+  w = await artWrites(page); sh = await artSheet(page, LNK);
+  const back = sh.filter(r => r[0] === '3002');
+  record(n, 'Artists links Undo: puts the row back under its own id once, below the last used row; the cleared row is not reused', w.length === 1 && w[0].tool === 'append_values' && w[0].at === d.after.length + 1 && back.length === 1 && back[0][3] === "'Some Session Player" && sh[d.r - 1].every(c => c === ''), JSON.stringify([w.map(x => x.at), back]));
+  // resources: add, delete, undo
+  const lastR = (await artSheet(page, RES)).length;
+  await page.locator('#artDetail [data-ap="resNew"]').click();
+  await page.locator('#artDetail form button[type="submit"]').click();
+  record(n, 'Artists resources: a title is required (no write)', /title/.test(await page.locator('#artMsg').textContent()));
+  await page.evaluate(() => { window.__writes.length = 0; window.__reads.length = 0; });
+  await page.locator('#as-kind').selectOption('Documentary'); await page.locator('#as-title').fill('A Doc'); await page.locator('#as-url').fill('https://example.org/doc'); await page.locator('#as-note').fill('good');
+  await page.locator('#artDetail form button[type="submit"]').click();
+  await page.waitForSelector('#artDetail [data-res="4004"]');
+  w = await artWrites(page); sh = await artSheet(page, RES);
+  record(n, 'Artists resources: appends below the last used row with the next id, text prefixed with \'', w.length === 1 && w[0].at === lastR + 1 && w[0].range === `'🎸 Resources'!A${lastR + 1}:F` && JSON.stringify(sh[lastR]) === JSON.stringify(['4004', id34, "'Documentary", "'A Doc", "'https://example.org/doc", "'good"]), JSON.stringify(sh[lastR]));
+  const rd3 = await page.evaluate(() => window.__reads);
+  record(n, 'Artists resources: the new id is verified after saving', rd3[rd3.length - 1] === "'🎸 Resources'!A1:A");
+  const lk = await page.evaluate(() => { const a = document.querySelector('#artDetail [data-res="4004"] a'); return a && [a.getAttribute('href'), a.target, a.rel]; });
+  record(n, 'Artists resources: the new http link opens in a new tab with noopener noreferrer', JSON.stringify(lk) === JSON.stringify(['https://example.org/doc', '_blank', 'noopener noreferrer']));
+  d = await delOne(RES, 'resDel', 4001, '#artDetail [data-res="4001"]');
+  record(n, 'Artists resources delete: clears the six cells of that row only', d.w.length === 1 && d.w[0].range === `'🎸 Resources'!A${d.r}:F${d.r}` && d.after[d.r - 1].every(c => c === ''), JSON.stringify(d.w));
+  await page.locator('#toasts .toast button', { hasText: 'Undo' }).last().click();
+  await page.waitForSelector('#artDetail [data-res="4001"]');
+  sh = await artSheet(page, RES);
+  record(n, 'Artists resources Undo: restored once under id 4001', sh.filter(r => r[0] === '4001').length === 1 && (await page.locator('#artDetail [data-res="4001"]').textContent()).includes('The Test Book'));
+  // failed delete comes back
+  await page.evaluate(() => { window.__failNext = 1; });
+  await page.locator('#artDetail [data-res="4004"] [data-ap="resDel"]').click();
+  await page.waitForFunction(() => /Couldn't delete/.test(document.getElementById('artMsg').textContent));
+  record(n, 'Artists resources delete: a failed clear puts the item back on screen', (await page.locator('#artDetail [data-res="4004"]').count()) === 1 && (await artSheet(page, RES)).some(r => r[0] === '4004'));
+  await page.locator('#artDetail [data-ap="back"]').click();
+
+  // Add them: only the missing artists
+  await page.evaluate(() => { window.__writes.length = 0; window.__reads.length = 0; });
+  const lastA = (await artSheet(page, ART)).length, maxId = Math.max(...(await artSheet(page, ART)).slice(1).map(r => +r[0] || 0));
+  await page.locator('#artGap [data-ap="addAsk"]').click();
+  const ask = await page.locator('#artGap').textContent();
+  record(n, 'Artists add-them: asks first, in the page, and writes nothing yet', /Add 3 draft artist pages/.test(ask) && (await artWrites(page)).length === 0, ask);
+  await page.keyboard.press('Escape');
+  record(n, 'Artists add-them: Escape cancels the confirm', (await page.locator('#artGap [data-ap="addAsk"]').count()) === 1 && (await artWrites(page)).length === 0);
+  await page.locator('#artGap [data-ap="addAsk"]').click();
+  await page.locator('#artGap [data-ap="addYes"]').click();
+  await page.waitForFunction(() => document.getElementById('artGap').hidden, null, { timeout: 8000 });
+  w = await artWrites(page); sh = await artSheet(page, ART);
+  const made = sh.slice(lastA);
+  record(n, 'Artists add-them: one append per missing artist, in order, each below the last used row', w.length === 3 && w.every((x, i) => x.tool === 'append_values' && x.at === lastA + 1 + i && x.sheet === ART) && made.map(r => r[1]).join() === ARTX.noPage.map(x => "'" + x).join(), JSON.stringify(w.map(x => x.at)));
+  record(n, 'Artists add-them: new ids are max+1 each time, status draft, nothing else filled', made.map(r => r[0]).join() === [1, 2, 3].map(i => String(maxId + i)).join() && made.every(r => r[8] === "'draft" && r[2] === '' && r[7] === ''), JSON.stringify(made.map(r => r[0])));
+  record(n, 'Artists add-them: aliased artists got no page of their own, and the new pages show in the list', !sh.some(r => /Test Artist 17|Test Artist 18/.test(r[1])) && (await artRowsOf(page)).length === ARTX.names.length + 3 && (await page.locator('#artGap').isVisible()) === false);
+  const lastCall = (await page.evaluate(() => window.__reads)).filter(r => r === "'🎸 Artists'!A1:A").length;
+  record(n, 'Artists add-them: each new id was read back and verified', lastCall >= 3, `${lastCall} id re-reads`);
+  const all = await artWrites(page), forbidden = await page.evaluate(() => window.__forbidden);
+  record(n, 'Artists writes never leave the 🎸 tabs (and the 🎸 album tab is untouched)', forbidden.length === 0 && all.every(x => x.sheet.startsWith('🎸 ') && x.sheet !== '🎸'), JSON.stringify(forbidden.slice(0, 2)));
+  await artOverflow(page, n, 'after the writes');
+  record(n, 'Artists writes: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await context.close();
+}
+
 let COVER_IMGS = null;
 async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, seedLC) {
   console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
@@ -3454,7 +3802,7 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, 
     const bar = await page.evaluate(DISCOVER);
     record(vp.name, 'tab pill bar discovered', bar.found && bar.tabs.length > 0,
       bar.found ? `${bar.tabs.length} tabs${bar.usingRoleTab ? ' (role=tab)' : ' (all buttons in bar)'}: ${bar.tabs.map(t => t.label).join(', ')}` : 'no tab bar found');
-    record(vp.name, 'tabs: Home, Collection, Plan, Playlists, Dashboard, Tools (no Log tab by default)', bar.tabs.map(t => t.label).join() === TABS6.join(), bar.tabs.map(t => t.label).join());
+    record(vp.name, 'tabs: Home, Collection, Artists, Plan, Playlists, Dashboard, Tools (no Log tab by default)', bar.tabs.map(t => t.label).join() === TABS6.join(), bar.tabs.map(t => t.label).join());
     record(vp.name, 'Home is the tab shown on load', (await page.locator('#tab-home').getAttribute('aria-selected')) === 'true' && await page.locator('#view-home').isVisible());
 
     const seenSlugs = new Set();
@@ -3530,6 +3878,8 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, 
   await run('playlists', () => playlistsMissingTests(browser, vp, seed, wrapperUrl));
   await run('playlists', () => playlistsSourceTests(browser, vp, seed, wrapperUrl));
   await run('playlists', () => playlistsGuardTests(browser, vp, seed, wrapperUrl));
+  await run('artists', () => artistsTests(browser, vp, seed, wrapperUrl));
+  await run('artistwrites', () => artistWritesTests(browser, vp, seed, wrapperUrl));
   await run('covers', () => coverTests(browser, vp, seed, seedC, wrapperUrl));
   await run('covers', () => coverSaveTests(browser, vp, seed, seedC, wrapperUrl));
   await run('covers', () => coverInteractionTests(browser, vp, seedC, wrapperUrl));

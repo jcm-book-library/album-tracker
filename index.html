@@ -496,12 +496,12 @@ div.hbar{padding:3px 6px}
 /* detail strip under a shelf */
 .s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
 .s-dcover{position:relative;width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
-/* cover art: the picture sits over the generated sleeve, which fades away except its initials badge */
+/* cover art: the picture sits over the generated sleeve, which fades away entirely (initials badge included) */
 [data-cv]{position:relative}
 .cvimg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;opacity:0;transition:opacity .35s ease}
 .cvimg.in{opacity:1}
 [data-cv].cv svg{position:relative}
-[data-cv].cv svg > :not(.bdg){opacity:0;transition:opacity 0s .4s}
+[data-cv].cv svg > *{opacity:0;transition:opacity 0s .4s}
 .s-it.slice .cvimg{left:calc(var(--s) * var(--ox) / -100);width:var(--s);height:var(--s);max-width:none}
 .cover-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1 1 260px;min-width:0}
 .cover-ctl input{flex:1 1 200px}
@@ -676,6 +676,53 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 .pl-bar{margin-top:var(--gap-tile)}
 .pl-msg{margin:0 0 var(--gap-tile);padding:8px 12px;border-radius:8px;background:var(--raise);border:1px solid var(--line);border-left:3px solid var(--accent);font-size:14px}
 .pl-msg[data-kind="error"]{border-left-color:var(--danger)}
+
+/* Artists tab: every colour comes from the month's accent variables */
+.art-bar{display:flex;flex-wrap:wrap;gap:var(--gap-tile);align-items:center;margin-bottom:var(--gap-tile)}
+.art-bar input[type="search"]{flex:1 1 220px;min-width:0;min-height:40px}
+.art-bar select{flex:1 1 150px;min-width:0;min-height:40px}
+.art-bar .chip{min-height:40px;padding-inline:16px}
+#view-artists .btn{min-height:40px}
+#view-artists input[type="text"],#view-artists input[type="number"],#view-artists select{min-height:40px}
+.art-gap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 var(--gap-tile);font-size:14px;color:var(--muted)}
+.art-rows,.art-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.art-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:2px 8px 2px 4px}
+.art-open{all:unset;box-sizing:border-box;cursor:pointer;min-height:44px;padding:6px 8px;border-radius:8px;display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0}
+.art-open:hover,.art-open:focus-visible{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.art-open:focus-visible,.art-link:focus-visible{outline:2px solid var(--accent)}
+.art-open .nm{font-weight:600;overflow-wrap:anywhere}
+.art-open .m{color:var(--muted);font-size:13px}
+.art-tag{display:inline-block;margin-left:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);vertical-align:middle}
+.art-row .pickbtn-sm{width:40px;height:40px}
+.art-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:12px 0}
+.art-head h2{flex:1 1 200px;min-width:0;margin:0;overflow-wrap:anywhere}
+.art-head h2:focus{outline:none}
+#artDetail .s-pickbtn{min-height:40px}
+.art-sec{margin-top:var(--gap);padding-top:var(--gap-tile);border-top:1px solid var(--line)}
+.art-sec h3{margin:0 0 8px;font-family:var(--display);font-size:16px}
+.art-sec h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent)}
+.art-dl{display:grid;grid-template-columns:minmax(0,9rem) minmax(0,1fr);gap:6px 14px;margin:0 0 12px}
+.art-dl dt{color:var(--muted);font-size:13px}
+.art-dl dd{margin:0;overflow-wrap:anywhere}
+.art-dl dd.bio{white-space:pre-wrap}
+.art-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0}
+.art-form .field.w4{grid-column:1/-1}
+.art-form .acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.art-albs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;list-style:none;margin:0;padding:0}
+.art-alb{display:flex;gap:10px;align-items:center;width:100%;min-height:48px;text-align:left;background:var(--raise);border:1px solid var(--line);color:var(--fg);border-radius:10px;padding:4px 8px}
+.art-alb:hover{border-color:var(--accent)}
+.art-alb .sl{width:40px;height:40px;flex:none;border-radius:4px;overflow:hidden}
+.art-alb .sl svg{display:block;width:100%;height:100%}
+.art-alb .tt{min-width:0;overflow-wrap:anywhere;font-size:14px}
+.art-alb .tt small{display:block;color:var(--muted);font-size:12px}
+.art-item{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:4px 0;border-top:1px solid var(--line)}
+.art-item .main{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.art-item .main .note{display:block;color:var(--muted);font-size:13px}
+.art-item a,.art-link{color:var(--accent);text-decoration:underline;overflow-wrap:anywhere}
+.art-link{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline;min-height:40px;display:inline-flex;align-items:center;overflow-wrap:anywhere;max-width:100%;box-sizing:border-box}
+.art-item a{display:inline-flex;align-items:center;min-height:40px}
+.art-ask{color:var(--muted);font-size:14px}
+@media (max-width:560px){.art-form{grid-template-columns:minmax(0,1fr)}.art-dl{grid-template-columns:minmax(0,1fr);gap:0}.art-dl dd{margin-bottom:8px}}
 .pl-search{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:var(--gap-tile)}
 .pl-search input{flex:1 1 240px;height:38px}
 .pl-search .btn{height:38px}
@@ -822,7 +869,8 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button class="tab" role="tab" id="tab-home" aria-selected="true" aria-controls="view-home" type="button">Home</button>
     <button class="tab" role="tab" id="tab-collection" aria-selected="false" aria-controls="view-collection" type="button">Collection</button>
-    <button class="tab" role="tab" id="tab-log" aria-selected="false" aria-controls="view-log" type="button" hidden>Log</button>
+    <button class="tab" role="tab" id="tab-artists" aria-selected="false" aria-controls="view-artists" type="button">Artists</button>
+    <button class="tab" role="tab" id="tab-log"aria-selected="false" aria-controls="view-log" type="button" hidden>Log</button>
     <button class="tab" role="tab" id="tab-plan" aria-selected="false" aria-controls="view-plan" type="button">Plan</button>
     <button class="tab" role="tab" id="tab-playlists" aria-selected="false" aria-controls="view-playlists" type="button">Playlists</button>
     <button class="tab" role="tab" id="tab-dashboard" aria-selected="false" aria-controls="view-dashboard" type="button">Dashboard</button>
@@ -953,6 +1001,27 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
           <ul class="rows" id="firstList"></ul>
         </section>
     </div>
+  </div>
+
+  <!-- ===== Artists ===== -->
+  <div id="view-artists" role="tabpanel" aria-labelledby="tab-artists" hidden>
+    <div class="pl-msg" id="artMsg" role="status" hidden></div>
+    <section class="panel" id="artList" aria-labelledby="artListH">
+      <div class="panel-head"><h2 id="artListH">Artists</h2><span class="muted small" id="artCount"></span></div>
+      <div class="art-bar">
+        <input type="search" id="artQ" placeholder="Search name or alias" aria-label="Search artists by name or alias" autocomplete="off">
+        <select id="artSort" aria-label="Sort artists">
+          <option value="az">A to Z</option>
+          <option value="most">Most albums</option>
+          <option value="fav">Favourites first</option>
+        </select>
+        <button class="chip" type="button" id="artFav" aria-pressed="false">Favourites</button>
+      </div>
+      <p class="muted small" id="artSample" hidden>These are sample artists. Connect your sheet to see your own.</p>
+      <div class="art-gap" id="artGap" hidden></div>
+      <ul class="art-rows" id="artRows" aria-label="Artists"></ul>
+    </section>
+    <section class="panel" id="artDetail" hidden></section>
   </div>
 
   <!-- ===== Plan ===== -->
@@ -1265,6 +1334,7 @@ function sheetId() { return BUILT_SHEET_ID || sgCfg().sheetId || ''; }
 const SERVER = 'Google Sheets';
 // This app only ever touches the 🎸 tab and tabs that start with 🎸.
 const TAB = '🎸', TAB_LOG = '🎸 Log', TAB_SET = '🎸 Settings', TAB_TRK = '🎸 Tracks';
+const TAB_ART = '🎸 Artists', TAB_LNK = '🎸 Links', TAB_RES = '🎸 Resources';
 const qt = n => `'${n}'`;
 
 /* ---------- dates (local time) ---------- */
@@ -1416,13 +1486,25 @@ function snapshotState() {
     return { date: addDays(t, -ago), albumId: id, title: a.title, artist: a.artist, plays, loggedAt: `${addDays(t, -ago)}T09:${pad(i)}:00.000Z`, source: 'app', note: '', _row: i + 2 };
   });
   const tracks = SNAP_TRACKS.map(([side, no, title, length, ago], i) => ({ id: String(5001 + i), albumId: '1001', album: 'Violator', side, no: String(no), title, length, copied: ago == null ? '' : addDays(t, -ago), note: '', _row: i + 2 }));
-  return { albums, log, tracks };
+  // A few made-up artists so the Artists tab isn't empty in the sample
+  const mkA = (i, name, o) => ({ id: String(2001 + i), name, knownAs: '', established: '', origin: '', bio: '', influences: '', favourite: '', status: 'draft', notes: '', _row: i + 2, ...o });
+  const artists = [
+    mkA(0, 'Depeche Mode', { knownAs: 'DM', established: '1980', origin: 'Basildon, England', bio: 'Sample entry. Connect your sheet to see your own artists.', favourite: addDays(t, -9), status: 'done' }),
+    mkA(1, 'Kate Bush', { established: '1975', origin: 'Kent, England' }),
+    mkA(2, 'Burial', { origin: 'London, England' }),
+    mkA(3, 'Sample Band', { established: '2020' }),
+    mkA(4, 'Nobody Yet', {})
+  ];
+  const links = [{ id: '3001', artistId: '2002', otherId: '', otherName: 'Peter Gabriel', type: 'Collaboration', note: 'Sample', _row: 2 }];
+  const resources = [{ id: '4001', artistId: '2001', kind: 'Documentary', title: 'Sample documentary', url: '', note: 'Made up', _row: 2 }];
+  return { albums, log, tracks, artists, links, resources };
 }
 
 /* ---------- state ---------- */
 const snap = snapshotState();
 const state = {
   albums: snap.albums, log: snap.log, tracks: snap.tracks, tracksMissing: false, playlists: [], plMissing: false,
+  artists: snap.artists, links: snap.links, resources: snap.resources, artMissing: false, lnkMissing: false, resMissing: false,
   settings: { yearGoalAlbums: 52, rotationDays: 14, upNextSize: 10, albumOfDayMin: 8 },
   mcp: null, google: false, live: false, busy: false, logMissing: false, hasLabelled: false,
   tab: 'home', logDate: null, pick: null, editingLog: null, ratePick: {},
@@ -1505,6 +1587,8 @@ async function refresh() {
     try { trkRows = await readRange(`${qt(TAB_TRK)}!A1:I`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; trkMissing = true; }
     let plRows = [], plGone = false;
     try { plRows = await readRange(`${qt(TAB_PL)}!A1:J`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; plGone = true; }
+    const readOpt = async range => { try { return await readRange(range); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; return null; } };
+    const artRows = await readOpt(`${qt(TAB_ART)}!A1:J`), lnkRows = await readOpt(`${qt(TAB_LNK)}!A1:F`), resRows = await readOpt(`${qt(TAB_RES)}!A1:F`);
     if (!albums.length) throw { code: 'tool_error', message: `the ${TAB} tab came back empty` };
 
     const ah = (albums[0] || []).map(h => String(h).trim());
@@ -1530,6 +1614,8 @@ async function refresh() {
     state.tracks = parsedTracks || []; state.tracksMissing = !parsedTracks;
     const parsedPl = plGone ? null : plParse(plRows);
     state.playlists = parsedPl || []; state.plMissing = !parsedPl; PL.loadError = '';
+    const pa = artRows && ART_T.parse(artRows), pl = lnkRows && LNK_T.parse(lnkRows), pr = resRows && RES_T.parse(resRows);
+    state.artists = pa || []; state.artMissing = !pa; state.links = pl || []; state.lnkMissing = !pl; state.resources = pr || []; state.resMissing = !pr;
 
     state.settings.coverFolder = '';
     for (const r of settings.slice(1)) {
@@ -4721,11 +4807,399 @@ $('plSavedList').addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.matches('[data-f]')) { e.preventDefault(); const li = e.target.closest('li.pl-saved'); li.querySelector('[data-act="rename-save"]').click(); }
 });
 
+/* ---------- Artists tab: 🎸 Artists, 🎸 Links and 🎸 Resources ---------- */
+// The same write rules as Playlists: the row is found by id right before every write, only changed cells are written,
+// deleting clears the row's cells, and appends go below the last used row with the new id (highest + 1) checked afterwards.
+const ART_FIELDS = ['id', 'name', 'knownAs', 'established', 'origin', 'bio', 'influences', 'favourite', 'status', 'notes'];
+const LNK_FIELDS = ['id', 'artistId', 'otherId', 'otherName', 'type', 'note'];
+const RES_FIELDS = ['id', 'artistId', 'kind', 'title', 'url', 'note'];
+const LNK_TYPES = ['Member', 'Former member', 'Side project', 'Collaboration', 'Previously known as', 'Influenced by'];
+// What the other artist's page calls the same row
+const LNK_REVERSE = { 'Member': 'Member of', 'Former member': 'Former member of', 'Side project': 'Side project of', 'Collaboration': 'Collaboration', 'Previously known as': 'Later known as', 'Influenced by': 'Influenced' };
+const LNK_ORDER = [...LNK_TYPES, ...LNK_TYPES.map(t => LNK_REVERSE[t]).filter(l => !LNK_TYPES.includes(l))];
+const RES_KINDS = ['Book', 'Documentary', 'Film', 'Article', 'Website', 'Podcast', 'Video', 'Other'];
+const safeHttp = u => /^https?:\/\//i.test(String(u || '').trim());
+
+// One small helper per tab, built from its field list. `num` cells are numbers, `date` cells yyyy-mm-dd, everything else text prefixed with '
+function sheetTable(tab, fields, floor, o) {
+  const last = colLetter(fields.length - 1), colIx = (h, k) => h.findIndex(x => norm(x) === k.toLowerCase());
+  const cell = (k, v) => {
+    if (o.num.includes(k)) return toNum(v) > 0 ? toNum(v) : '';
+    if (o.date.includes(k)) return toDate(v) || '';
+    v = String(v ?? '').trim();
+    return v ? "'" + v : '';
+  };
+  const header = async () => ((await readRange(`${qt(tab)}!A1:${last}1`))[0] || []).map(h => String(h).trim());
+  const hits = (col, id) => col.map((r, i) => i > 0 && String(r[0] ?? '').trim() !== '' && toNum(unq(r[0])) === toNum(id) ? i + 1 : 0).filter(Boolean);
+  const put = (tool, range, values) => { assertSheetTab(tab); return state.mcp.callTool(SERVER, tool, { spreadsheetId: sheetId(), range: `${qt(tab)}!${range}`, values }, { cache: false }); };
+  async function findRow(id) {
+    const h = await header(), idCol = colIx(h, 'id');
+    if (idCol < 0) throw { code: 'tool_error', message: `The ${tab} tab has no id column` };
+    const L = colLetter(idCol), found = hits(await readRange(`${qt(tab)}!${L}1:${L}`), id);
+    if (found.length !== 1) throw { code: 'tool_error', message: found.length ? `id ${id} appears ${found.length} times in ${tab}, so nothing was written` : `id ${id} isn't in ${tab} any more, so nothing was written` };
+    return { header: h, row: found[0] };
+  }
+  return {
+    tab, fields, cell,
+    parse(rows) {
+      const h = (rows[0] || []).map(norm), ix = k => h.indexOf(k.toLowerCase());
+      if (o.need.some(k => ix(k) < 0)) return null;
+      return rows.slice(1).map((r, i) => {
+        const rec = { _row: i + 2 };
+        for (const k of fields) {
+          const raw = ix(k) >= 0 ? unq(r[ix(k)]) : '';
+          rec[k] = o.num.includes(k) ? (toNum(raw) > 0 ? String(toNum(raw)) : '') : o.date.includes(k) ? (toDate(raw) || '') : raw;
+        }
+        return rec;
+      }).filter(x => toNum(x.id) > 0);   // rows with no id are deleted rows
+    },
+    async writeFields(id, changed) {
+      const { header: h, row } = await findRow(id), cols = {};
+      for (const k of Object.keys(changed)) {
+        const c = colIx(h, k);
+        if (c < 0) throw { code: 'tool_error', message: `The ${tab} tab has no "${k}" column` };
+        cols[k] = c;
+      }
+      for (const [k, c] of Object.entries(cols)) await putCell(tab, colLetter(c), row, cell(k, changed[k]));
+    },
+    // Delete = clear that row's cells with one update. The row stays, empty, so no other row moves.
+    async clearRow(id) {
+      const { row } = await findRow(id);
+      await put('update_values', `A${row}:${last}${row}`, [Array(fields.length).fill('')]);
+    },
+    // keepId puts a deleted record back (Undo) under its own id, still below the last used row
+    async append(rec, keepId) {
+      const h = await header(), idCol = colIx(h, 'id');
+      if (idCol < 0 || o.need.some(k => colIx(h, k) < 0)) throw { code: 'tool_error', message: `The ${tab} tab has no header row with ${o.need.join(', ')}` };
+      const L = colLetter(idCol), ids = (await readRange(`${qt(tab)}!${L}2:${L}`)).map(r => toNum(unq(r[0])));
+      if (keepId && ids.includes(toNum(keepId))) throw { code: 'tool_error', message: `id ${keepId} is already in ${tab}, so nothing was restored` };
+      const id = keepId ? toNum(keepId) : Math.max(floor, ...ids) + 1;
+      // Sheets treats a blank (deleted) row as the end of the table, so append from the row after the last used one.
+      const lastRow = (await readRange(`${qt(tab)}!A1:${last}`)).length, full = { ...rec, id };
+      const row = h.map(x => { const k = fields.find(f => f.toLowerCase() === norm(x)); return k ? cell(k, full[k]) : ''; });
+      const res = await put('append_values', `A${lastRow + 1}:${last}`, [row]);
+      const found = hits(await readRange(`${qt(tab)}!${L}1:${L}`), id);
+      if (found.length !== 1) throw { code: 'tool_error', message: found.length ? `the new id ${id} appears ${found.length} times, check the sheet` : `the new id ${id} couldn't be found after saving, check the sheet` };
+      return { ...rec, id: String(id), _row: rowFromAppend(res) || found[0] };
+    }
+  };
+}
+const ART_T = sheetTable(TAB_ART, ART_FIELDS, 2000, { need: ['id', 'name'], num: ['id', 'established'], date: ['favourite'] });
+const LNK_T = sheetTable(TAB_LNK, LNK_FIELDS, 3000, { need: ['id', 'artistId', 'type'], num: ['id', 'artistId', 'otherId'], date: [] });
+const RES_T = sheetTable(TAB_RES, RES_FIELDS, 4000, { need: ['id', 'artistId', 'title'], num: ['id', 'artistId'], date: [] });
+
+// Artist writes, like playlist writes, go through one queue so quick taps can't interleave
+const artQ = { chain: Promise.resolve(), pending: 0 };
+function artRun(fn) {
+  artQ.pending++; setStatus('live', `Saving artists… (${artQ.pending})`);
+  const p = artQ.chain.then(fn);
+  artQ.chain = p.catch(() => {});
+  return p.finally(() => { artQ.pending--; setStatus('live', artQ.pending ? `Saving artists… (${artQ.pending})` : 'Artists saved'); });
+}
+const ART = { q: '', sort: 'az', fav: false, open: null, editing: false, relForm: false, resForm: false, confirmAdd: false, scroll: 0, busy: false };
+function artMsg(text, kind) { const e = $('artMsg'); e.hidden = !text; e.textContent = text || ''; e.dataset.kind = kind || ''; }
+const artFail = (what, err) => { artMsg(`${what}: ${plErr(err)}`, 'error'); if (/isn't in/.test((err && err.message) || '')) refresh(); };
+const artMissing = { artists: () => state.artMissing, links: () => state.lnkMissing, resources: () => state.resMissing };
+const artTabName = { artists: TAB_ART, links: TAB_LNK, resources: TAB_RES };
+function artGuard(what, part) {
+  if (artMissing[part || 'artists']()) { artMsg(`Create the ${artTabName[part || 'artists']} tab first.`, 'error'); return false; }
+  return liveGuard(what);
+}
+
+// An album belongs to an artist when its Artist matches the artist's name or one of their aliases (knownAs, separated by ;).
+// Names are matched before aliases, so one artist's alias never steals another artist's own name. No artist, or "Various", belongs to nobody.
+const VARIOUS = k => k === 'various' || k === 'various artists';
+function artIndex() {
+  const byKey = new Map(), albums = new Map(), unassigned = new Map();
+  for (const a of state.artists) { const k = artistKey(a.name); if (k && !byKey.has(k)) byKey.set(k, a); }
+  for (const a of state.artists) for (const al of a.knownAs.split(';')) { const k = artistKey(al); if (k && !byKey.has(k)) byKey.set(k, a); }
+  for (const al of state.albums) {
+    const k = artistKey(al.artist);
+    if (!k || VARIOUS(k)) continue;
+    const a = byKey.get(k);
+    if (a) { let l = albums.get(a.id); if (!l) albums.set(a.id, l = []); l.push(al); }
+    else { const u = unassigned.get(k) || { name: String(al.artist).trim(), n: 0 }; u.n++; unassigned.set(k, u); }
+  }
+  return { byKey, albums, unassigned };
+}
+const artAlbumsOf = (ix, a) => (ix.albums.get(a.id) || []).slice().sort((x, y) => (toNum(x.year) - toNum(y.year)) || norm(x.title).localeCompare(norm(y.title)));
+const artById = id => state.artists.find(a => a.id === String(id)) || null;
+const recPickBtn = (rec, label, cls, attrs, text) => `<button class="${cls}" type="button" ${attrs} aria-pressed="${favOf(rec)}"${text ? '' : ` aria-label="Favourite: ${esc(label)}"`}>${PICK_SVG}${text || ''}</button>`;
+
+// The favourite pick for any record that has a favourite date: pass the record, a name for messages and a function that
+// writes the changed cells. The screen changes first; if the write fails the record goes back and the message says why.
+function toggleFavRecord(rec, name, write, redraw) {
+  if (!rec || !liveGuard('Picking favourites')) return;
+  const want = !favOf(rec), prev = rec.favourite, value = want ? today() : '';
+  rec.favourite = value; redraw();
+  say(want ? `${name} added to Favourites` : `${name} removed from Favourites`);
+  artRun(() => write({ favourite: value })).then(() => spinMark(), err => {
+    rec.favourite = prev; redraw();
+    artFail(`Couldn't save the favourite for “${name}”`, err);
+  });
+}
+
+/* --- list --- */
+function renderArtists() {
+  const rec = ART.open && artById(ART.open);
+  if (ART.open && !rec) { ART.open = null; ART.editing = ART.relForm = ART.resForm = false; }
+  $('artList').hidden = !!rec; $('artDetail').hidden = !rec;
+  if (rec) renderArtDetail(rec); else renderArtList();
+}
+function renderArtList() {
+  const ix = artIndex(), miss = state.artMissing;
+  const q = normQ(ART.q);
+  let list = state.artists.map(a => ({ a, n: (ix.albums.get(a.id) || []).length, own: (ix.albums.get(a.id) || []).filter(x => labelOf(x) === 'owned').length }));
+  const total = list.length;
+  if (ART.fav) list = list.filter(x => favOf(x.a));
+  if (q) list = list.filter(x => [x.a.name, ...x.a.knownAs.split(';')].some(s => normQ(s).includes(q)));
+  const byName = (x, y) => artistKey(x.a.name).localeCompare(artistKey(y.a.name));
+  if (ART.sort === 'most') list.sort((x, y) => y.n - x.n || byName(x, y));
+  else if (ART.sort === 'fav') list.sort((x, y) => (favOf(y.a) - favOf(x.a)) || byName(x, y));
+  else list.sort(byName);
+  $('artCount').textContent = miss ? '' : total === list.length ? plural(total, 'artist') : `${list.length} of ${total}`;
+  $('artSample').hidden = state.live;
+  const fb = $('artFav'); fb.setAttribute('aria-pressed', String(ART.fav));
+  // albums with no artist page yet
+  const gap = $('artGap'), un = [...ix.unassigned.values()], albumsNo = un.reduce((s, u) => s + u.n, 0);
+  gap.hidden = miss || !un.length;
+  if (!gap.hidden) {
+    gap.innerHTML = ART.confirmAdd
+      ? `<span>Add ${plural(un.length, 'draft artist page')} for ${plural(albumsNo, 'album')}?</span><button class="btn btn-primary" type="button" data-ap="addYes" data-fk="art:gap:yes">Add them</button><button class="btn" type="button" data-ap="addNo" data-fk="art:gap:no">Cancel</button>`
+      : `<span id="artGapText">${plural(albumsNo, 'album')} ${albumsNo === 1 ? 'has' : 'have'} no artist page yet</span><button class="btn" type="button" data-ap="addAsk" data-fk="art:gap:ask">Add them</button>`;
+  }
+  artMsgMissing();
+  const ul = $('artRows'); ul.textContent = '';
+  if (miss) return;
+  if (!total) ul.appendChild(mk('li', 'empty', 'No artists yet. Add the albums’ artists with the button above, or add rows to the sheet.'));
+  else if (!list.length) ul.appendChild(mk('li', 'empty', 'No artist matches that.'));
+  ul.insertAdjacentHTML('beforeend', list.map(({ a, n, own }) => {
+    const m = [plural(n, 'album'), `${own} owned`].join(' · ');
+    return `<li class="art-row" data-id="${a.id}"><button class="art-open" type="button" data-ap="open" data-id="${a.id}" data-fk="art:row:${a.id}:open" aria-label="${esc(a.name)}, ${m}${favOf(a) ? ', favourite' : ''}${a.status === 'done' ? '' : ', draft'}">` +
+      `<span class="nm">${esc(a.name)}${a.status === 'done' ? '' : '<span class="art-tag">draft</span>'}</span><span class="m">${m}</span></button>` +
+      recPickBtn(a, a.name, 'pickbtn-sm', `data-ap="pick" data-id="${a.id}" data-fk="art:row:${a.id}:pick"`) + `</li>`;
+  }).join(''));
+}
+const ART_MISSING_TEXT = () => `Create the ${TAB_ART} tab first. Artists can't be shown or saved until it's there; everything else works as usual.`;
+function artMsgMissing() {
+  if (state.artMissing) artMsg(ART_MISSING_TEXT(), 'error');
+  else if ($('artMsg').textContent === ART_MISSING_TEXT()) artMsg('');
+}
+
+/* --- detail --- */
+const artFieldVal = (v, ph) => v ? esc(v) : `<span class="muted">${ph || 'Not set'}</span>`;
+function renderArtDetail(a) {
+  const ix = artIndex(), albums = artAlbumsOf(ix, a), box = $('artDetail');
+  let h = `<button class="btn" type="button" data-ap="back" data-fk="art:back">← Artists</button>` +
+    `<div class="art-head"><h2 id="artName" tabindex="-1" data-fk="art:head">${esc(a.name)}${a.status === 'done' ? '' : '<span class="art-tag">draft</span>'}</h2>` +
+    recPickBtn(a, a.name, 's-pickbtn', `data-ap="pick" data-id="${a.id}" data-fk="art:pill:${a.id}:pick"`, 'Favourite') + `</div>`;
+  if (ART.editing) {
+    const f = (k, label, type, w, extra = '') => `<div class="field ${w || ''}"><label for="ae-${k}">${label}</label><input id="ae-${k}" name="${k}" type="${type}" value="${esc(a[k])}" ${extra}></div>`;
+    h += `<form class="art-form" novalidate data-form="edit" aria-label="Edit ${esc(a.name)}">` +
+      f('name', 'Name', 'text', '', 'required maxlength="120"') + f('knownAs', 'Also known as (separate with ;)', 'text', '', 'maxlength="240"') +
+      f('established', 'Established (year)', 'number', '', 'inputmode="numeric" min="1000" max="2100" step="1"') + f('origin', 'Origin (city, country)', 'text', '', 'maxlength="120"') +
+      f('influences', 'Influences (comma separated)', 'text', 'w4', 'maxlength="400"') +
+      `<div class="field w4"><label for="ae-bio">Bio</label><textarea id="ae-bio" name="bio" rows="6" maxlength="1800">${esc(a.bio)}</textarea></div>` +
+      `<div class="field"><label for="ae-status">Status</label><select id="ae-status" name="status"><option value="draft"${a.status === 'done' ? '' : ' selected'}>draft</option><option value="done"${a.status === 'done' ? ' selected' : ''}>done</option></select></div>` +
+      `<div class="field w4"><label for="ae-notes">Notes</label><textarea id="ae-notes" name="notes" rows="3" maxlength="1000">${esc(a.notes)}</textarea></div>` +
+      `<div class="acts"><button class="btn btn-primary" type="submit" data-fk="art:save">Save</button><button class="btn" type="button" data-ap="editCancel" data-fk="art:cancel">Cancel</button></div></form>`;
+  } else {
+    h += `<dl class="art-dl"><dt>Also known as</dt><dd>${artFieldVal(a.knownAs.split(';').map(s => s.trim()).filter(Boolean).join(', '))}</dd>` +
+      `<dt>Established</dt><dd>${artFieldVal(a.established)}</dd><dt>Origin</dt><dd>${artFieldVal(a.origin)}</dd><dt>Influences</dt><dd>${artFieldVal(a.influences)}</dd>` +
+      `<dt>Bio</dt><dd class="bio">${artFieldVal(a.bio)}</dd><dt>Status</dt><dd>${a.status === 'done' ? 'done' : 'draft'}</dd>` +
+      (favOf(a) ? `<dt>Favourite since</dt><dd>${esc(fmtDate(a.favourite))}</dd>` : '') + `<dt>Notes</dt><dd>${artFieldVal(a.notes)}</dd></dl>` +
+      `<button class="btn" type="button" data-ap="edit" data-fk="art:edit">Edit</button>`;
+  }
+  // albums
+  h += `<div class="art-sec"><h3>Albums</h3>` + (albums.length ? `<ul class="art-albs">` + albums.map(al => {
+    const key = albumKey(al);
+    return `<li><button class="art-alb" type="button" data-ap="album" data-id="${key}" data-fk="art:alb:${key}" aria-label="Open ${esc(al.title)}${al.year ? ', ' + esc(al.year) : ''}"><span class="sl"${cvAttr(al)}>${artSvg(al.title)}</span><span class="tt">${esc(al.title)}<small>${esc([al.year, LAB[labelOf(al)].n].filter(Boolean).join(' · '))}</small></span></button></li>`;
+  }).join('') + `</ul>` : `<p class="empty">No albums by this artist yet.</p>`) + `</div>`;
+  // relationships
+  h += `<div class="art-sec"><h3>Relationships</h3>`;
+  if (state.lnkMissing) h += `<p class="empty">Create the ${TAB_LNK} tab first. Relationships can't be shown or saved until it's there.</p>`;
+  else {
+    const rows = [];
+    for (const l of state.links.slice().sort((x, y) => toNum(x.id) - toNum(y.id))) {
+      if (l.artistId === a.id) rows.push({ l, label: l.type, other: artById(l.otherId), text: l.otherName });
+      else if (l.otherId === a.id) { const o = artById(l.artistId); if (o) rows.push({ l, label: LNK_REVERSE[l.type] || l.type, other: o, text: o.name, rev: true }); }
+    }
+    for (const label of [...LNK_ORDER, ...new Set(rows.map(r => r.label))].filter((v, i, arr) => arr.indexOf(v) === i)) {
+      const g = rows.filter(r => r.label === label);
+      if (!g.length) continue;
+      h += `<h4>${esc(label)}</h4><ul class="art-items">` + g.map(r => {
+        const nm = r.other ? `<button class="art-link" type="button" data-ap="goto" data-id="${r.other.id}" data-fk="art:rel:${r.l.id}:go">${esc(r.other.name)}</button>` : esc(r.text || '(unnamed)');
+        return `<li class="art-item" data-link="${r.l.id}"><span class="main">${nm}${r.l.note ? `<span class="note">${esc(r.l.note)}</span>` : ''}</span><button class="btn" type="button" data-ap="relDel" data-id="${r.l.id}" data-fk="art:rel:${r.l.id}:del" aria-label="Delete relationship: ${esc(label)} ${esc(r.other ? r.other.name : r.text)}">Delete</button></li>`;
+      }).join('') + `</ul>`;
+    }
+    if (!rows.length) h += `<p class="empty">No relationships yet.</p>`;
+    if (ART.relForm) {
+      h += `<form class="art-form" novalidate data-form="rel" aria-label="Add relationship"><div class="field"><label for="ar-type">Type</label><select id="ar-type" name="type">${LNK_TYPES.map(t => `<option>${t}</option>`).join('')}</select></div>` +
+        `<div class="field"><label for="ar-other">Other artist (pick one or type a name)</label><input id="ar-other" name="other" type="text" list="artNames" autocomplete="off" required maxlength="120"><datalist id="artNames">${state.artists.filter(x => x.id !== a.id).map(x => `<option value="${esc(x.name)}"></option>`).join('')}</datalist></div>` +
+        `<div class="field w4"><label for="ar-note">Note</label><input id="ar-note" name="note" type="text" maxlength="240"></div>` +
+        `<div class="acts"><button class="btn btn-primary" type="submit" data-fk="art:relsave">Save</button><button class="btn" type="button" data-ap="relCancel" data-fk="art:relcancel">Cancel</button></div></form>`;
+    } else h += `<button class="btn" type="button" data-ap="relNew" data-fk="art:relnew">Add relationship</button>`;
+  }
+  h += `</div>`;
+  // resources
+  h += `<div class="art-sec"><h3>Resources</h3>`;
+  if (state.resMissing) h += `<p class="empty">Create the ${TAB_RES} tab first. Resources can't be shown or saved until it's there.</p>`;
+  else {
+    const mine = state.resources.filter(r => r.artistId === a.id).sort((x, y) => toNum(x.id) - toNum(y.id));
+    for (const kind of [...RES_KINDS, ...new Set(mine.map(r => r.kind))].filter((v, i, arr) => arr.indexOf(v) === i)) {
+      const g = mine.filter(r => r.kind === kind);
+      if (!g.length) continue;
+      h += `<h4>${esc(kind || 'Other')}</h4><ul class="art-items">` + g.map(r => {
+        const t = safeHttp(r.url) ? `<a href="${esc(r.url.trim())}" target="_blank" rel="noopener noreferrer">${esc(r.title)}</a>` : esc(r.title);
+        const note = [r.note, r.url && !safeHttp(r.url) ? r.url : ''].filter(Boolean).map(esc).join(' · ');
+        return `<li class="art-item" data-res="${r.id}"><span class="main">${t}${note ? `<span class="note">${note}</span>` : ''}</span><button class="btn" type="button" data-ap="resDel" data-id="${r.id}" data-fk="art:res:${r.id}:del" aria-label="Delete resource: ${esc(r.title)}">Delete</button></li>`;
+      }).join('') + `</ul>`;
+    }
+    if (!mine.length) h += `<p class="empty">No resources yet.</p>`;
+    if (ART.resForm) {
+      h += `<form class="art-form" novalidate data-form="res" aria-label="Add resource"><div class="field"><label for="as-kind">Kind</label><select id="as-kind" name="kind">${RES_KINDS.map(t => `<option>${t}</option>`).join('')}</select></div>` +
+        `<div class="field"><label for="as-title">Title</label><input id="as-title" name="title" type="text" required maxlength="200"></div>` +
+        `<div class="field"><label for="as-url">Link (optional)</label><input id="as-url" name="url" type="text" inputmode="url" autocomplete="off" maxlength="500"></div>` +
+        `<div class="field"><label for="as-note">Note</label><input id="as-note" name="note" type="text" maxlength="240"></div>` +
+        `<div class="acts"><button class="btn btn-primary" type="submit" data-fk="art:ressave">Save</button><button class="btn" type="button" data-ap="resCancel" data-fk="art:rescancel">Cancel</button></div></form>`;
+    } else h += `<button class="btn" type="button" data-ap="resNew" data-fk="art:resnew">Add resource</button>`;
+  }
+  h += `</div>`;
+  box.innerHTML = h;
+  box.setAttribute('aria-labelledby', 'artName');
+  artMsgMissing();
+}
+
+/* --- actions --- */
+function artOpen(id) {
+  if (!ART.open) ART.scroll = window.scrollY;
+  ART.open = String(id); ART.editing = ART.relForm = ART.resForm = false; artMsg('');
+  renderArtists(); window.scrollTo(0, 0);
+  const h = $('artName'); if (h) h.focus({ preventScroll: true });
+}
+function artBack() {
+  const id = ART.open;
+  ART.open = null; ART.editing = ART.relForm = ART.resForm = false; artMsg('');
+  renderArtists(); window.scrollTo(0, ART.scroll || 0);
+  const row = document.querySelector(`[data-fk="art:row:${id}:open"]`); if (row) row.focus({ preventScroll: true });
+}
+const artRedraw = () => { const fk = activeFk(); renderArtists(); if (fk) restoreFocus(fk); };
+function artPick(id) {
+  const a = artById(id); if (!a) return;
+  toggleFavRecord(a, a.name, f => ART_T.writeFields(a.id, f), artRedraw);
+}
+function artSaveEdit(form) {
+  const a = artById(ART.open); if (!a) return;
+  const v = k => form.elements[k].value.trim();
+  const next = { name: v('name'), knownAs: v('knownAs').split(';').map(s => s.trim()).filter(Boolean).join('; '), established: v('established'), origin: v('origin'), influences: v('influences'), bio: v('bio'), status: v('status') === 'done' ? 'done' : 'draft', notes: v('notes') };
+  if (!next.name) { artMsg('An artist needs a name.', 'error'); return; }
+  if (next.established && !(Number.isInteger(Number(next.established)) && Number(next.established) >= 1000 && Number(next.established) <= 2100)) { artMsg('Established should be a year, like 1980.', 'error'); return; }
+  const changed = {};
+  for (const [k, val] of Object.entries(next)) {
+    const old = String(a[k] ?? '').trim() || (k === 'status' ? 'draft' : '');
+    if (k === 'established' ? toNum(old) !== toNum(val) : old !== val) changed[k] = val;
+  }
+  const close = () => { ART.editing = false; artMsg(''); renderArtists(); const b = document.querySelector('[data-fk="art:edit"]'); if (b) b.focus({ preventScroll: true }); };
+  if (!Object.keys(changed).length) { close(); return; }
+  if (!artGuard('Saving')) return;
+  const prev = Object.fromEntries(Object.keys(changed).map(k => [k, a[k]]));
+  Object.assign(a, changed); close();
+  artRun(() => ART_T.writeFields(a.id, changed)).then(() => spinMark(), err => { Object.assign(a, prev); artRedraw(); artFail(`Couldn't save “${next.name}”`, err); });
+}
+async function artSaveRel(form) {
+  const a = artById(ART.open); if (!a || !artGuard('Saving', 'links')) return;
+  const text = form.elements.other.value.trim(), type = form.elements.type.value, note = form.elements.note.value.trim();
+  if (!text) { artMsg('Say who this is with.', 'error'); return; }
+  const m = artIndex().byKey.get(artistKey(text));
+  if (m && m.id === a.id) { artMsg('An artist can’t be linked to themselves.', 'error'); return; }
+  const btn = form.querySelector('[type="submit"]'); btn.disabled = true; artMsg('');
+  try {
+    const saved = await artRun(() => LNK_T.append({ artistId: a.id, otherId: m ? m.id : '', otherName: m ? '' : text, type, note }));
+    state.links.push(saved); ART.relForm = false; renderArtists();
+    const b = document.querySelector('[data-fk="art:relnew"]'); if (b) b.focus({ preventScroll: true });
+    toast(`Added ${type.toLowerCase()}: ${m ? m.name : text}`); say(`Relationship added`);
+  } catch (err) { btn.disabled = false; artFail('Not saved', err); }
+}
+async function artSaveRes(form) {
+  const a = artById(ART.open); if (!a || !artGuard('Saving', 'resources')) return;
+  const title = form.elements.title.value.trim(), kind = form.elements.kind.value, url = form.elements.url.value.trim(), note = form.elements.note.value.trim();
+  if (!title) { artMsg('A resource needs a title.', 'error'); form.elements.title.focus(); return; }
+  const btn = form.querySelector('[type="submit"]'); btn.disabled = true; artMsg('');
+  try {
+    const saved = await artRun(() => RES_T.append({ artistId: a.id, kind, title, url, note }));
+    state.resources.push(saved); ART.resForm = false; renderArtists();
+    const b = document.querySelector('[data-fk="art:resnew"]'); if (b) b.focus({ preventScroll: true });
+    toast(`Added ${kind.toLowerCase()}: ${title}`); say('Resource added');
+  } catch (err) { btn.disabled = false; artFail('Not saved', err); }
+}
+// Delete clears the row. The record leaves the screen at once and comes back if the write fails; Undo appends it again under its own id.
+function artDelete(listKey, T, part, rec, label) {
+  if (!artGuard('Deleting', part)) return;
+  state[listKey] = state[listKey].filter(x => x !== rec); artRedraw(); say(`Deleted ${label}`);
+  const del = artRun(() => T.clearRow(rec.id));
+  const t = toast(`Deleted ${label}`, { undo: () => {
+    artRun(async () => { const saved = await T.append(rec, rec.id); rec._row = saved._row; state[listKey].push(rec); })
+      .then(() => { artRedraw(); say(`Restored ${label}`); }, err => artFail(`Couldn't restore ${label}`, err));
+  } });
+  del.catch(err => { state[listKey].push(rec); t.close(); artRedraw(); artFail(`Couldn't delete ${label}`, err); });
+}
+async function artAddMissing() {
+  if (!artGuard('Adding artists')) return;
+  const names = [...artIndex().unassigned.values()].map(u => u.name);
+  ART.confirmAdd = false; renderArtists();
+  let made = 0;
+  try {
+    await artRun(async () => { for (const name of names) { state.artists.push(await ART_T.append(Object.fromEntries(ART_FIELDS.map(k => [k, k === 'name' ? name : k === 'status' ? 'draft' : ''])))); made++; } });
+    artMsg(`Added ${plural(made, 'artist page')}.`);
+  } catch (err) { artFail(`Added ${made} of ${names.length} before stopping`, err); }
+  renderArtists();
+}
+
+/* --- wiring --- */
+$('artQ').addEventListener('input', e => { ART.q = e.target.value; renderArtList(); });
+$('artSort').addEventListener('change', e => { ART.sort = e.target.value; renderArtList(); });
+$('artFav').addEventListener('click', () => { ART.fav = !ART.fav; renderArtList(); });
+$('view-artists').addEventListener('click', e => {
+  const b = e.target.closest('[data-ap]'); if (!b) return;
+  const id = b.dataset.id, fk = b.dataset.fk;
+  switch (b.dataset.ap) {
+    case 'open': case 'goto': artOpen(id); break;
+    case 'back': artBack(); break;
+    case 'pick': artPick(id); break;
+    case 'edit': ART.editing = true; renderArtists(); { const i = $('ae-name'); if (i) i.focus(); } break;
+    case 'editCancel': ART.editing = false; renderArtists(); { const x = document.querySelector('[data-fk="art:edit"]'); if (x) x.focus(); } break;
+    case 'album': { const al = albumByKey(id); if (al) openAlbumDialog(al); break; }
+    case 'relNew': ART.relForm = true; renderArtists(); { const i = $('ar-other'); if (i) i.focus(); } break;
+    case 'relCancel': ART.relForm = false; renderArtists(); { const x = document.querySelector('[data-fk="art:relnew"]'); if (x) x.focus(); } break;
+    case 'resNew': ART.resForm = true; renderArtists(); { const i = $('as-title'); if (i) i.focus(); } break;
+    case 'resCancel': ART.resForm = false; renderArtists(); { const x = document.querySelector('[data-fk="art:resnew"]'); if (x) x.focus(); } break;
+    case 'relDel': { const l = state.links.find(x => x.id === id); if (l) { const o = artById(l.artistId === ART.open ? l.otherId : l.artistId); artDelete('links', LNK_T, 'links', l, `${l.type}: ${o ? o.name : l.otherName || 'relationship'}`); } break; }
+    case 'resDel': { const r = state.resources.find(x => x.id === id); if (r) artDelete('resources', RES_T, 'resources', r, `“${r.title}”`); break; }
+    case 'addAsk': ART.confirmAdd = true; renderArtList(); restoreFocus('art:gap:yes'); break;
+    case 'addNo': ART.confirmAdd = false; renderArtList(); restoreFocus('art:gap:ask'); break;
+    case 'addYes': artAddMissing(); break;
+  }
+  void fk;
+});
+$('view-artists').addEventListener('submit', e => {
+  const f = e.target.closest('form[data-form]'); if (!f) return;
+  e.preventDefault();
+  if (f.dataset.form === 'edit') artSaveEdit(f); else if (f.dataset.form === 'rel') artSaveRel(f); else artSaveRes(f);
+});
+// Escape closes whichever form is open and puts focus back on the button that opened it
+$('view-artists').addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !(ART.editing || ART.relForm || ART.resForm || ART.confirmAdd)) return;
+  e.preventDefault();
+  const sel = ART.editing ? 'editCancel' : ART.relForm ? 'relCancel' : ART.resForm ? 'resCancel' : 'addNo';
+  const btn = $('view-artists').querySelector(`[data-ap="${sel}"]`); if (btn) btn.click();
+});
+
 /* ---------- tabs and rendering ---------- */
 // A tab needs an entry here, a tab button #tab-<name> and a panel #view-<name>.
 const TABS = {
   home: { render: renderHome },
   collection: { render: renderCollection },
+  artists: { render: renderArtists },
   log: { render: renderLogTab },
   plan: { render: renderPlan },
   playlists: { render: renderPlaylists },

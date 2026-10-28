@@ -9,6 +9,11 @@ Started 2026-10-18.
 3. Dashboard
 4. Tools and Discover (album of the day, on this day, anniversaries)
 
+## Stage B: Artists (built 2026-10-25)
+
+- An Artists tab with a list, an artist page, relationships between artists and resources (books, documentaries and so on) kept against an artist.
+  Data lives in `🎸 Artists`, `🎸 Links` and `🎸 Resources`; see the README's sheet changes. Later: artists in the Home favourites, and a Home tile.
+
 ## Later: listening and visuals
 
 ### V1. Local player with a real visualiser (recommended first)

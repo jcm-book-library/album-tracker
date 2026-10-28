@@ -4,7 +4,7 @@ Album tracker (named Sleeves & Grooves until 24 Oct 2026; the repo keeps the nam
 (`jcm-book-library/my-book-library`). It is a friendlier front end for the
 🎸 tab of the "Entertainment Tracker" Google Sheet, which stays the source of truth.
 
-Status: Log, Plan, Library, Dashboard, Tools, Discover and Tracks built. Private artifact: https://claude.ai/artifact/7WTduYo8DU1jx1Hjx25vd3
+Status: Log, Plan, Library, Dashboard, Tools, Discover, Tracks and Artists built. Private artifact: https://claude.ai/artifact/7WTduYo8DU1jx1Hjx25vd3
 See [ROADMAP.md](ROADMAP.md).
 
 ## Hosting
@@ -25,7 +25,15 @@ See [ROADMAP.md](ROADMAP.md).
 
 ## What's in the app
 
-- Tabs: Home, Collection, Plan, Playlists, Dashboard, Tools.
+- Tabs: Home, Collection, Artists, Plan, Playlists, Dashboard, Tools.
+- **Artists** lists the artists with an album count and an owned count, a search (name or alias), a sort (A to Z, Most albums, Favourites first)
+  and a Favourites filter. An artist page shows the details (aliases, established, origin, influences, bio, status, notes) with an Edit form,
+  the artist's albums, **Relationships** (Member, Former member, Side project, Collaboration, Previously known as, Influenced by; the other artist's
+  page shows the reverse, e.g. "Member of") and **Resources** (books, documentaries and so on, with a link when the address starts with http:// or https://).
+  Data lives in `🎸 Artists`, `🎸 Links` and `🎸 Resources`. An album belongs to an artist when its Artist matches the artist's name or one of their
+  aliases (`knownAs`, separated by `;`); no artist, or "Various", belongs to nobody. "N albums have no artist page yet" with **Add them** creates the
+  missing artists as drafts after a confirm. The guitar pick works as it does for albums (it writes that artist's `favourite` date).
+  Deleting a relationship or resource clears its row and offers Undo (Undo adds it back under its own id, below the last used row).
 - **Playlists** builds playlists from a pool of tracks (the `Classical` tab, read-only; another sheet and tab; or an uploaded CSV): Browse the pool,
   Build with presets and rules (era, form, mood, work-friendly, energy, BPM, composer, target length; ordered by energy, key flow, era or shuffle),
   and Save to `🎸 Playlists`. "Copy for Spotify" copies track links in order to paste into a Spotify playlist. The listening log is hidden unless "Show listening log" is switched on in Tools
@@ -97,6 +105,20 @@ See [ROADMAP.md](ROADMAP.md).
   so the newest albums sit at the far end and the oldest are closest to the incinerator.
   Backup before this change: `🎸 backup 2026-10-25 (before Labelled)`.
 - Checked by script afterwards: A–P identical to the backup, Favourite column empty, dropdown chips intact; later A–Q identical to the second backup and Labelled empty.
+
+### 2026-10-25 (Artists)
+
+- New tabs, all read and written by the app; 🎸 itself is unchanged (no new columns):
+  - `🎸 Artists`: `id | name | knownAs | established | origin | bio | influences | favourite | status | notes`.
+    `id` is a permanent number from 2001 (highest + 1; duplicates highlighted red). `knownAs` holds aliases separated by `;` (also used to match albums).
+    `established` is a year or blank. `favourite` is a date (yyyy-mm-dd), blank = not a favourite, the same meaning as the albums' Favourite column.
+    `status` is `draft` or `done` (blank = draft).
+  - `🎸 Links`: `id | artistId | otherId | otherName | type | note`. `id` from 3001. Reads "<artist> <type> <other>"; `otherId` is an artist in `🎸 Artists`
+    (the row then shows on both pages), or blank with `otherName` for someone without a page (`otherId` wins if both are set).
+    `type` is Member, Former member, Side project, Collaboration, Previously known as or Influenced by.
+  - `🎸 Resources`: `id | artistId | kind | title | url | note`. `id` from 4001. `kind` is Book, Documentary, Film, Article, Website, Podcast, Video or Other.
+    `url` is optional text; the app links it only when it starts with http:// or https://.
+  - Deleting in the app clears the row's cells (found by id first); the row stays, empty, and new rows go below the last used row.
 
 ### 2026-10-25 (Playlists)
 
