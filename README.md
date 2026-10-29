@@ -38,6 +38,13 @@ See [ROADMAP.md](ROADMAP.md).
   Build with presets and rules (era, form, mood, work-friendly, energy, BPM, composer, target length; ordered by energy, key flow, era or shuffle),
   and Save to `🎸 Playlists`. "Copy for Spotify" copies track links in order to paste into a Spotify playlist. The listening log is hidden unless "Show listening log" is switched on in Tools
   (this browser only); its code and the `🎸 Log` tab are kept for the later MP3 player.
+- **Find cover** picks a cover for an album from Cover Art Archive when it has no Drive file. A **Find cover** button (it reads **Change cover** once a cover is chosen)
+  sits in a shelf's detail strip and in the Edit album footer; Tools → Look → Covers says "N albums have no cover yet" and **Find covers** works through them:
+  favourites first, then Owned, then rated 8 to 10, then the rest, ties by title, with "3 of 41" and the reason (Favourite, Owned, Rated 9). The picker searches MusicBrainz
+  (one call about every 1.3 seconds, never closer than 1.1) and shows up to six candidates with their pictures; tap one, or choose **None of these** (the album is not offered again
+  unless "Show ones I said none to" is on), **Skip** (writes nothing, offered again next time) or **Done for now**. **Remove cover choice** clears the row, with Undo.
+  The choice is stored as a small reference in `🎸 Covers`, never as an image; the picture is loaded straight from coverartarchive.org. A Drive file always wins over a reference,
+  and a picture that fails to load leaves the generated sleeve. Everything is hidden until the `🎸 Covers` tab exists (Tools says "Create the 🎸 Covers tab first.").
 - **Collection** shows the albums as shelves. A shelf is a label; the label is worked out from the album's row, first match wins:
   Didn't like (Status) → Owned (Status Owned, or Format Vinyl (Owned)) → Vinyl wish list (Status Purchase, or Format Vinyl (Wanted))
   → Upcoming (Coming Soon) → To hear (Listen) → Heard (Listened, or any rating).
@@ -128,6 +135,16 @@ See [ROADMAP.md](ROADMAP.md).
   - Deleting a playlist in the app clears that row's cells (found by id first); the row stays, empty, and new rows go below the last used row.
 - The app also **reads** (never writes) the `Classical` tab, and any sheet link and tab the owner pastes into the Playlists tab, as the pool of tracks.
   The only writes in this feature go to `🎸 Playlists`.
+
+### 2026-10-28 (Find cover)
+
+- New tab `🎸 Covers`, one row per album that has had a cover chosen (or looked for): `id | source | sourceId | chosen | note`.
+  - `id`: the album's own `id` from 🎸 (a number; the key, so one row per album and a second row for the same id is an error, "appears 2 times", and nothing is written).
+  - `source`: `caa-rg` (a Cover Art Archive picture for a MusicBrainz release-group) or `none` (you looked and nothing fit; the album is not offered again until retried).
+  - `sourceId`: the release-group id (text) for `caa-rg`, blank for `none`. The app shows `https://coverartarchive.org/release-group/<sourceId>/front-500`; no image is ever stored.
+  - `chosen`: a date (yyyy-mm-dd). `note`: free text.
+  - Changing a choice writes only the changed cells of that row (found by id first). Removing a choice clears that row's cells (the row stays, empty); new rows go below the last used row and the id is checked afterwards.
+- The tab is created by hand (header row only); until it exists the app hides every Find cover control. 🎸 itself is unchanged (no new columns).
 
 ## Look
 

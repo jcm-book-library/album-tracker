@@ -576,6 +576,26 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
 .field textarea{min-height:70px;resize:vertical}
 .sec-label{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700;margin-top:6px}
 
+/* find a cover */
+#covDlg{width:min(720px,calc(100vw - 32px))}
+.cov-album{font-size:13px;overflow-wrap:anywhere}
+.cov-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px}
+.cov-prog{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0}
+.cov-prog b{font-family:var(--display);font-size:18px}
+.cov-msg{margin:0;font-size:14px;overflow-wrap:anywhere}
+.cov-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cov-grid[hidden]{display:none}
+.cov-cand{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:100%;text-align:left;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--raise);color:var(--fg)}
+.cov-cand:hover,.cov-cand:focus-visible{border-color:var(--accent)}
+.cov-img{display:block;position:relative;width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--surface);margin-bottom:2px}
+.cov-img img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
+.cov-cand .t{font-weight:600;font-size:13px;overflow-wrap:anywhere}
+.cov-cand .m{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.cov-foot{flex-wrap:wrap;align-items:center}
+.cov-acts{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.cover-find{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;flex:1 1 100%}
+@media (max-width:560px){.cov-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cov-body{padding:14px 14px 16px}}
+
 /* tracks dialog */
 .trk-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px}
 .trk-prog{display:flex;flex-direction:column;gap:8px}
@@ -1243,7 +1263,9 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
       <div class="look-row"><label for="coverLink">Covers</label>
         <div class="cover-ctl"><input type="text" id="coverLink" autocomplete="off" spellcheck="false" placeholder="Cover folder link" aria-label="Cover folder link"><button class="btn" type="button" id="coverSave">Save</button><button class="btn" type="button" id="coverClear">Clear</button></div>
         <p class="cover-stat muted" id="coverStat" role="status"></p>
-        <button class="btn" type="button" id="coverConnect" hidden>Connect again</button></div>
+        <button class="btn" type="button" id="coverConnect" hidden>Connect again</button>
+        <p class="cover-stat muted" id="covFindStat" role="status"></p>
+        <div class="cover-find"><button class="btn" type="button" id="covFindBtn">Find covers</button><label class="switch" id="covNoneWrap"><input type="checkbox" role="switch" id="covShowNone"><span>Show ones I said none to</span></label></div></div>
       <div class="look-row"><label for="lookLog">Listening log</label><label class="switch"><input type="checkbox" role="switch" id="lookLog"><span>Show listening log</span></label></div>
     </section>
     </div>
@@ -1275,8 +1297,20 @@ dialog::backdrop{background:rgba(8,6,14,.65)}
   <form id="albumForm" method="dialog">
     <div class="dlg-head"><h2 id="dlgTitle">Edit album</h2><button class="btn" type="button" id="dlgClose">Close</button></div>
     <div class="dlg-body" id="dlgBody"></div>
-    <div class="dlg-foot"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex-wrap:wrap"><button class="btn" type="button" id="dlgTracks" hidden>Tracks</button><span class="muted" id="dlgMsg" style="font-size:13px;align-self:center"></span></div><button class="btn btn-primary" type="submit" id="dlgSave">Save</button></div>
+    <div class="dlg-foot"><div style="display:flex;gap:10px;align-items:center;min-width:0;flex-wrap:wrap"><button class="btn" type="button" id="dlgTracks" hidden>Tracks</button><button class="btn" type="button" id="dlgCover" hidden>Find cover</button><span class="muted" id="dlgMsg" style="font-size:13px;align-self:center"></span></div><button class="btn btn-primary" type="submit" id="dlgSave">Save</button></div>
   </form>
+</dialog>
+
+<dialog id="covDlg" aria-labelledby="covTitle">
+  <div class="dlg-head"><div style="min-width:0"><h2 id="covTitle" tabindex="-1">Find cover</h2><div class="cov-album"><b id="covAlbum"></b> <span class="muted" id="covArtist"></span></div></div><button class="btn" type="button" id="covClose">Close</button></div>
+  <div class="cov-body">
+    <p class="cov-prog" id="covProg" hidden><b class="tnum" id="covProgText"></b><span class="s-tag" id="covWhy" hidden></span></p>
+    <p class="cov-msg" id="covMsg" role="status" hidden></p>
+    <p class="trk-msg" id="covFail" role="alert" data-kind="error" hidden></p>
+    <div><button class="btn" type="button" id="covRetry" hidden>Try again</button></div>
+    <ul class="cov-grid" id="covGrid" hidden></ul>
+  </div>
+  <div class="dlg-foot cov-foot"><div class="cov-acts"><button class="btn" type="button" id="covNone">None of these</button><button class="btn" type="button" id="covSkip">Skip</button><button class="btn" type="button" id="covRemove" hidden>Remove cover choice</button></div><button class="btn" type="button" id="covDone" hidden>Done for now</button></div>
 </dialog>
 
 <dialog id="tracksDlg" aria-labelledby="trkTitle">
@@ -1320,7 +1354,7 @@ function sheetId() { return BUILT_SHEET_ID || sgCfg().sheetId || ''; }
 const SERVER = 'Google Sheets';
 // This app only ever touches the 🎸 tab and tabs that start with 🎸.
 const TAB = '🎸', TAB_LOG = '🎸 Log', TAB_SET = '🎸 Settings', TAB_TRK = '🎸 Tracks';
-const TAB_ART = '🎸 Artists', TAB_LNK = '🎸 Links', TAB_RES = '🎸 Resources';
+const TAB_ART = '🎸 Artists', TAB_LNK = '🎸 Links', TAB_RES = '🎸 Resources', TAB_COV = '🎸 Covers';
 const qt = n => `'${n}'`;
 
 /* ---------- dates (local time) ---------- */
@@ -1491,6 +1525,7 @@ const snap = snapshotState();
 const state = {
   albums: snap.albums, log: snap.log, tracks: snap.tracks, tracksMissing: false, playlists: [], plMissing: false,
   artists: snap.artists, links: snap.links, resources: snap.resources, artMissing: false, lnkMissing: false, resMissing: false,
+  covers: [], covMissing: true,
   settings: { yearGoalAlbums: 52, rotationDays: 14, upNextSize: 10, albumOfDayMin: 8 },
   mcp: null, google: false, live: false, busy: false, logMissing: false, hasLabelled: false,
   tab: 'home', logDate: null, pick: null, editingLog: null, ratePick: {},
@@ -1575,6 +1610,7 @@ async function refresh() {
     try { plRows = await readRange(`${qt(TAB_PL)}!A1:J`); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; plGone = true; }
     const readOpt = async range => { try { return await readRange(range); } catch (e) { if (e && (e.code === 'google_signin' || e.code === 'needs_reauth')) throw e; return null; } };
     const artRows = await readOpt(`${qt(TAB_ART)}!A1:J`), lnkRows = await readOpt(`${qt(TAB_LNK)}!A1:F`), resRows = await readOpt(`${qt(TAB_RES)}!A1:F`);
+    const covRows = await readOpt(`${qt(TAB_COV)}!A1:E`);
     if (!albums.length) throw { code: 'tool_error', message: `the ${TAB} tab came back empty` };
 
     const ah = (albums[0] || []).map(h => String(h).trim());
@@ -1602,6 +1638,8 @@ async function refresh() {
     state.playlists = parsedPl || []; state.plMissing = !parsedPl; PL.loadError = '';
     const pa = artRows && ART_T.parse(artRows), pl = lnkRows && LNK_T.parse(lnkRows), pr = resRows && RES_T.parse(resRows);
     state.artists = pa || []; state.artMissing = !pa; state.links = pl || []; state.lnkMissing = !pl; state.resources = pr || []; state.resMissing = !pr;
+    const pc = covRows && COV_T.parse(covRows);
+    state.covers = pc || []; state.covMissing = !pc; covRefsRebuild();
 
     state.settings.coverFolder = '';
     for (const r of settings.slice(1)) {
@@ -2211,7 +2249,7 @@ function detailHtml(a, S, ctx) {
   const acts = `<button class="lblchip" type="button" data-sa="chip" data-ctx="${ctx}" data-id="${key}" data-fk="${fk('chip')}" aria-haspopup="menu" aria-expanded="false" aria-label="Label: ${esc(LAB[lab].n)}. Change label for ${esc(a.title)}">${esc(LAB[lab].n)} ▾</button>` +
     `<button class="s-pickbtn" type="button" data-sa="pick" data-id="${key}" data-fk="${fk('pick')}" aria-pressed="${favOf(a)}">${PICK_SVG}Favourite</button>` +
     (toNum(a.id) ? `<button class="s-act" type="button" data-sa="tracks" data-id="${key}">Tracks</button>` : '') +
-    `<button class="s-act" type="button" data-sa="edit" data-id="${key}">Edit</button>` +
+    `<button class="s-act" type="button" data-sa="edit" data-id="${key}">Edit</button>` + covActsHtml(a, key) +
     (u ? `<a class="s-buy" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Buy ${esc(a.title)} at ${esc(shopName(u))}">Buy · ${esc(shopName(u))}</a>` : '');
   return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover"${cvAttr(a)}>${artSvg(a.title)}</div>` +
     `<div class="s-dinfo"><h3>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div>` +
@@ -2391,6 +2429,8 @@ document.addEventListener('click', e => {
   else if (act === 'chip') { if (menu && menuOpener === b) closeMenu(true); else openMenu(b); }
   else if (act === 'tracks') openTracks(a);
   else if (act === 'edit') openAlbumDialog(a);
+  else if (act === 'cover') covOpen(a);
+  else if (act === 'coverx') covRemove(a);
 });
 
 /* ---------- the stack: pointer, focus and keys ---------- */
@@ -2565,6 +2605,7 @@ function openAlbumDialog(album) {
   $('dlgTitle').textContent = album ? 'Edit album' : 'Add an album';
   $('dlgMsg').textContent = album ? `id ${album.id}` : 'A new id is given when you save';
   $('dlgTracks').hidden = !(album && toNum(album.id));
+  covDialogButton(album);
   const body = $('dlgBody'); body.textContent = '';
   for (const f of FORM) {
     if (f.sec) { const d = document.createElement('div'); d.className = 'sec-label'; d.textContent = f.sec; body.appendChild(d); continue; }
@@ -5273,6 +5314,7 @@ $('addAlbumBtn').addEventListener('click', () => openAlbumDialog(null));
 $('albumForm').addEventListener('submit', saveAlbumDialog);
 $('dlgClose').addEventListener('click', () => $('albumDlg').close());
 $('dlgTracks').addEventListener('click', () => { if (editing) openTracks(editing); });
+$('dlgCover').addEventListener('click', () => { if (editing) covOpen(editing); });
 
 /* ---------- cover art ----------
    One image per album in a private Google Drive folder, named by the album id (1043.jpg, 1043.png ...). The folder id is kept in
@@ -5282,7 +5324,8 @@ const DRIVE = 'Google Drive';
 const cov = {
   folder: '', files: null, mem: new Map(), failed: new Set(), pending: new Set(), queue: [], active: 0, epoch: 0, gen: 0,
   st: 'none',      // none | listing | ok | noaccess | error
-  msg: '', io: null, mo: null
+  msg: '', io: null, mo: null,
+  refs: new Map(), none: new Set(), refFailed: new Set()   // 🎸 Covers: album id -> Cover Art Archive image address; ids marked none; addresses that failed to load this session
 };
 const cover = { msg: '' };
 const coverFolderFrom = v => {
@@ -5390,18 +5433,20 @@ function applyCover(el, src, fade) {
   el.classList.add('cv');
 }
 function stripCovers() {
-  document.querySelectorAll('[data-cv].cv').forEach(el => { el.classList.remove('cv'); el.querySelectorAll(':scope > img.cvimg').forEach(i => i.remove()); });
+  document.querySelectorAll('[data-cv]').forEach(el => { el.classList.remove('cv'); el.querySelectorAll(':scope > img.cvimg').forEach(i => i.remove()); });
   cov.epoch++;
 }
 // A sleeve (or strip, or tile) that carries data-cv: show what is cached now, and watch it for the screen when it has a file that needs downloading
 function covBind(el) {
   el._cvg = cov.epoch;
   const id = el.dataset.cv, hit = cov.mem.get(id), f = cov.files && cov.files.get(id);
-  if (hit && el.querySelector(':scope > img.cvimg') == null) applyCover(el, hit.src, false);
+  const cur = el.querySelector(':scope > img.cvimg');
+  if (hit && (!cur || cur._ref)) { if (cur) cur._ref = ''; applyCover(el, hit.src, false); }   // a Drive file always wins over a chosen reference
+  else if (!hit && !f && cov.refs.size) covRefApply(el, id);
   if (f && (!hit || hit.mod !== f.mod) && !cov.failed.has(id) && covIO()) { cov.io.unobserve(el); cov.io.observe(el); }
 }
 function covScan() {
-  if (!cov.folder && !cov.mem.size) return;
+  if (!cov.folder && !cov.mem.size && !cov.refs.size) return;
   document.querySelectorAll('[data-cv]').forEach(el => { if (el._cvg !== cov.epoch) covBind(el); });
 }
 function covIO() {
@@ -5458,7 +5503,7 @@ async function coverInit() {
     covDrop(folder);
   }
   cov.msg = '';
-  if (!folder) { cov.st = 'none'; renderCovers(); return; }
+  if (!folder) { cov.st = 'none'; cov.epoch++; covScan(); renderCovers(); return; }   // covScan: chosen references take over from the pictures just removed
   cov.st = 'listing'; renderCovers();
   try {
     if (changed) { const cached = await covLoad(folder); if (gen !== cov.gen) return; for (const [k, v] of cached) cov.mem.set(k, v); cov.epoch++; covScan(); renderCovers(); }
@@ -5505,6 +5550,7 @@ function renderCovers() {
   if (saved && (cov.st === 'noaccess' || cov.st === 'error')) t = 'Folder saved. ' + t;
   stat.textContent = cover.msg || t;
   btn.hidden = !(hint && !cover.msg);
+  renderCoverFind();
 }
 async function saveCover(clear) {
   const inp = $('coverLink');
@@ -5532,6 +5578,311 @@ $('coverLink').addEventListener('input', () => { if (cover.msg) { cover.msg = ''
 $('coverConnect').addEventListener('click', () => googleConnect({ consent: true }));
 // Sleeves are drawn all over the place and redrawn often: pick up new ones as they appear, before they are painted
 try { new MutationObserver(() => covScan()).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+
+/* ---------- find a cover: 🎸 Covers and Cover Art Archive ----------
+   A chosen cover is a small reference in 🎸 Covers (id = the album's id, source caa-rg, sourceId = a MusicBrainz release-group id), never an image file.
+   The picture is Cover Art Archive's own address, loaded as a plain <img>. A Drive file always wins over a reference.
+   MusicBrainz is asked about one album at a time, at most about once a second; the Cover Art Archive pictures are not throttled. */
+const COV_FIELDS = ['id', 'source', 'sourceId', 'chosen', 'note'];
+const COV_T = sheetTable(TAB_COV, COV_FIELDS, 0, { need: ['id', 'source'], num: ['id'], date: ['chosen'] });
+const MBID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const covUrl = (mbid, size = 500) => `https://coverartarchive.org/release-group/${mbid}/front-${size}`;   // the app has one picture size for sleeves, so 500 everywhere; 250 for the picker's small thumbnails
+const MB_GAP = 1300;   // ms between MusicBrainz calls (they allow about one a second; the margin covers timer and network jitter, so no two calls are ever closer than 1100)
+const COV_MSG = { net: "Couldn't reach MusicBrainz. Check your connection and try again.", none: 'No cover pictures found for this one. Choose “None of these” if nothing fits, or Skip.' };
+
+const covRec = id => state.covers.find(r => r.id === String(toNum(id))) || null;
+const covHasRef = a => !!a && cov.refs.has(String(toNum(a.id)));
+const covHasDrive = id => !!((cov.files && cov.files.has(id)) || cov.mem.has(id));
+// Shown whenever the tab exists, and in sample mode (where the buttons are there but disabled)
+const covShow = () => !state.live || !state.covMissing;
+function covRefsRebuild() {
+  cov.refs = new Map(); cov.none = new Set();
+  for (const r of state.covers) {
+    const id = String(toNum(r.id));
+    if (cov.refs.has(id) || cov.none.has(id)) continue;   // two rows for one album: the first is shown, and writing is refused
+    if (r.source === 'caa-rg' && MBID.test(r.sourceId)) cov.refs.set(id, covUrl(r.sourceId));
+    else if (r.source === 'none') cov.none.add(id);
+  }
+}
+// Draw a reference on a sleeve/strip/tile that has no Drive picture. The sleeve stays until the picture has loaded; a picture that fails is dropped and remembered for the session.
+function covRefApply(el, id) {
+  const url = cov.refs.get(id);
+  if (!url || cov.refFailed.has(url)) return;
+  const had = el.querySelector(':scope > img.cvimg');
+  if (had && !had._ref) return;   // a Drive picture is already there
+  applyCover(el, url, true);
+  const img = el.querySelector(':scope > img.cvimg');
+  if (!img) return;
+  img._ref = url;
+  if (!img._wired) {
+    img._wired = true;
+    img.addEventListener('load', () => { if (img._ref && img.naturalWidth && img.parentElement) img.parentElement.classList.add('cv'); });
+    img.addEventListener('error', () => covRefFailed(img));
+  }
+  el.classList.toggle('cv', img.complete && img.naturalWidth > 0);
+}
+function covRefFailed(img) {
+  const url = img._ref; if (!url) return;
+  cov.refFailed.add(url);
+  document.querySelectorAll('[data-cv] > img.cvimg').forEach(i => {
+    if (i._ref !== url) return;
+    const el = i.parentElement; i.remove();
+    if (!el.querySelector(':scope > img.cvimg')) el.classList.remove('cv');
+  });
+}
+// After the references change on screen (a choice, a removal, a revert): re-read them, drop pictures that no longer match, redraw
+function covApply() {
+  covRefsRebuild();
+  document.querySelectorAll('[data-cv] > img.cvimg').forEach(i => {
+    if (!i._ref || cov.refs.get(i.parentElement.dataset.cv) === i._ref) return;
+    const el = i.parentElement; i.remove();
+    if (!el.querySelector(':scope > img.cvimg')) el.classList.remove('cv');
+  });
+  cov.epoch++;
+  render(); renderCovers();
+  if (document.getElementById('albumDlg').open) covDialogButton(editing);
+}
+
+/* --- buttons --- */
+function covActsHtml(a, key) {
+  if (!toNum(a.id) || !covShow()) return '';
+  const dis = isLive() ? '' : ` disabled title="${esc(connectHint())}"`, has = covHasRef(a);
+  return `<button class="s-act" type="button" data-sa="cover" data-id="${key}"${dis}>${has ? 'Change cover' : 'Find cover'}</button>` +
+    (has ? `<button class="s-act" type="button" data-sa="coverx" data-id="${key}"${dis}>Remove cover choice</button>` : '');
+}
+function covDialogButton(album) {
+  const b = document.getElementById('dlgCover'); if (!b) return;
+  b.hidden = !(album && toNum(album.id) && covShow());
+  b.textContent = covHasRef(album) ? 'Change cover' : 'Find cover';
+  b.disabled = !isLive(); b.title = b.disabled ? connectHint() : '';
+}
+// The albums to offer: no Drive picture, no reference, and (unless asked for) not marked none. Favourites first, then Owned, then rated 8 to 10, then the rest; ties by title.
+function covQueueBuild(showNone) {
+  const out = [];
+  for (const a of state.albums) {
+    if (!toNum(a.id)) continue;
+    const id = String(toNum(a.id));
+    if (covHasDrive(id) || cov.refs.has(id) || (cov.none.has(id) && !showNone)) continue;
+    const r = toNum(a.rating), tier = favOf(a) ? 0 : labelOf(a) === 'owned' ? 1 : r >= 8 ? 2 : 3;
+    out.push({ a, tier, why: ['Favourite', 'Owned', `Rated ${r}`, ''][tier] });
+  }
+  return out.sort((x, y) => x.tier - y.tier || norm(x.a.title).localeCompare(norm(y.a.title)) || (toNum(x.a.id) - toNum(y.a.id)));
+}
+function renderCoverFind() {
+  const stat = document.getElementById('covFindStat'); if (!stat) return;
+  const btn = $('covFindBtn'), sw = $('covNoneWrap');
+  if (state.live && state.covMissing) { stat.textContent = `Create the ${TAB_COV} tab first.`; btn.hidden = true; sw.hidden = true; return; }
+  const no = state.albums.filter(a => toNum(a.id) && !covHasDrive(String(toNum(a.id))) && !cov.refs.has(String(toNum(a.id))));
+  const nones = no.filter(a => cov.none.has(String(toNum(a.id)))).length;
+  stat.textContent = `${no.length === 1 ? '1 album has' : fmt(no.length) + ' albums have'} no cover yet` + (nones ? ` · ${nones} marked “none”` : '') + (isLive() ? '' : '. ' + connectHint());
+  btn.hidden = false; sw.hidden = false;
+  btn.disabled = !isLive(); btn.title = btn.disabled ? connectHint() : '';
+}
+
+/* --- MusicBrainz: one queue, spaced out --- */
+const mb = { last: 0, chain: Promise.resolve() };
+function mbGet(url, stale) {   // stale(): true once nobody wants the answer (the picker moved on), so the call is never sent
+  const run = async () => {
+    if (stale && stale()) throw new Error('not needed');
+    const wait = mb.last + MB_GAP - Date.now();
+    if (wait > 0) await new Promise(ok => setTimeout(ok, wait));
+    if (stale && stale()) throw new Error('not needed');
+    mb.last = Date.now();
+    const ctl = typeof AbortController === 'function' ? new AbortController() : null, timer = ctl ? setTimeout(() => ctl.abort(), 20000) : 0;
+    try {
+      const res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
+      if (!res.ok) throw new Error('MusicBrainz answered ' + res.status);
+      return await res.json();
+    } finally { clearTimeout(timer); }
+  };
+  const p = mb.chain.then(run);
+  mb.chain = p.catch(() => {});
+  return p;
+}
+const luceneEsc = s => String(s ?? '').replace(/[+\-&|!(){}\[\]^"~*?:\\\/]/g, '\\$&');
+function mbQuery(a) {
+  let q = `releasegroup:"${luceneEsc(String(a.title || '').trim())}"`;
+  const artist = String(a.artist || '').trim();
+  if (artist && !VARIOUS(artistKey(artist))) q += ` AND artist:"${luceneEsc(artist)}"`;   // blank or Various: the title alone
+  return `https://musicbrainz.org/ws/2/release-group/?query=${encodeURIComponent(q)}&fmt=json&limit=8`;
+}
+// Up to six release groups scoring 60 or more, best first, no duplicate ids
+function mbCandidates(data) {
+  const seen = new Set(), out = [];
+  const list = data && Array.isArray(data['release-groups']) ? data['release-groups'] : null;
+  if (!list) throw new Error('unexpected answer');
+  for (const g of list.map((g, i) => ({ g, i, s: toNum(g && g.score) })).filter(x => x.g && MBID.test(String(x.g.id || '')) && x.s >= 60).sort((x, y) => y.s - x.s || x.i - y.i).map(x => x.g)) {
+    if (seen.has(g.id)) continue;
+    seen.add(g.id);
+    const ac = Array.isArray(g['artist-credit']) ? g['artist-credit'] : [];
+    out.push({
+      id: g.id, title: String(g.title || '').trim(), type: String(g['primary-type'] || '').trim(),
+      year: (String(g['first-release-date'] || '').match(/^\d{4}/) || [''])[0], score: toNum(g.score),
+      artist: ac.map((c, i) => String(c.name || '') + (i < ac.length - 1 ? (c.joinphrase != null && c.joinphrase !== '' ? c.joinphrase : ', ') : '')).join('').trim()
+    });
+    if (out.length === 6) break;
+  }
+  return out;
+}
+
+/* --- writing --- */
+const covW = { chain: Promise.resolve(), pending: 0, bad: false };
+function covRun(fn) {
+  covW.pending++; setStatus('live', `Saving cover… (${covW.pending})`);
+  const p = covW.chain.then(fn);
+  covW.chain = p.catch(() => {});
+  return p.then(v => { covW.bad = false; return v; }, e => { covW.bad = true; throw e; }).finally(() => { covW.pending--; setStatus('live', covW.pending ? `Saving cover… (${covW.pending})` : covW.bad ? 'Cover not saved' : 'Cover saved'); });
+}
+function covFail(what, err) {
+  const text = `${what}: ${plErr(err)}`;
+  covUI.fail = text; covPaint();
+  notice(text, 'error');
+  if (/isn't in/.test((err && err.message) || '')) refresh();
+}
+function covGuard(what) {
+  if (state.live && state.covMissing) { const t = `Create the ${TAB_COV} tab first.`; covUI.fail = t; covPaint(); notice(t, 'error'); return false; }
+  return liveGuard(what);
+}
+// Choose a cover (or mark none). The sleeve changes first; if the write fails it goes back and says why.
+function covSet(a, source, sourceId) {
+  if (!covGuard('Choosing a cover')) return Promise.resolve(false);
+  const id = String(toNum(a.id)), old = covRec(id), prev = old ? { ...old } : null, next = { source, sourceId };
+  const changed = {};
+  let rec = old;
+  if (old) {
+    for (const k of Object.keys(next)) if (String(old[k] || '') !== String(next[k] || '')) changed[k] = next[k];
+    if (Object.keys(changed).length) changed.chosen = today();   // the same choice again changes nothing
+    Object.assign(old, changed);
+  } else { rec = { id, source, sourceId, chosen: today(), note: '', _row: 0 }; state.covers.push(rec); }
+  const touched = !old || Object.keys(changed).length > 0;
+  if (touched) covApply();
+  say(source === 'none' ? `Marked “${a.title}” as having no cover` : `Cover chosen for “${a.title}”`);
+  if (!touched) return Promise.resolve(true);
+  return covRun(() => old ? COV_T.writeFields(id, changed) : COV_T.append(rec, id).then(saved => { rec._row = saved._row; })).then(() => true, err => {
+    if (old) Object.assign(old, prev); else state.covers = state.covers.filter(r => r !== rec);
+    covApply();
+    covFail(`Couldn't save the cover for “${a.title}”`, err);
+    return false;
+  });
+}
+// Remove the choice: the row is cleared (never deleted) and Undo puts it back under its own id, below the last used row
+function covRemove(a) {
+  if (!a) return;
+  const rec = covRec(a.id);
+  if (!rec) return;
+  if (!covGuard('Removing a cover choice')) return;
+  const dlg = $('covDlg'); if (dlg.open) dlg.close();
+  state.covers = state.covers.filter(r => r !== rec); covApply();
+  say(`Removed the cover choice for “${a.title}”`);
+  const del = covRun(() => COV_T.clearRow(rec.id));
+  const t = toast(`Removed the cover choice for “${a.title}”`, { undo: () => {
+    state.covers.push(rec); covApply();
+    covRun(async () => { const saved = await COV_T.append(rec, rec.id); rec._row = saved._row; })
+      .then(() => say(`Restored the cover choice for “${a.title}”`), err => { state.covers = state.covers.filter(r => r !== rec); covApply(); covFail(`Couldn't restore the cover choice for “${a.title}”`, err); });
+  } });
+  del.catch(err => { state.covers.push(rec); t.close(); covApply(); covFail(`Couldn't remove the cover choice for “${a.title}”`, err); });
+}
+
+/* --- the picker --- */
+const covUI = { album: null, queue: null, token: 0, fail: '', msg: '', retry: false, grid: [] };
+function covOpen(a) {
+  if (!a || !toNum(a.id)) return;
+  if (!covGuard('Finding a cover')) return;
+  covUI.queue = null; covUI.fail = '';
+  covDlgOpen();
+  covShowAlbum(a);
+}
+function covOpenQueue() {
+  if (!covGuard('Finding covers')) return;
+  const list = covQueueBuild($('covShowNone').checked);
+  covUI.queue = { list, i: 0, total: list.length }; covUI.fail = '';
+  covDlgOpen();
+  if (list.length) covShowAlbum(list[0].a); else covFinish('Nothing to look for', 'Every album already has a cover or has been marked none. Switch on “Show ones I said none to” to look at those again.');
+}
+function covDlgOpen() {
+  for (const d of ['albumDlg', 'drillDlg', 'tracksDlg']) if ($(d).open) $(d).close();
+  if (!$('covDlg').open) $('covDlg').showModal();
+}
+function covFinish(title, msg) {
+  covUI.token++; covUI.album = null; covUI.grid = []; covUI.retry = false; covUI.msg = msg;
+  covPaint(title); covPaintGrid();
+  $('covTitle').focus();
+}
+function covShowAlbum(a) {
+  covUI.album = a; covUI.grid = []; covUI.retry = false; covUI.msg = 'Searching…';
+  const token = ++covUI.token;
+  covPaint(); covPaintGrid();
+  $('covTitle').focus();
+  mbGet(mbQuery(a), () => token !== covUI.token).then(mbCandidates).then(list => {
+    if (token !== covUI.token) return;
+    covUI.grid = list; covUI.msg = list.length ? '' : COV_MSG.none; covPaint(); covPaintGrid();
+  }, () => {
+    if (token !== covUI.token) return;
+    covUI.grid = []; covUI.msg = COV_MSG.net; covUI.retry = true; covPaint();
+  });
+}
+function covPaint(title) {
+  const a = covUI.album, q = covUI.queue, has = covHasRef(a);
+  $('covTitle').textContent = title || (has ? 'Change cover' : 'Find cover');
+  $('covAlbum').textContent = a ? a.title : '';
+  $('covArtist').textContent = a && a.artist ? a.artist : '';
+  const cur = q && a ? q.list[q.i] : null;
+  $('covProg').hidden = !(q && a);
+  if (q && a) { $('covProgText').textContent = `${q.i + 1} of ${q.total}`; $('covWhy').textContent = cur && cur.why ? cur.why : ''; $('covWhy').hidden = !(cur && cur.why); }
+  $('covMsg').textContent = covUI.msg; $('covMsg').hidden = !covUI.msg;
+  $('covFail').textContent = covUI.fail; $('covFail').hidden = !covUI.fail;
+  $('covRetry').hidden = !covUI.retry;
+  $('covNone').hidden = !a || has; $('covSkip').hidden = !a; $('covRemove').hidden = !a || !has;
+  $('covDone').hidden = !q;
+}
+function covPaintGrid() {
+  $('covGrid').hidden = !covUI.grid.length;
+  const ul = $('covGrid'); ul.textContent = '';
+  for (const c of covUI.grid) {
+    const li = mk('li'), b = mk('button', 'cov-cand'), fr = mk('span', 'cov-img'), img = document.createElement('img');
+    b.type = 'button'; b.dataset.mbid = c.id;
+    b.setAttribute('aria-label', `${c.title}${c.artist ? ' by ' + c.artist : ''}${c.year ? ', ' + c.year : ''}${c.type ? ', ' + c.type : ''}. Choose this cover`);
+    img.alt = ''; img.decoding = 'async'; img.draggable = false;
+    img.addEventListener('error', () => covCandGone(c.id));
+    img.src = covUrl(c.id, 250);
+    fr.appendChild(img);
+    b.append(fr, mk('span', 't', c.title || 'Untitled'), mk('span', 'm', c.artist || 'Unknown artist'), mk('span', 'm', [c.year, c.type].filter(Boolean).join(' · ') || ' '));
+    li.appendChild(b); ul.appendChild(li);
+  }
+}
+// A candidate whose picture is missing (Cover Art Archive answers 404) leaves the grid
+function covCandGone(mbid) {
+  const i = covUI.grid.findIndex(c => c.id === mbid); if (i < 0) return;
+  const li = [...$('covGrid').querySelectorAll('button.cov-cand')].find(b => b.dataset.mbid === mbid);
+  const hadFocus = li && li.contains(document.activeElement), next = li && (li.parentElement.nextElementSibling || li.parentElement.previousElementSibling);
+  covUI.grid.splice(i, 1);
+  if (li) li.parentElement.remove();
+  if (!covUI.grid.length) { covUI.msg = COV_MSG.none; $('covMsg').textContent = covUI.msg; $('covMsg').hidden = false; $('covGrid').hidden = true; }
+  if (hadFocus) { const t = next && next.querySelector('button') || $('covNone'); (t.hidden ? $('covSkip') : t).focus(); }
+}
+function covAdvance() {
+  const q = covUI.queue;
+  if (!q) { $('covDlg').close(); return; }
+  q.i++;
+  if (q.i >= q.list.length) covFinish('That’s the end of the list', 'Skipped albums will be offered again next time.');
+  else covShowAlbum(q.list[q.i].a);
+}
+$('covGrid').addEventListener('click', e => {
+  const b = e.target.closest('button.cov-cand'), a = covUI.album; if (!b || !a) return;
+  const mbid = b.dataset.mbid;
+  covUI.fail = '';
+  covSet(a, 'caa-rg', mbid);
+  covAdvance();
+});
+$('covNone').addEventListener('click', () => { const a = covUI.album; if (!a) return; covUI.fail = ''; covSet(a, 'none', ''); covAdvance(); });
+$('covSkip').addEventListener('click', covAdvance);
+$('covDone').addEventListener('click', () => $('covDlg').close());
+$('covClose').addEventListener('click', () => $('covDlg').close());
+$('covRemove').addEventListener('click', () => covRemove(covUI.album));
+$('covRetry').addEventListener('click', () => { if (covUI.album) covShowAlbum(covUI.album); });
+$('covDlg').addEventListener('close', () => { covUI.token++; covUI.album = null; covUI.queue = null; covUI.grid = []; covUI.msg = ''; covUI.retry = false; $('covGrid').textContent = ''; });
+$('covFindBtn').addEventListener('click', covOpenQueue);
+$('covShowNone').addEventListener('change', renderCoverFind);
 
 
 /* ---------- Google Sheets direct (GitHub Pages and other hosts outside claude.ai) ----------

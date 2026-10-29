@@ -14,6 +14,12 @@ Started 2026-10-18.
 - An Artists tab with a list, an artist page, relationships between artists and resources (books, documentaries and so on) kept against an artist.
   Data lives in `🎸 Artists`, `🎸 Links` and `🎸 Resources`; see the README's sheet changes. Later: artists in the Home favourites, and a Home tile.
 
+## Stage C: Find cover (built 2026-10-28)
+
+- Choose a cover for an album from Cover Art Archive when it has no Drive file. The choice is a small reference in `🎸 Covers` (see the README's sheet changes), never an image file, and a Drive file always wins.
+  Entry points: the shelf detail strip, the Edit album footer, and Tools → Look → Covers (a queue: favourites, Owned, rated 8 to 10, the rest). MusicBrainz is asked about one album at a time, spaced out.
+- Later: a "retry the ones I said none to" nudge on Home; letting a chosen picture be saved into the Drive cover folder by hand; choosing a particular release (not just the release-group) when a pressing's art differs.
+
 ## Later: listening and visuals
 
 ### V1. Local player with a real visualiser (recommended first)
@@ -52,7 +58,7 @@ Started 2026-10-18.
 - Storage: on the device (IndexedDB) or Google Drive, never in the Sheet.
 - Format-shifting music you own for private use is generally allowed in Australia; sharing the recordings isn't.
 
-### Cover art (both hosts, same method as the sports tracker)
+### Cover art (both hosts, same method as the sports tracker; see Stage C for choosing a cover from Cover Art Archive)
 - Covers are image files in a private Google Drive folder (never in the public repo). The folder's id is kept in `🎸 Settings`
   (key `coverFolder`), set once by pasting the folder link in the app, so it never appears in code.
 - GitHub Pages: read with the owner's own Google sign-in (Drive read-only scope, already used by the sports tracker with the shared Client ID).

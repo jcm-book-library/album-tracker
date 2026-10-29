@@ -86,7 +86,23 @@ function buildDrive() {
   add('drv-warning', 'Warning.jpg'); add('drv-notes', 'notes.txt', T0, 'text/plain'); add('drv-1051b', '1051b.jpg'); add('drv-nodigits', '10x5.png');
   return { files, reject: false, failIds: [] };
 }
-function buildSeed({ labelled = false, noPlaylists = false, covers = false, noArtists = false, noLinks = false, noResources = false } = {}) {
+// 🎸 Covers (Find cover): 'none' = no such tab, 'empty' = header only, 'seeded' = a reference on an owned album that has a Drive file (A), a reference on
+// an owned album that has none (B), a `none` row (C) and a blank row in the middle (so an append has to go below the last used row), 'dup' = seeded plus a second row for A.
+const COV_HEADER = ['id', 'source', 'sourceId', 'chosen', 'note'];
+const mbidN = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;   // made-up MusicBrainz ids (the real hosts are never contacted)
+const COVX = {};
+function buildCoverTab(albums, kind) {
+  const rows = albums.slice(1), hasDrive = r => Number(r[9]) % 7 !== 0 && Number(r[9]) !== 1050;   // the stub's Drive folder skips every 7th id
+  const owned = rows.filter(r => labelFor(r) === 'owned' && !r[COLS.fav]), noDrive = owned.filter(r => !hasDrive(r)), hear = rows.filter(r => labelFor(r) === 'hear' && !r[COLS.fav] && !r[COLS.format]);
+  const [A, B, C, D, E] = [owned.find(hasDrive), noDrive[0], noDrive[1], hear[0], hear[1]];
+  Object.assign(COVX, { A: A[9], B: B[9], C: C[9], D: D[9], E: E[9], titles: { A: A[0], B: B[0], C: C[0], D: D[0], E: E[0] }, artists: { D: D[2] }, dates: { A: isoDay(3), B: isoDay(2), C: isoDay(1) } });
+  if (kind === 'none') return {};
+  if (kind === 'empty') return { '🎸 Covers': [COV_HEADER] };
+  const t = [COV_HEADER, [A[9], 'caa-rg', mbidN(10), isoDay(3), 'first pick'], ['', '', '', '', ''], [B[9], 'caa-rg', mbidN(11), isoDay(2), ''], [C[9], 'none', '', isoDay(1), 'nothing fit']];
+  if (kind === 'dup') t.push([A[9], 'caa-rg', mbidN(12), isoDay(1), '']);
+  return { '🎸 Covers': t };
+}
+function buildSeed({ labelled = false, noPlaylists = false, covers = false, noArtists = false, noLinks = false, noResources = false, covTab = 'none' } = {}) {
   const albums = FIXTURE.values.map(r => [...r]);   // a copy: FIXTURE itself stays the fixed reference. [header, ...rows]; id is column J (index 9)
   // New columns after the fixture's A:O. P (Buy link) is added inside the page, so it is left blank here.
   albums[0].push('', 'Favourite');
@@ -160,6 +176,7 @@ function buildSeed({ labelled = false, noPlaylists = false, covers = false, noAr
     // Playlists: header row only. The Classical tab is read-only test data; Pool 2 lives in a second spreadsheet.
     ...(noPlaylists ? {} : { '🎸 Playlists': [PL_HEADER] }),
     ...buildArtistTabs(albums, { noArtists, noLinks, noResources }),
+    ...buildCoverTab(albums, covTab),
     'Classical': FIXTURE_CL.values.map(r => [...r]),
     __pool2: POOL2,
     __drive: buildDrive(),
@@ -3434,7 +3451,7 @@ async function coverPagesTests(browser, vp, seedC, url, imgs) {
   }
 }
 
-async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false, touch = false, clipboard = false } = {}) {
+async function openContext(browser, vp, seed, { blockChart = false, reducedMotion, showLog = false, touch = false, clipboard = false, resourceErrorsOk = false } = {}) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, ...(reducedMotion ? { reducedMotion } : {}), ...(touch ? { hasTouch: true, isMobile: vp.width < 560 } : {}) });
   if (clipboard) await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await context.clock.install({ time: RUN_START });
@@ -3457,7 +3474,7 @@ async function openContext(browser, vp, seed, { blockChart = false, reducedMotio
     if (m.type() !== 'error') return;
     const text = m.text();
     // Requests blocked above surface as generic resource errors; they are not app errors.
-    if (externalBlocked > 0 && /^Failed to load resource/.test(text)) return;
+    if ((externalBlocked > 0 || resourceErrorsOk) && /^Failed to load resource/.test(text)) return;   // resourceErrorsOk: the Find cover suites serve 404s and 503s on purpose
     problems.push(`console: ${text}`);
   });
   return { context, page, problems, blocked: () => externalBlocked };
@@ -3780,6 +3797,492 @@ async function artistWritesTests(browser, vp, seed, url) {
 }
 
 let COVER_IMGS = null;
+// ---------- Find cover: 🎸 Covers and Cover Art Archive ----------
+// MusicBrainz and Cover Art Archive are never contacted: page.route answers for both, copying the documented response shapes
+// (a release-group search with release-groups[] { id, score, primary-type, title, first-release-date, artist-credit[] }, and
+// coverartarchive.org/release-group/<mbid>/front-250|500 answering an image, or 404 when there is no art).
+const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+const CORS = { 'access-control-allow-origin': '*' };
+// Eight hits as MusicBrainz would send them: id 2 twice, scores 99 91 88 85 72 65 61, so six survive in the order 2 4 6 7 1 3
+function mbAnswer(title, artist) {
+  const rg = (n, score, type, extra = {}) => ({
+    id: mbidN(n), 'type-id': 'f529b476-6e62-324f-b0aa-1f3e33d313fc', score, 'primary-type': type, 'first-release-date': `${1970 + n}-0${n}-01`,
+    title: n === 2 ? title : `${title} (edition ${n})`,
+    'artist-credit': [{ name: artist || 'Various Artists', joinphrase: '', artist: { id: '0383dadf-2a4e-4d10-a46a-e9e041da8eb3', name: artist || 'Various Artists' } }], ...extra
+  });
+  return {
+    created: '2026-10-28T00:00:00.000Z', count: 8, offset: 0,
+    'release-groups': [rg(1, 72, 'Album'), rg(2, 99, 'Album'), rg(3, 65, 'EP'), rg(4, 91, 'Single'), rg(5, 61, 'Album'),
+      rg(6, 88, 'Album', { 'artist-credit': [{ name: artist, joinphrase: ' & ' }, { name: 'Guest Player', joinphrase: '' }] }), rg(7, 85, 'Album'), rg(2, 99, 'Album')]
+  };
+}
+const COV_ORDER = [2, 4, 6, 7, 1, 3];
+// The stand-in for both hosts on one browser context. ctl.mb / ctl.caa record every request; ctl.fail makes MusicBrainz answer 503;
+// ctl.noArt is a Set of ids Cover Art Archive answers 404 for; ctl.gate (a promise) holds those 404s back; ctl.mbGate holds MusicBrainz's answer back.
+async function covStub(context, { noArt = [] } = {}) {
+  const ctl = { mb: [], caa: [], fail: false, noArt: new Set(noArt.map(mbidN)), gate: null, mbGate: null };
+  await context.route(/^https:\/\/(musicbrainz\.org|coverartarchive\.org)\//, async route => {
+    const u = new URL(route.request().url());
+    if (u.hostname === 'musicbrainz.org') {
+      const q = u.searchParams.get('query') || '', title = (/releasegroup:"((?:[^"\\]|\\.)*)"/.exec(q) || [])[1] || '', artist = (/artist:"((?:[^"\\]|\\.)*)"/.exec(q) || [])[1] || '';
+      ctl.mb.push({ t: Date.now(), path: u.pathname, q, limit: u.searchParams.get('limit'), fmt: u.searchParams.get('fmt'), title, artist });
+      if (ctl.mbGate) await ctl.mbGate;
+      if (ctl.fail) return route.fulfill({ status: 503, headers: CORS, contentType: 'text/plain', body: 'Service Unavailable' });
+      return route.fulfill({ status: 200, headers: CORS, contentType: 'application/json', body: JSON.stringify(mbAnswer(title, artist)) });
+    }
+    const m = /^\/release-group\/([^/]+)\/front-(\d+)$/.exec(u.pathname);
+    ctl.caa.push({ id: m && m[1], size: m && m[2] });
+    if (ctl.gate && m && ctl.noArt.has(m[1])) await ctl.gate;
+    if (!m || ctl.noArt.has(m[1])) return route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' });
+    return route.fulfill({ status: 200, contentType: 'image/png', body: PNG1 });
+  });
+  return ctl;
+}
+async function covPage(browser, vp, seed, url, { tab = 'collection', noArt = [], sample = false } = {}) {
+  const ctx = await openContext(browser, vp, seed, { resourceErrorsOk: true });
+  const ctl = await covStub(ctx.context, { noArt });
+  if (sample) await ctx.context.addInitScript(() => { window.claude = { use: async () => null }; });
+  await ctx.page.goto(url);
+  await ctx.page.waitForLoadState('load');
+  await ctx.page.waitForFunction(s => document.getElementById('statusText').textContent.startsWith(s), sample ? 'Showing a sample' : 'Live', { timeout: 8000 });
+  await ctx.page.locator(`#tab-${tab}`).click();
+  await ctx.page.waitForTimeout(250);
+  return { ...ctx, ctl };
+}
+const covStripBtn = (page, shelf, act) => page.locator(`${shelfSel(shelf)} .s-detail [data-sa="${act}"]`);
+async function covSelect(page, id, shelf) {
+  await expandShelf(page, shelf);
+  const title = await page.evaluate(i => window.__sg.state.ix.byId.get(i).title, String(id));
+  if (await page.locator(`${shelfSel(shelf)} .s-detail h3`).filter({ hasText: title }).count()) return;   // already selected: another tap would close it
+  const art = page.locator(`${shelfSel(shelf)} .s-it[data-id="${id}"] .s-art`);
+  await art.scrollIntoViewIfNeeded();
+  await art.click();
+  await page.locator(`${shelfSel(shelf)} .s-detail h3`).filter({ hasText: title }).waitFor();
+}
+async function covOpenFor(page, id, shelf) {
+  await covSelect(page, id, shelf);
+  await covStripBtn(page, shelf, 'cover').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open);
+}
+const covCands = page => page.evaluate(() => [...document.querySelectorAll('#covGrid button.cov-cand')].map(b => b.dataset.mbid));
+const covWaitCands = (page, k) => page.waitForFunction(k => document.querySelectorAll('#covGrid button.cov-cand').length >= k, k, { timeout: 15000 });
+const covImg = (page, id) => page.evaluate(i => { const e = document.querySelector(`#shelves [data-cv="${i}"]`), im = e && e.querySelector(':scope > img.cvimg'); return { cv: !!e && e.classList.contains('cv'), src: im ? im.getAttribute('src') : null, ok: !!im && im.complete && im.naturalWidth > 0, alt: im ? im.getAttribute('alt') : null, cors: im ? im.crossOrigin : null }; }, String(id));
+const covWaitImg = (page, id) => page.waitForFunction(i => { const im = document.querySelector(`#shelves [data-cv="${i}"] > img.cvimg`); return !!im && im.complete && im.naturalWidth > 0; }, String(id), { timeout: 8000 });
+const covRows = page => page.evaluate(() => window.__sheet['🎸 Covers'].map(r => [...r]));
+const covUsed = rows => { let i = rows.length; while (i > 0 && rows[i - 1].every(c => c === '')) i--; return i; };
+const covWr = page => page.evaluate(() => window.__writes.map(w => ({ tool: w.tool, sheet: w.sheet, range: w.range, values: w.values, at: w.appendedAtRow })));
+const covSaved = page => page.waitForFunction(() => document.getElementById('statusText').textContent === 'Cover saved', null, { timeout: 8000 });
+const covUrlOf = (n, size = 500) => `https://coverartarchive.org/release-group/${mbidN(n)}/front-${size}`;
+// The queue worked out here from the seed, separately from the app: favourites, Owned, rated 8 to 10, the rest; ties by title
+function covExpectedQueue(seed, skip = new Set()) {
+  return fxSeedRows(seed).filter(r => !skip.has(r[9])).map(r => {
+    const rate = parseFloat(r[COLS.rating]) || 0, tier = r[COLS.fav] ? 0 : labelFor(r) === 'owned' ? 1 : rate >= 8 ? 2 : 3;
+    return { id: r[9], title: r[0], tier, why: ['Favourite', 'Owned', `Rated ${rate}`, ''][tier] };
+  }).sort((a, b) => a.tier - b.tier || a.title.toLowerCase().localeCompare(b.title.toLowerCase()) || Number(a.id) - Number(b.id));
+}
+
+async function findCoverTests(browser, vp, url) {
+  const n = vp.name, P = 'Find cover: ', phone = vp.width < 560;
+  const seedS = buildSeed({ covTab: 'seeded' }), X = COVX, total = fxSeedRows(seedS).length;
+
+  // 1. a reference shows as the cover; a `none` row, and every other album, keep the generated sleeve
+  let f = await covPage(browser, vp, seedS, url);
+  let { page, ctl, problems } = f;
+  await expandShelf(page, 'owned');
+  await covWaitImg(page, X.B); await covWaitImg(page, X.A);
+  let b = await covImg(page, X.B), a = await covImg(page, X.A), c = await covImg(page, X.C);
+  record(n, P + 'a reference shows as the cover, from coverartarchive.org front-500', b.cv && b.ok && b.src === covUrlOf(11) && a.cv && a.src === covUrlOf(10), JSON.stringify([b, a]));
+  record(n, P + 'the picture is a plain <img>: no alt text noise, no cross-origin request mode', b.alt === '' && b.cors === null);
+  record(n, P + 'an album marked none keeps its generated sleeve', !c.cv && c.src === null);
+  const refs = await page.evaluate(() => ({ refs: [...window.__sg.cov.refs.entries()], none: [...window.__sg.cov.none] }));
+  record(n, P + 'cov.refs maps album id to the image address, cov.none holds the none ids', refs.refs.length === 2 && refs.refs.some(([k, v]) => k === X.B && v === covUrlOf(11)) && refs.none.join() === X.C, JSON.stringify(refs));
+  record(n, P + 'sleeve pictures are only ever asked for at front-500', ctl.caa.length > 0 && ctl.caa.every(r => r.size === '500'), JSON.stringify(ctl.caa.slice(0, 3)));
+  record(n, P + 'the blank row in the middle of the tab is skipped when reading', refs.refs.length + refs.none.length === 3);
+  record(n, P + 'showing covers asks MusicBrainz nothing and writes nothing', ctl.mb.length === 0 && (await page.evaluate(() => window.__writes.length)) === 0);
+  const strip = async id => { await covSelect(page, id, 'owned'); return (await page.locator(`${shelfSel('owned')} .s-detail .s-dact button`).allTextContents()).map(t => t.trim()); };
+  const sa = await strip(X.A), sc = await strip(X.C);
+  record(n, P + 'detail strip: Change cover and Remove cover choice when a reference exists', sa.includes('Change cover') && sa.includes('Remove cover choice') && !sa.includes('Find cover'), sa.join(' | '));
+  record(n, P + 'detail strip: Find cover (only) for an album marked none, so it can be retried', sc.includes('Find cover') && !sc.includes('Remove cover choice') && !sc.includes('Change cover'), sc.join(' | '));
+  record(n, P + 'no console errors (showing references)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 2. a Drive file always wins over a reference
+  const seedCS = buildSeed({ covers: true, covTab: 'seeded' });
+  f = await covPage(browser, vp, seedCS, url); ({ page, ctl, problems } = f);
+  await page.waitForFunction(() => window.__sg.cov.st !== 'listing', null, { timeout: 8000 });
+  await expandShelf(page, 'owned');
+  await page.locator(`${shelfSel('owned')} .s-it[data-id="${X.A}"] .s-art`).scrollIntoViewIfNeeded();
+  await page.waitForFunction(i => { const im = document.querySelector(`#shelves [data-cv="${i}"] > img.cvimg`); return !!im && im.src.startsWith('data:image/'); }, X.A, { timeout: 10000 });
+  await covWaitImg(page, X.B);
+  a = await covImg(page, X.A); b = await covImg(page, X.B);
+  record(n, P + 'Drive file wins: an album with a file and a reference shows the Drive picture', a.cv && /^data:image\//.test(a.src), String(a.src).slice(0, 40));
+  record(n, P + 'Drive file wins: the reference\'s picture is never even requested', !ctl.caa.some(r => r.id === mbidN(10)), JSON.stringify(ctl.caa.map(r => r.id)));
+  record(n, P + 'an album with a reference and no Drive file shows the reference', b.cv && b.src === covUrlOf(11), String(b.src));
+  record(n, P + 'no console errors (Drive and references together)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 3. a picture that fails falls back to the sleeve and is not asked for again this session
+  f = await covPage(browser, vp, seedS, url, { noArt: [11] }); ({ page, ctl, problems } = f);
+  await expandShelf(page, 'owned');
+  await page.waitForFunction(u => window.__sg.cov.refFailed.has(u), covUrlOf(11), { timeout: 8000 });
+  b = await covImg(page, X.B);
+  record(n, P + 'an image that errors (404) is removed and the generated sleeve stays', !b.cv && b.src === null && (await page.locator(`${shelfSel('owned')} .s-it[data-id="${X.B}"] .s-art svg`).count()) === 1);
+  await page.evaluate(() => { window.__sg.render(); });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => { window.__sg.render(); });
+  await page.waitForTimeout(300);
+  record(n, P + 'the failure is remembered for the session: re-rendering does not ask again', ctl.caa.filter(r => r.id === mbidN(11)).length === 1 && !(await covImg(page, X.B)).cv, JSON.stringify(ctl.caa.filter(r => r.id === mbidN(11))));
+  record(n, P + 'the other reference still shows', (await covImg(page, X.A)).src === covUrlOf(10));
+  record(n, P + 'no console errors (404 picture)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 4. the tab is missing: nothing is offered, the message is clear, the rest of the app carries on
+  f = await covPage(browser, vp, buildSeed({ covTab: 'none' }), url); ({ page, ctl, problems } = f);
+  await covSelect(page, X.D, 'hear');
+  record(n, P + 'tab missing: no Find cover button in the detail strip', (await covStripBtn(page, 'hear', 'cover').count()) === 0 && (await page.locator(`${shelfSel('hear')} .s-detail [data-sa="edit"]`).count()) === 1);
+  await page.locator(`${shelfSel('hear')} .s-detail [data-sa="edit"]`).click();
+  await page.waitForFunction(() => document.getElementById('albumDlg').open);
+  record(n, P + 'tab missing: no Find cover button in the Edit album dialog', await page.locator('#dlgCover').isHidden() && await page.locator('#dlgTracks').isVisible());
+  await page.locator('#dlgClose').click();
+  await page.locator('#tab-tools').click(); await page.locator('#covFindStat').scrollIntoViewIfNeeded();
+  record(n, P + 'tab missing: Tools says "Create the 🎸 Covers tab first." and offers no button', (await page.locator('#covFindStat').textContent()) === 'Create the 🎸 Covers tab first.' && await page.locator('#covFindBtn').isHidden());
+  record(n, P + 'tab missing: the rest of the app keeps working (shelves still draw) and nothing is requested', (await page.evaluate(() => window.__sg.state.albums.length)) === total && ctl.mb.length === 0 && ctl.caa.length === 0);
+  record(n, P + 'tab missing: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 5. the tab exists but is empty: the buttons are there, labelled Find cover, and Tools counts the albums
+  f = await covPage(browser, vp, buildSeed({ covTab: 'empty' }), url); ({ page, ctl, problems } = f);
+  await covSelect(page, X.D, 'hear');
+  record(n, P + 'empty tab: the detail strip offers Find cover', (await covStripBtn(page, 'hear', 'cover').textContent()).trim() === 'Find cover' && (await covStripBtn(page, 'hear', 'coverx').count()) === 0);
+  await page.locator(`${shelfSel('hear')} .s-detail [data-sa="edit"]`).click();
+  await page.waitForFunction(() => document.getElementById('albumDlg').open);
+  record(n, P + 'empty tab: the Edit album footer offers Find cover', (await page.locator('#dlgCover').textContent()) === 'Find cover' && await page.locator('#dlgCover').isVisible() && await page.locator('#dlgCover').isEnabled());
+  await page.locator('#dlgCover').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open && !document.getElementById('albumDlg').open);
+  record(n, P + 'the Edit album button opens the picker for that album (the edit dialog steps aside)', (await page.locator('#covAlbum').textContent()) === X.titles.D);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await page.locator('#tab-tools').click(); await page.locator('#covFindStat').scrollIntoViewIfNeeded();
+  record(n, P + 'Tools: "N albums have no cover yet" counts every album with no picture', (await page.locator('#covFindStat').textContent()) === `${total} albums have no cover yet` && await page.locator('#covFindBtn').isVisible() && (await page.locator('#covFindBtn').textContent()) === 'Find covers', await page.locator('#covFindStat').textContent());
+  record(n, P + 'no console errors (empty tab)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 6. sample mode: the buttons are there, disabled, with the usual connect hint
+  f = await covPage(browser, vp, buildSeed({ covTab: 'seeded' }), url, { sample: true }); ({ page, problems } = f);
+  const hint = await page.evaluate(() => connectHint());
+  const some = await page.evaluate(() => { const a = window.__sg.state.albums.find(x => Number(x.id)); return a ? String(a.id) : ''; });
+  await page.locator('#tab-tools').click(); await page.locator('#covFindStat').scrollIntoViewIfNeeded();
+  record(n, P + 'sample mode: Find covers is shown but disabled, with the connect hint', await page.locator('#covFindBtn').isVisible() && await page.locator('#covFindBtn').isDisabled() && (await page.locator('#covFindBtn').getAttribute('title')) === hint && (await page.locator('#covFindStat').textContent()).includes(hint), hint);
+  if (some) {
+    await page.locator('#tab-collection').click();
+    const shelf = await page.evaluate(i => (document.querySelector(`#shelves .s-it[data-id="${i}"]`) || { dataset: {} }).dataset.shelf, some);
+    if (shelf) {
+      await covSelect(page, some, shelf);
+      record(n, P + 'sample mode: the detail strip button is disabled with the hint', await covStripBtn(page, shelf, 'cover').isDisabled() && (await covStripBtn(page, shelf, 'cover').getAttribute('title')) === hint);
+    }
+  }
+  record(n, P + 'sample mode: no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 7. the search, the picker, the failure message
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  const sheetBefore = JSON.stringify(await page.evaluate(() => window.__sheet['🎸']));
+  ctl.gate = new Promise(ok => { ctl.openGate = ok; });
+  ctl.noArt.add(mbidN(4));
+  let release; ctl.mbGate = new Promise(ok => { release = ok; });
+  await covSelect(page, X.D, 'hear');
+  await covStripBtn(page, 'hear', 'cover').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open);
+  await page.waitForFunction(() => document.getElementById('covMsg').textContent === 'Searching…');
+  record(n, P + 'shows "Searching…" while MusicBrainz is asked', (await page.locator('#covMsg').textContent()) === 'Searching…' && (await page.locator('#covTitle').textContent()) === 'Find cover');
+  record(n, P + 'the dialog names the album and its artist at the top', (await page.locator('#covAlbum').textContent()) === X.titles.D && (await page.locator('#covArtist').textContent()) === X.artists.D);
+  release(); await covWaitCands(page, 6);
+  const q = ctl.mb[0];
+  const wantQ = `releasegroup:"${X.titles.D}" AND artist:"${X.artists.D}"`;
+  record(n, P + 'the search is GET /ws/2/release-group/?query=releasegroup:"title" AND artist:"artist"&fmt=json&limit=8', ctl.mb.length === 1 && q.path === '/ws/2/release-group/' && q.q === wantQ && q.fmt === 'json' && q.limit === '8', JSON.stringify(q));
+  let cands = await covCands(page);
+  record(n, P + 'at most six candidates, best score first, the duplicate id and the lowest score dropped', cands.join() === COV_ORDER.map(mbidN).join(), cands.map(x => Number(x.slice(-12))).join());
+  const card = await page.evaluate(() => [...document.querySelectorAll('#covGrid button.cov-cand')].map(b => ({ t: b.querySelector('.t').textContent, m: [...b.querySelectorAll('.m')].map(x => x.textContent), src: b.querySelector('img').getAttribute('src'), alt: b.querySelector('img').getAttribute('alt') })));
+  record(n, P + 'each candidate shows a front-250 thumbnail with its title, artist, year and type under it', card[0].t === X.titles.D && card[0].m[0] === X.artists.D && card[0].m[1] === '1972 · Album' && card[1].t === `${X.titles.D} (edition 4)` && card[1].m[1] === '1974 · Single' && card[4].m[1] === '1971 · Album' && card[5].m[1] === '1973 · EP' && card.every(x => /\/front-250$/.test(x.src) && x.alt === ''), JSON.stringify(card[1]));
+  record(n, P + 'a joined artist credit reads with its joinphrase (A & B)', card[2].m[0] === `${X.artists.D} & Guest Player`, card[2].m[0]);
+  ctl.openGate();
+  await page.waitForFunction(() => document.querySelectorAll('#covGrid button.cov-cand').length === 5);
+  cands = await covCands(page);
+  record(n, P + 'a candidate whose picture is 404 on Cover Art Archive leaves the grid', cands.join() === [2, 6, 7, 1, 3].map(mbidN).join(), cands.map(x => Number(x.slice(-12))).join());
+  record(n, P + 'footer: None of these, Skip and Close, no Remove cover choice for an album with no reference', await page.locator('#covNone').isVisible() && await page.locator('#covSkip').isVisible() && await page.locator('#covClose').isVisible() && await page.locator('#covRemove').isHidden() && await page.locator('#covDone').isHidden());
+  const geo = await page.evaluate(() => { const d = document.getElementById('covDlg').getBoundingClientRect(); return { l: d.left, r: d.right, sw: document.getElementById('covDlg').scrollWidth, cw: document.getElementById('covDlg').clientWidth }; });
+  const o7 = await page.evaluate(overflow);
+  record(n, P + `no sideways scroll with the picker open${phone ? ' at 390px' : ''}`, o7.sw <= o7.iw && geo.l >= 0 && geo.r <= o7.iw && geo.sw <= geo.cw, JSON.stringify([geo, o7]));
+  // focus is trapped in the dialog; Escape closes it without writing
+  let outside = 0;
+  for (let i = 0; i < 16; i++) { await page.keyboard.press('Tab'); if (!(await page.evaluate(() => document.activeElement === document.body || !!document.activeElement.closest('#covDlg')))) outside++; }   // past the last control a modal dialog hands focus to the browser, never to the page behind
+  record(n, P + 'Tab never leaves the dialog (focus is trapped)', outside === 0, `${outside} presses outside`);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  record(n, P + 'Escape closes the picker and writes nothing', (await page.evaluate(() => window.__writes.length)) === 0 && (await covRows(page)).length === 5);
+  // failure: a clear message, never a stack trace, then Try again
+  ctl.fail = true;
+  await covStripBtn(page, 'hear', 'cover').click();
+  await page.waitForFunction(() => document.getElementById('covMsg').textContent.startsWith("Couldn't reach"), null, { timeout: 15000 });
+  const fm = await page.locator('#covMsg').textContent();
+  record(n, P + 'a failed search says "Couldn\'t reach MusicBrainz. Check your connection and try again." and shows no stack trace', fm === "Couldn't reach MusicBrainz. Check your connection and try again." && await page.locator('#covRetry').isVisible() && (await covCands(page)).length === 0, fm);
+  record(n, P + 'after a failed search None of these and Skip are still there', await page.locator('#covNone').isVisible() && await page.locator('#covSkip').isVisible());
+  ctl.fail = false;
+  await page.locator('#covRetry').click();
+  await covWaitCands(page, 5);
+  record(n, P + 'Try again searches again and the candidates arrive', (await covCands(page)).length >= 5 && await page.locator('#covRetry').isHidden() && await page.locator('#covMsg').isHidden());
+  await page.locator('#covClose').click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  // Lucene specials are escaped; Various or blank searches the title alone; scores under 60 are dropped; the order is by score
+  const qs = await page.evaluate(() => ({
+    sp: decodeURIComponent(mbQuery({ title: 'AC/DC: "Back" (in) Black! [1980] ~* ? ^ + - && || \\', artist: "Guns N' Roses" }).split('query=')[1].split('&fmt')[0]),
+    var1: decodeURIComponent(mbQuery({ title: 'Hits', artist: 'Various' }).split('query=')[1].split('&fmt')[0]),
+    var2: decodeURIComponent(mbQuery({ title: 'Hits', artist: 'Various Artists' }).split('query=')[1].split('&fmt')[0]),
+    blank: decodeURIComponent(mbQuery({ title: 'Hits', artist: '  ' }).split('query=')[1].split('&fmt')[0]),
+    scores: mbCandidates({ 'release-groups': [{ id: '00000000-0000-4000-8000-000000000001', score: 59 }, { id: '00000000-0000-4000-8000-000000000002', score: 60 }, { id: '00000000-0000-4000-8000-000000000003', score: '75' }, { id: '00000000-0000-4000-8000-000000000004', score: 100 }] }).map(x => Number(x.id.slice(-12)))
+  }));
+  record(n, P + 'Lucene special characters are escaped in the query', qs.sp === 'releasegroup:"AC\\/DC\\: \\"Back\\" \\(in\\) Black\\! \\[1980\\] \\~\\* \\? \\^ \\+ \\- \\&\\& \\|\\| \\\\" AND artist:"Guns N\' Roses"', qs.sp);
+  record(n, P + 'a blank or "Various" artist searches the title alone', qs.var1 === 'releasegroup:"Hits"' && qs.var2 === qs.var1 && qs.blank === qs.var1, JSON.stringify([qs.var1, qs.var2, qs.blank]));
+  record(n, P + 'only scores of 60 or more are kept, best first', qs.scores.join() === '4,3,2', qs.scores.join());
+  record(n, P + 'the 🎸 album tab is untouched and no console errors', JSON.stringify(await page.evaluate(() => window.__sheet['🎸'])) === sheetBefore && problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+}
+
+async function findCoverQueueTests(browser, vp, url) {
+  const n = vp.name, P = 'Find cover queue: ', X = COVX;
+  const seedS = buildSeed({ covTab: 'seeded' });
+  const skip = new Set([X.A, X.B, X.C]);
+  const exp = covExpectedQueue(seedS, skip);
+  const f = await covPage(browser, vp, seedS, url, { tab: 'tools' });
+  const { page, ctl, problems } = f;
+  await page.locator('#covFindStat').scrollIntoViewIfNeeded();
+  record(n, P + 'Tools: the line counts the albums with no cover and says how many are marked none', (await page.locator('#covFindStat').textContent()) === `${exp.length + 1} albums have no cover yet · 1 marked “none”`, await page.locator('#covFindStat').textContent());
+  const built = await page.evaluate(() => covQueueBuild(false).map(x => [String(x.a.id), x.why]));
+  record(n, P + 'order: favourites first, then Owned, then rated 8 to 10, then the rest, ties by title', JSON.stringify(built) === JSON.stringify(exp.map(x => [x.id, x.why])), `${built.length} vs ${exp.length}`);
+  const tiers = [...new Set(exp.map(x => x.tier))];
+  record(n, P + 'the test data has all four groups (so the order above really checks something)', tiers.join() === '0,1,2,3' && exp.filter(x => x.tier === 0).length === 4, tiers.join());
+  record(n, P + 'albums with a reference, or marked none, are not offered', !built.some(([id]) => skip.has(id)));
+  const wantN = exp.length;
+  await page.locator('#covFindBtn').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open);
+  await covWaitCands(page, 5);
+  record(n, P + 'the dialog shows progress "1 of N" and why this album is first', (await page.locator('#covProgText').textContent()) === `1 of ${wantN}` && (await page.locator('#covWhy').textContent()) === exp[0].why && (await page.locator('#covAlbum').textContent()) === exp[0].title, `${await page.locator('#covProgText').textContent()} / ${await page.locator('#covWhy').textContent()}`);
+  record(n, P + 'queue mode has Done for now as well as Close', await page.locator('#covDone').isVisible() && await page.locator('#covClose').isVisible());
+  const a0 = (await page.locator('#covArtist').textContent());
+  record(n, P + 'the search asks about this album', ctl.mb.length === 1 && ctl.mb[0].title === exp[0].title && ctl.mb[0].artist === a0, JSON.stringify(ctl.mb[0]));
+  // pick, None, Skip: each moves on
+  const lastBefore = covUsed(await covRows(page));
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#covGrid button.cov-cand').first().click();
+  await page.waitForFunction(w => document.getElementById('covProgText').textContent === w, `2 of ${wantN}`);
+  await covWaitCands(page, 5);
+  record(n, P + 'choosing a cover moves on to the next album ("2 of N") with its reason', (await page.locator('#covAlbum').textContent()) === exp[1].title && (await page.locator('#covWhy').textContent()) === exp[1].why && (exp[1].why === '' ? await page.locator('#covWhy').isHidden() : true));
+  await page.locator('#covNone').click();
+  await page.waitForFunction(w => document.getElementById('covProgText').textContent === w, `3 of ${wantN}`);
+  await covWaitCands(page, 5);
+  await page.locator('#covSkip').click();
+  await page.waitForFunction(w => document.getElementById('covProgText').textContent === w, `4 of ${wantN}`);
+  await covWaitCands(page, 5);
+  await covSaved(page);
+  const w = await covWr(page), rows = await covRows(page);
+  record(n, P + 'a choice and a None are written (two appends); Skip writes nothing', w.length === 2 && w.every(x => x.tool === 'append_values' && x.sheet === '🎸 Covers'), JSON.stringify(w.map(x => [x.tool, x.range])));
+  record(n, P + 'they go below the last used row, one after the other, with the album ids', w[0].at === lastBefore + 1 && w[1].at === lastBefore + 2 && rows[lastBefore][0] === exp[0].id && rows[lastBefore][1] === "'caa-rg" && rows[lastBefore + 1][0] === exp[1].id && rows[lastBefore + 1][1] === "'none" && rows[lastBefore + 1][2] === '', JSON.stringify([rows[lastBefore], rows[lastBefore + 1]]));
+  const times = ctl.mb.map(r => r.t), gaps = times.slice(1).map((t, i) => t - times[i]);
+  record(n, P + 'MusicBrainz is asked once per album, at least 1100 ms apart', ctl.mb.length === 4 && gaps.length === 3 && gaps.every(g => g >= 1100), gaps.join(' ms, ') + ' ms');
+  await page.locator('#covDone').click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  record(n, P + 'Done for now leaves', true);
+  const built2 = await page.evaluate(() => [covQueueBuild(false).length, covQueueBuild(true).length]);
+  record(n, P + 'afterwards the picked and the none albums are no longer offered; the skipped one still is', built2[0] === wantN - 2 && (await page.evaluate(i => covQueueBuild(false).some(x => String(x.a.id) === i), exp[2].id)), JSON.stringify(built2));
+  record(n, P + 'the toggle brings the "none" albums back: seeded one plus the one just marked', built2[1] === wantN);
+  await page.locator('#covFindStat').scrollIntoViewIfNeeded();
+  record(n, P + 'Tools line updates at once', (await page.locator('#covFindStat').textContent()) === `${wantN} albums have no cover yet · 2 marked “none”`, await page.locator('#covFindStat').textContent());
+  // open it again: the skipped album is first; the toggle adds the none ones
+  await page.locator('#covFindBtn').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open);
+  await covWaitCands(page, 5);
+  record(n, P + 'a skipped album is offered again next time', (await page.locator('#covProgText').textContent()) === `1 of ${wantN - 2}` && (await page.locator('#covAlbum').textContent()) === exp[2].title, await page.locator('#covProgText').textContent());
+  await page.locator('#covClose').click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await page.locator('#covShowNone').check();
+  await page.locator('#covFindBtn').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open);
+  await page.waitForFunction(() => document.getElementById('covMsg').textContent !== 'Searching…', null, { timeout: 15000 });
+  record(n, P + '"Show ones I said none to" puts them back in the queue', (await page.locator('#covProgText').textContent()) === `1 of ${wantN}`, await page.locator('#covProgText').textContent());
+  const o = await page.evaluate(overflow);
+  record(n, P + 'no sideways scroll with the queue open', o.sw <= o.iw, `${o.sw} vs ${o.iw}`);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  // nothing left to look for: a plain message, no search
+  await page.locator('#covShowNone').uncheck();
+  const calls = ctl.mb.length;
+  await page.evaluate(() => { window.__sg.state.albums.length = 0; });
+  await page.locator('#covFindBtn').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open);
+  record(n, P + 'with nothing to look for the dialog says so and asks MusicBrainz nothing', (await page.locator('#covTitle').textContent()) === 'Nothing to look for' && /Every album already has a cover/.test(await page.locator('#covMsg').textContent()) && ctl.mb.length === calls && await page.locator('#covNone').isHidden() && await page.locator('#covSkip').isHidden());
+  await page.keyboard.press('Escape');
+  record(n, P + 'every write stayed on the 🎸 Covers tab', (await covWr(page)).every(x => x.sheet === '🎸 Covers') && (await page.evaluate(() => window.__forbidden.length)) === 0);
+  record(n, P + 'no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+}
+
+async function findCoverWritesTests(browser, vp, url) {
+  const n = vp.name, P = 'Find cover writes: ', X = COVX;
+  const seedS = buildSeed({ covTab: 'seeded' });
+  const delayAppends = page => page.evaluate(() => { const m = window.__sg.state.mcp, orig = m.callTool.bind(m); m.callTool = async (s, t, a, o) => { if (t === 'append_values') await new Promise(r => setTimeout(r, 900)); return orig(s, t, a, o); }; });
+  let f, page, ctl, problems, today;
+
+  // 1. pick for an album with no row: appended below the last used row (past the blank row), id = the album's id, verified after; optimistic cover
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  today = await page.evaluate(() => today());
+  const used0 = covUsed(await covRows(page)), sheetAlbum = JSON.stringify(await page.evaluate(() => window.__sheet['🎸']));
+  await covOpenFor(page, X.D, 'hear'); await covWaitCands(page, 5);
+  await delayAppends(page);
+  await page.evaluate(() => { window.__writes.length = 0; window.__reads.length = 0; });
+  const first = page.locator('#covGrid button.cov-cand').first();
+  await first.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await covWaitImg(page, X.D);
+  record(n, P + 'a pick by keyboard (Enter) closes the picker and the cover appears at once, before the write has finished', (await page.evaluate(() => window.__writes.length)) === 0 && (await covImg(page, X.D)).src === covUrlOf(2), JSON.stringify(await covImg(page, X.D)));
+  await covSaved(page);
+  let w = await covWr(page), rows = await covRows(page);
+  record(n, P + 'append: one append_values to 🎸 Covers, from the row after the last used one (the blank row is not filled)', w.length === 1 && w[0].tool === 'append_values' && w[0].sheet === '🎸 Covers' && w[0].range === `'🎸 Covers'!A${used0 + 1}:E` && w[0].at === used0 + 1 && rows[2].every(c => c === ''), JSON.stringify(w));
+  record(n, P + 'append: id is the album\'s id as a number, source and sourceId are text with \', chosen is today, note blank', JSON.stringify(rows[used0]) === JSON.stringify([X.D, "'caa-rg", `'${mbidN(2)}`, today, '']) && w[0].values[0][0] === Number(X.D) && typeof w[0].values[0][0] === 'number', JSON.stringify(w[0].values));
+  const rd = await page.evaluate(() => window.__reads);
+  record(n, P + 'append: the id column was read just before and the new id is verified afterwards', rd.includes("'🎸 Covers'!A2:A") && rd[rd.length - 1] === "'🎸 Covers'!A1:A", rd.join(' ; '));
+  record(n, P + 'append: exactly one row for the album', rows.filter(r => r[0] === X.D).length === 1);
+  record(n, P + 'the 🎸 album tab is not changed', JSON.stringify(await page.evaluate(() => window.__sheet['🎸'])) === sheetAlbum);
+  record(n, P + 'a chosen album now says Change cover and Remove cover choice', (await covStripBtn(page, 'hear', 'cover').textContent()).trim() === 'Change cover' && (await covStripBtn(page, 'hear', 'coverx').count()) === 1);
+  record(n, P + 'no console errors (append)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 2. change a choice: only the changed cells, row found by id (the sheet shifted), same choice again writes nothing
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  today = await page.evaluate(() => today());
+  await covOpenFor(page, X.A, 'owned'); await covWaitCands(page, 5);
+  record(n, P + 'Change cover: titled Change cover; None of these is not offered, Remove cover choice is', (await page.locator('#covTitle').textContent()) === 'Change cover' && await page.locator('#covNone').isHidden() && await page.locator('#covRemove').isVisible());
+  await page.evaluate(() => { window.__sheet['🎸 Covers'].splice(1, 0, ['', '', '', '', '']); window.__writes.length = 0; window.__reads.length = 0; });
+  await page.locator(`#covGrid button.cov-cand[data-mbid="${mbidN(1)}"]`).click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await covSaved(page);
+  w = await covWr(page); rows = await covRows(page);
+  const rowA = rows.findIndex(r => r[0] === X.A) + 1;
+  record(n, P + 'update: finds the row by id (the sheet had shifted by one) and writes only the changed cells (sourceId and chosen)', rowA === 3 && w.length === 2 && w.every(x => x.tool === 'update_values' && x.sheet === '🎸 Covers') && JSON.stringify(w.map(x => x.range).sort()) === JSON.stringify([`'🎸 Covers'!C3`, `'🎸 Covers'!D3`]), JSON.stringify(w.map(x => [x.range, x.values[0][0]])));
+  record(n, P + 'update: values are text with \' and the date; source and note are untouched', w.find(x => x.range.endsWith('C3')).values[0][0] === `'${mbidN(1)}` && w.find(x => x.range.endsWith('D3')).values[0][0] === today && rows[2][1] === 'caa-rg' && rows[2][4] === 'first pick', JSON.stringify(rows[2]));
+  const rd2 = await page.evaluate(() => window.__reads);
+  record(n, P + 'update: the header and the id column were read right before the write', rd2.includes("'🎸 Covers'!A1:E1") && rd2.includes("'🎸 Covers'!A1:A"), rd2.join(' ; '));
+  record(n, P + 'update: still exactly one row for the album, and nothing was appended', rows.filter(r => r[0] === X.A).length === 1 && w.every(x => x.tool !== 'append_values'));
+  await covWaitImg(page, X.A);
+  record(n, P + 'update: the sleeve shows the new picture', (await covImg(page, X.A)).src === covUrlOf(1));
+  await covOpenFor(page, X.A, 'owned'); await covWaitCands(page, 5);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator(`#covGrid button.cov-cand[data-mbid="${mbidN(1)}"]`).click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await page.waitForTimeout(400);
+  record(n, P + 'choosing the cover it already has writes nothing', (await covWr(page)).length === 0);
+  record(n, P + 'no console errors (update)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 3. None of these: writes `none`, stops the album being offered, keeps the sleeve; the toggle retries it
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  today = await page.evaluate(() => today());
+  const used3 = covUsed(await covRows(page));
+  await covOpenFor(page, X.E, 'hear'); await covWaitCands(page, 5);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#covNone').click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await covSaved(page);
+  w = await covWr(page); rows = await covRows(page);
+  record(n, P + 'None of these appends a `none` row: source none, sourceId blank, chosen today', w.length === 1 && w[0].tool === 'append_values' && w[0].at === used3 + 1 && JSON.stringify(rows[used3]) === JSON.stringify([X.E, "'none", '', today, '']), JSON.stringify(rows[used3]));
+  const off = await page.evaluate(i => [covQueueBuild(false).some(x => String(x.a.id) === i), covQueueBuild(true).some(x => String(x.a.id) === i)], X.E);
+  record(n, P + 'a none album is not offered again until retried (the toggle offers it)', off[0] === false && off[1] === true, JSON.stringify(off));
+  record(n, P + 'a none album keeps its generated sleeve, and its strip says Find cover', !(await covImg(page, X.E)).cv && (await covStripBtn(page, 'hear', 'cover').textContent()).trim() === 'Find cover');
+  // retrying a none album with a real choice updates that same row (source, sourceId and chosen; the same row, not a second one)
+  await covStripBtn(page, 'hear', 'cover').click();
+  await page.waitForFunction(() => document.getElementById('covDlg').open); await covWaitCands(page, 5);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator(`#covGrid button.cov-cand[data-mbid="${mbidN(7)}"]`).click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await covSaved(page);
+  w = await covWr(page); rows = await covRows(page);
+  record(n, P + 'retrying a none album updates its row in place (source, sourceId, chosen), one row for the album', w.length === 3 && w.every(x => x.tool === 'update_values') && JSON.stringify(w.map(x => x.range.replace("'🎸 Covers'!", '').replace(/\d+$/, '')).sort()) === JSON.stringify(['B', 'C', 'D']) && rows.filter(r => r[0] === X.E).length === 1 && rows[used3][1] === "'caa-rg" && rows[used3][2] === `'${mbidN(7)}`, JSON.stringify([w.map(x => [x.range, x.values[0][0]]), rows[used3]]));
+  record(n, P + 'no console errors (none)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 4. remove: one update clears the row's cells, Undo puts the row back below the last used row
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  await covSelect(page, X.A, 'owned');
+  const before4 = await covRows(page);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await covStripBtn(page, 'owned', 'coverx').click();
+  await covSaved(page);
+  w = await covWr(page); rows = await covRows(page);
+  record(n, P + 'remove: one update clears that row\'s five cells; the row stays, empty, and nothing else moves', w.length === 1 && w[0].tool === 'update_values' && w[0].range === `'🎸 Covers'!A2:E2` && JSON.stringify(w[0].values) === JSON.stringify([['', '', '', '', '']]) && rows[1].every(c => c === '') && rows.length === before4.length && JSON.stringify(rows.slice(2)) === JSON.stringify(before4.slice(2)), JSON.stringify(w));
+  record(n, P + 'remove: the cover goes back to the generated sleeve, and the strip offers Find cover', !(await covImg(page, X.A)).cv && (await covStripBtn(page, 'owned', 'cover').textContent()).trim() === 'Find cover' && (await covStripBtn(page, 'owned', 'coverx').count()) === 0);
+  record(n, P + 'remove: a toast offers Undo', (await page.locator('#toasts .toast', { hasText: 'Removed the cover choice' }).locator('button', { hasText: 'Undo' }).count()) === 1);
+  const used4 = covUsed(rows);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#toasts .toast button', { hasText: 'Undo' }).last().click();
+  await covSaved(page);
+  w = await covWr(page); rows = await covRows(page);
+  record(n, P + 'Undo: appends the row back under its own id below the last used row; the cleared row is not reused', w.length === 1 && w[0].tool === 'append_values' && w[0].at === used4 + 1 && rows[1].every(c => c === '') && JSON.stringify(rows[used4]) === JSON.stringify([X.A, "'caa-rg", `'${mbidN(10)}`, COVX.dates.A, "'first pick"]) && rows.filter(r => r[0] === X.A).length === 1, JSON.stringify([w.map(x => x.at), rows[used4]]));
+  await covWaitImg(page, X.A);
+  record(n, P + 'Undo: the cover is back', (await covImg(page, X.A)).src === covUrlOf(10));
+  // a failed clear puts the choice back and says why
+  await page.evaluate(() => { window.__failNext = 1; window.__writes.length = 0; });
+  await covStripBtn(page, 'owned', 'coverx').click();
+  await page.waitForFunction(() => /Couldn't remove the cover choice/.test(document.getElementById('notice').textContent));
+  await covWaitImg(page, X.A);
+  record(n, P + 'a failed remove puts the choice back and shows the reason', (await covImg(page, X.A)).src === covUrlOf(10) && /Injected failure/.test(await page.locator('#notice').textContent()) && (await covRows(page)).some(r => r[0] === X.A && r[2] === `'${mbidN(10)}`));
+  // the picker's own Remove cover choice does the same thing
+  await covOpenFor(page, X.A, 'owned'); await covWaitCands(page, 5);
+  const rowA4 = (await covRows(page)).findIndex(r => r[0] === X.A) + 1;
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator('#covRemove').click();
+  await page.waitForFunction(() => !document.getElementById('covDlg').open);
+  await covSaved(page);
+  w = await covWr(page);
+  record(n, P + 'Remove cover choice in the picker closes it and clears that one row, with an Undo toast', w.length === 1 && w[0].range === `'🎸 Covers'!A${rowA4}:E${rowA4}` && (await covRows(page))[rowA4 - 1].every(c => c === '') && (await page.locator('#toasts .toast', { hasText: 'Removed the cover choice' }).locator('button', { hasText: 'Undo' }).count()) >= 1, JSON.stringify(w));
+  record(n, P + 'no console errors (remove)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 5. a failed pick reverts with a message inside the picker (queue) and in the page
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  const sheet5 = JSON.stringify(await covRows(page));
+  await covOpenFor(page, X.D, 'hear'); await covWaitCands(page, 5);
+  await page.evaluate(() => { window.__failNext = 1; });
+  await page.locator('#covGrid button.cov-cand').first().click();
+  await page.waitForFunction(() => /Couldn't save the cover/.test(document.getElementById('notice').textContent));
+  const nt = await page.locator('#notice').textContent();
+  record(n, P + 'a failed write reverts the cover at once and says why', /Injected failure/.test(nt) && !(await covImg(page, X.D)).cv && (await page.evaluate(i => !window.__sg.state.covers.some(r => r.id === i), X.D)) && JSON.stringify(await covRows(page)) === sheet5, nt);
+  record(n, P + 'no console errors (failed write)', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+
+  // 6. a second row for one album is an error, nothing is written, the old choice stays
+  f = await covPage(browser, vp, buildSeed({ covTab: 'dup' }), url); ({ page, ctl, problems } = f);
+  await covOpenFor(page, X.A, 'owned'); await covWaitCands(page, 5);
+  await page.evaluate(() => { window.__writes.length = 0; });
+  await page.locator(`#covGrid button.cov-cand[data-mbid="${mbidN(1)}"]`).click();
+  await page.waitForFunction(() => /appears 2 times/.test(document.getElementById('notice').textContent));
+  await covWaitImg(page, X.A);
+  record(n, P + 'two rows for one album id: "appears 2 times", nothing written, the old cover stays', /appears 2 times/.test(await page.locator('#notice').textContent()) && (await covWr(page)).length === 0 && (await covImg(page, X.A)).src === covUrlOf(10));
+  await f.context.close();
+
+  // 7. every write of the whole group stayed on a 🎸 tab (the stub also records anything refused)
+  f = await covPage(browser, vp, seedS, url); ({ page, ctl, problems } = f);
+  const album0 = JSON.stringify(await page.evaluate(() => window.__sheet['🎸']));
+  await covOpenFor(page, X.D, 'hear'); await covWaitCands(page, 5);
+  await page.locator('#covGrid button.cov-cand').nth(1).click();
+  await covSaved(page);
+  const all = await covWr(page);
+  record(n, P + 'no write ever leaves the 🎸 tabs (only 🎸 Covers is written; the stub refused nothing)', all.length > 0 && all.every(x => x.sheet === '🎸 Covers') && (await page.evaluate(() => window.__forbidden.length)) === 0 && JSON.stringify(await page.evaluate(() => window.__sheet['🎸'])) === album0);
+  const o = await page.evaluate(overflow);
+  record(n, P + 'no sideways scroll afterwards', o.sw <= o.iw, `${o.sw} vs ${o.iw}`);
+  record(n, P + 'no console errors', problems.length === 0, problems.slice(0, 2).join(' | '));
+  await f.context.close();
+}
+
 async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, seedLC) {
   console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
   const only = (process.env.SMOKE_ONLY || '').split(',').filter(Boolean);
@@ -3880,6 +4383,9 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, 
   await run('playlists', () => playlistsGuardTests(browser, vp, seed, wrapperUrl));
   await run('artists', () => artistsTests(browser, vp, seed, wrapperUrl));
   await run('artistwrites', () => artistWritesTests(browser, vp, seed, wrapperUrl));
+  await run('findcover', () => findCoverTests(browser, vp, wrapperUrl));
+  await run('findcover', () => findCoverQueueTests(browser, vp, wrapperUrl));
+  await run('findcoverwrites', () => findCoverWritesTests(browser, vp, wrapperUrl));
   await run('covers', () => coverTests(browser, vp, seed, seedC, wrapperUrl));
   await run('covers', () => coverSaveTests(browser, vp, seed, seedC, wrapperUrl));
   await run('covers', () => coverInteractionTests(browser, vp, seedC, wrapperUrl));
