@@ -493,9 +493,28 @@ div.hbar{padding:3px 6px}
   @keyframes nervous{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-.7px,.3px) rotate(-.7deg)}45%{transform:translate(.6px,-.3px) rotate(.6deg)}70%{transform:translate(-.5px,0) rotate(-.4deg)}}
 }
 
-/* detail strip under a shelf */
-.s-detail{position:relative;margin-top:26px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;background:var(--raise);border:1px solid var(--line);border-radius:14px;padding:16px}
-.s-dcover{position:relative;width:96px;height:96px;border-radius:6px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
+/* floating panel: a generic, non-modal card (see design/float-panel.md). Left side on wide screens, bottom sheet on phones. Colours come from the page's tokens only. */
+:root{--fp-w:320px;--fp-gap:16px;--fp-top:96px}
+.fpanel{position:fixed;z-index:100;left:16px;top:var(--fp-top);width:var(--fp-w);max-height:calc(100vh - var(--fp-top) - 16px);display:flex;flex-direction:column;background:var(--raise);color:var(--fg);border:1px solid var(--line);border-radius:16px;box-shadow:0 28px 56px -12px var(--shadow),0 6px 18px var(--shadow);animation:fpin .18s ease-out}
+.fpanel-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:16px}
+.fpanel-x{position:absolute;top:8px;right:8px;z-index:2;width:40px;height:40px;padding:0;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:22px;line-height:1;cursor:pointer}
+.fpanel-x:hover{border-color:var(--fg)}
+.fpanel-grab{display:none;flex:none;width:40px;height:5px;border-radius:3px;background:var(--line);margin:8px auto 0}
+.fpanel [data-fp-title]:focus{outline:none}
+@keyframes fpin{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+@keyframes fpup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@media (max-width:900px){
+  .fpanel{left:8px;right:8px;top:auto;bottom:0;width:auto;max-height:70vh;border-radius:16px 16px 0 0;border-bottom:0;animation-name:fpup}
+  .fpanel-grab{display:block}
+  .fpanel-body{padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion:reduce){.fpanel{animation:none}}
+/* page glue: with the panel docked on the left (wide screens) the page content starts to its right, so nothing sits underneath it */
+@media (min-width:901px){body.fp-open .wrap{padding-left:max(16px,calc(var(--fp-w) + var(--fp-gap) * 2 - max(0px,(100vw - 1180px) / 2)))}}
+
+/* the selected album, shown inside the floating panel */
+.s-detail{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0}
+.s-dcover{position:relative;width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;box-shadow:0 6px 12px -3px var(--shadow)}
 /* cover art: the picture sits over the generated sleeve, which fades away entirely (initials badge included) */
 [data-cv]{position:relative}
 .cvimg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;opacity:0;transition:opacity .35s ease}
@@ -569,11 +588,14 @@ input[type="checkbox"][role="switch"]:checked::after{transform:translateX(18px);
   .s-furnace{width:calc(var(--s) * 1.45)}
   .sh-note{font-size:11px}
   .sh-head h2{font-size:19px}
-  .s-detail{grid-template-columns:auto minmax(0,1fr);padding:14px}
-  .s-detail .s-x{position:absolute;top:10px;right:10px}
-  .s-detail .s-dinfo h3{padding-right:34px}
-  .s-dcover{width:76px;height:76px}
   .sh-btn{padding:6px 11px;font-size:13px}
+}
+
+@media (max-width:900px){
+  .s-detail{grid-template-columns:88px minmax(0,1fr);gap:14px;align-items:start}
+  .s-dcover{width:88px;height:88px;aspect-ratio:auto}
+  .s-dinfo h3{padding-right:44px;font-size:18px}
+  .fpanel .lblchip,.fpanel .s-pickbtn,.fpanel .s-act,.fpanel .s-buy{min-height:40px;display:inline-flex;align-items:center}
 }
 
 /* edit dialog */
@@ -2265,11 +2287,10 @@ function detailHtml(a, S, ctx) {
     (toNum(a.id) ? `<button class="s-act" type="button" data-sa="tracks" data-id="${key}">Tracks</button>` : '') +
     `<button class="s-act" type="button" data-sa="edit" data-id="${key}">Edit</button>` + covActsHtml(a, key) +
     (u ? `<a class="s-buy" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Buy ${esc(a.title)} at ${esc(shopName(u))}">Buy · ${esc(shopName(u))}</a>` : '');
-  return `<div class="s-detail" role="region" aria-label="Selected: ${esc(a.title)}"><div class="s-dcover"${cvAttr(a)}>${artSvg(a.title)}</div>` +
-    `<div class="s-dinfo"><h3>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div>` +
-    `<button class="s-x" type="button" data-sa="close" data-id="${key}" data-shelf="${S}" data-ctx="${ctx}" aria-label="Close details">×</button></div>`;
+  return `<div class="s-detail"><div class="s-dcover"${cvAttr(a)}>${artSvg(a.title)}</div>` +
+    `<div class="s-dinfo"><h3 data-fp-title>${esc(a.title)}</h3><p class="muted">${esc([a.artist, a.year].filter(Boolean).join(' · ') || 'Unknown artist')}</p><div class="s-dmeta">${tags.join('')}</div><div class="s-dact">${acts}</div></div></div>`;
 }
-// One shelf's inner markup: header, board (standing sleeves + packed stack, or a wrapping grid) and the detail strip
+// One shelf's inner markup: header and board (standing sleeves + packed stack, or a wrapping grid). The selected album shows in the floating panel, not here
 function shelfInner(S, ctx, all, o = {}) {
   const compact = !!o.compact, n = all.length, inc = S.k === 'nope' && !compact;
   const N = inc ? INC_SLOTS() : compact ? (mq.narrow.matches ? 3 : 4) : nStand();
@@ -2291,12 +2312,11 @@ function shelfInner(S, ctx, all, o = {}) {
         (more ? `<span class="s-more" aria-hidden="true">+${more}</span>` : '') +
         `<button class="s-chev prev" type="button" data-sa="fan" data-dir="-1" aria-label="Show earlier albums">‹</button><button class="s-chev next" type="button" data-sa="fan" data-dir="1" aria-label="Show later albums">›</button></div>` : '') + `</div>`;
   }
-  const selA = shelfUI.sel && shelfUI.sel.ctx === ctx && shelfUI.sel.shelf === S.k ? all.find(e => albumKey(e.a) === shelfUI.sel.id) : null;
   const more = compact ? (n ? `<button class="btn sh-btn" type="button" data-sa="seeall">See all on Collection</button>` : '')
     : (n > N ? `<button class="btn sh-btn" type="button" data-sa="all" data-key="${S.k}" data-fk="${ctx}:${S.k}:all:btn" aria-expanded="${open}">${open ? 'Show fewer' : 'Show all ' + n}</button>` : '');
   const burnt = inc && n > N ? `<span class="sh-note">${n - N} incinerated</span>` : '';
   return `<div class="sh-head"><h2 id="${hid}" tabindex="-1"${inc ? ` title="${esc(INC_TIP)}"` : ''}>${icon}${esc(S.head)}</h2><div class="sh-right"><span class="sh-count" aria-label="${n} album${n === 1 ? '' : 's'}">${n}</span>${burnt}${more}</div></div>` +
-    `<div class="s-board${open ? ' open' : ''}${compact ? ' compact' : ''}">${body}<div class="s-ledge"></div></div>${selA ? detailHtml(selA.a, S.k, ctx) : ''}`;
+    `<div class="s-board${open ? ' open' : ''}${compact ? ' compact' : ''}">${body}<div class="s-ledge"></div></div>`;
 }
 
 /* ---------- the packed stack: hover / touch / keyboard fan it out like a hand of cards (display only) ---------- */
@@ -2379,6 +2399,64 @@ function renderShelves() {
 }
 function renderHomeFav() { $('homeFav').innerHTML = shelfInner(SHELVES[0], 'h', favEntries(), { compact: true }); paintStacks($('homeFav')); }
 
+/* ---------- floatPanel: a small generic floating card (no album code in it; see design/float-panel.md) ---------- */
+// floatPanel.open(html, { label, returnTo, onClose }) shows the card (or swaps its content when already open), moves focus to the element marked
+// data-fp-title in the html (made focusable here) and returns; update(html) re-renders in place, keeping scroll and focus;
+// close() hides it, calls onClose and puts focus back on returnTo (an element, or a function that finds one); close({ silent: true }) skips onClose.
+// Wide screens: docked on the left, the page gets class fp-open on <body>. Phones (900px and narrower): a bottom sheet.
+const floatPanel = (() => {
+  let el = null, body = null, cur = null, last = '';
+  const resolve = r => { const t = typeof r === 'function' ? r() : r; return t && t.isConnected ? t : null; };
+  function paint(html) {
+    if (html === last) return;
+    const top = body.scrollTop; last = html; body.innerHTML = html; body.scrollTop = top;
+    const h = body.querySelector('[data-fp-title]');
+    if (h) { h.id = 'fpanel-title'; h.tabIndex = -1; el.setAttribute('aria-labelledby', 'fpanel-title'); el.removeAttribute('aria-label'); }
+    else { el.removeAttribute('aria-labelledby'); el.setAttribute('aria-label', cur.label || 'Details'); }
+  }
+  function build() {
+    el = document.createElement('div'); el.className = 'fpanel'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'false');
+    el.innerHTML = '<div class="fpanel-grab" aria-hidden="true"></div><button class="fpanel-x" type="button" aria-label="Close details">×</button><div class="fpanel-body"></div>';
+    body = el.querySelector('.fpanel-body');
+    el.querySelector('.fpanel-x').addEventListener('click', () => api.close());
+    el.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); api.close(); } });
+    document.body.appendChild(el); document.body.classList.add('fp-open');
+  }
+  const api = {
+    open(html, o = {}) {
+      cur = o; last = '';
+      if (!el) build();
+      paint(html);
+      const h = body.querySelector('[data-fp-title]'); if (h) h.focus({ preventScroll: true });
+    },
+    update(html) { if (el) paint(html); },
+    close(o = {}) {
+      if (!el) return;
+      const c = cur || {}, inside = el.contains(document.activeElement);
+      el.remove(); el = body = cur = null; last = ''; document.body.classList.remove('fp-open');
+      if (!o.silent && c.onClose) c.onClose();
+      if (!o.silent || inside) { const t = resolve(c.returnTo); if (t) t.focus({ preventScroll: true }); }
+    },
+    isOpen: () => !!el
+  };
+  return api;
+})();
+
+/* the selected album (shelfUI.sel) shows in the floating panel; the panel belongs to the page whose shelf was clicked (Home or Collection) */
+const sleeveOf = s => document.querySelector(`.s-art[data-sa="sel"][data-ctx="${s.ctx}"][data-shelf="${s.shelf}"][data-id="${s.id}"]`);
+let panelKey = '';
+function syncAlbumPanel() {
+  const s = shelfUI.sel, a = s && albumByKey(s.id);
+  const page = s && (s.ctx === 'h' ? 'home' : 'collection');
+  if (!a || state.tab !== page || (page === 'collection' && state.colView !== 'shelves')) {   // gone, or the tab/view that owns it is not showing
+    shelfUI.sel = null; panelKey = ''; floatPanel.close({ silent: true }); return;
+  }
+  const key = `${s.ctx}:${s.shelf}:${s.id}`, html = detailHtml(a, s.shelf, s.ctx);
+  if (floatPanel.isOpen() && panelKey === key) { floatPanel.update(html); return; }
+  panelKey = key;
+  floatPanel.open(html, { label: `Selected: ${a.title}`, returnTo: () => sleeveOf(s), onClose: () => { if (shelfUI.sel === s) { shelfUI.sel = null; render(''); } } });
+}
+
 /* ---------- label popover (a menu: arrows, Home/End, Enter, Esc) ---------- */
 let menu = null, menuOpener = null, menuKey = null;
 function openMenu(btn) {
@@ -2435,8 +2513,7 @@ document.addEventListener('click', e => {
   if (act === 'sel') {
     const sl = b.closest('.slice');
     if (sl && !mq.fine.matches && !sl.classList.contains('fanned')) { setFan(sl.closest('.s-stack'), +sl.dataset.i, 'touch'); return; }   // touch: the first tap opens the fan
-    const same = shelfUI.sel && shelfUI.sel.id === b.dataset.id && shelfUI.sel.shelf === b.dataset.shelf && shelfUI.sel.ctx === b.dataset.ctx; shelfUI.sel = same ? null : { id: b.dataset.id, shelf: b.dataset.shelf, ctx: b.dataset.ctx }; render(fk); }
-  else if (act === 'close') { shelfUI.sel = null; render(`${b.dataset.ctx}:${b.dataset.shelf}:${b.dataset.id}:art`); }
+    const same = shelfUI.sel && shelfUI.sel.id === b.dataset.id && shelfUI.sel.shelf === b.dataset.shelf && shelfUI.sel.ctx === b.dataset.ctx; shelfUI.sel = same ? null : { id: b.dataset.id, shelf: b.dataset.shelf, ctx: b.dataset.ctx }; render(same ? fk : ''); }
   else if (act === 'all') { shelfUI.expanded[b.dataset.key] = !shelfUI.expanded[b.dataset.key]; render(fk); }
   else if (act === 'seeall') showTab('collection');
   else if (act === 'pick') toggleFav(a, undefined, fk);
@@ -2488,6 +2565,12 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   const j = Math.max(0, Math.min(all.length - 1, to));
   setFan(st, j, 'kb'); all[j].querySelector('.s-art').focus({ preventScroll: true });
+});
+
+// Escape on a sleeve closes the floating panel (inside the panel, floatPanel handles it itself)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.defaultPrevented || menu || !floatPanel.isOpen() || !e.target.closest || !e.target.closest('.s-art[data-sa="sel"]')) return;
+  e.preventDefault(); floatPanel.close();
 });
 
 /* ---------- drag and drop between shelves (mouse and trackpad) ---------- */
@@ -2543,6 +2626,7 @@ function renderCollection() {
   $('colView').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state.colView)));
   $('libSearch').placeholder = table ? 'Search title, artist, genre or notes' : 'Search title, artist or genre';
   if (table) renderLibrary(); else renderShelves();
+  syncAlbumPanel();
 }
 function renderLibrary() {
   const L = state.lib;
@@ -5250,7 +5334,7 @@ const TABS = {
 // fk: the control to put focus back on after the screen is redrawn (defaults to the one focused now)
 function render(fk) {
   const keep = fk !== undefined ? fk : activeFk();
-  buildIndex(); (TABS[state.tab] || TABS.home).render(); if ($('tracksDlg').open) renderTracksDlg();
+  buildIndex(); (TABS[state.tab] || TABS.home).render(); syncAlbumPanel(); if ($('tracksDlg').open) renderTracksDlg();
   shelfUI.arrive = null;
   if (keep) restoreFocus(keep);
 }

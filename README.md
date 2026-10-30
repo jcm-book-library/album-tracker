@@ -39,7 +39,7 @@ See [ROADMAP.md](ROADMAP.md).
   and Save to `🎸 Playlists`. "Copy for Spotify" copies track links in order to paste into a Spotify playlist. The listening log is hidden unless "Show listening log" is switched on in Tools
   (this browser only); its code and the `🎸 Log` tab are kept for the later MP3 player.
 - **Find cover** picks a cover for an album from Cover Art Archive when it has no Drive file. A **Find cover** button (it reads **Change cover** once a cover is chosen)
-  sits in a shelf's detail strip and in the Edit album footer; Tools → Look → Covers says "N albums have no cover yet" and **Find covers** works through them:
+  sits in the floating album panel and in the Edit album footer; Tools → Look → Covers says "N albums have no cover yet" and **Find covers** works through them:
   favourites first, then Owned, then rated 8 to 10, then the rest, ties by title, with "3 of 41" and the reason (Favourite, Owned, Rated 9). The picker searches MusicBrainz
   (one call about every 1.3 seconds, never closer than 1.1) and shows up to six candidates with their pictures; tap one, or choose **None of these** (the album is not offered again
   unless "Show ones I said none to" is on), **Skip** (writes nothing, offered again next time) or **Done for now**. **Remove cover choice** clears the row, with Undo.
@@ -51,6 +51,10 @@ See [ROADMAP.md](ROADMAP.md).
 - Changing a label (the chip, or dragging to another shelf) writes `Status`, plus `Format` when it pairs with the move
   (Vinyl (Wanted) ↔ Vinyl (Owned); cleared when a wanted vinyl moves to a non-vinyl label), plus `Labelled` (today) when that column exists.
   An album whose Format is Vinyl (Owned) can't quick-move to To hear, Heard or Upcoming. Each change has an Undo.
+- Selecting a sleeve opens its details in a **floating panel** instead of a strip under the shelf, so it is in view however long a shelf is. On wide screens it is a card
+  docked on the left (the page moves over just far enough to clear it, and the shelves stay scrollable and clickable); on phones (900px and narrower) it is
+  a bottom sheet. It has the label chip, Favourite, Tracks, Edit, Find cover and Buy buttons. Click another sleeve to swap it, or click the selected sleeve again, press the × or Escape
+  to close it; it also closes when you change tab. It is a small generic component (`floatPanel`), written up in `design/float-panel.md` for the other collection apps.
 - **Favourites** are a guitar pick that writes the `Favourite` date (or clears it), independent of the label and the rating.
 - The Didn't like shelf has an incinerator: the newest four albums stand in a row, and older ones are "incinerated" on screen only.
   They keep their label and stay in the sheet; "Show all" lists them as ash tiles and they can be moved back.
