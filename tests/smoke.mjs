@@ -1545,26 +1545,26 @@ async function collectionTests(browser, vp, seed, url) {
   const buyAlbum = await page.evaluate(() => { const a = state.albums.find(x => x.buy && /^https:/.test(x.buy) && labelOf(x) === 'wish' && toNum(x.id)); return a ? { id: String(toNum(a.id)), title: a.title } : null; });
   await expandShelf(page, 'wish');
   await page.locator(`${shelfSel('wish')} .s-it[data-id="${buyAlbum.id}"] .s-art`).click();
-  const d = await page.evaluate(() => { const e = document.querySelector('#shelves .s-detail'); return e ? { h3: e.querySelector('h3').textContent, btns: [...e.querySelectorAll('button')].map(b => b.textContent.trim()).filter(Boolean), buy: e.querySelector('a.s-buy') ? { t: e.querySelector('a.s-buy').textContent, href: e.querySelector('a.s-buy').href, target: e.querySelector('a.s-buy').target, rel: e.querySelector('a.s-buy').rel } : null, pressed: e.querySelector('.s-pickbtn').getAttribute('aria-pressed') } : null; });
+  const d = await page.evaluate(() => { const e = document.querySelector('.fpanel .s-detail'); return e ? { h3: e.querySelector('h3').textContent, btns: [...e.querySelectorAll('button')].map(b => b.textContent.trim()).filter(Boolean), buy: e.querySelector('a.s-buy') ? { t: e.querySelector('a.s-buy').textContent, href: e.querySelector('a.s-buy').href, target: e.querySelector('a.s-buy').target, rel: e.querySelector('a.s-buy').rel } : null, pressed: e.querySelector('.s-pickbtn').getAttribute('aria-pressed') } : null; });
   record(n, 'Collection: tapping a sleeve opens the detail strip with label chip, Favourite, Tracks, Edit and a Buy pill', !!d && d.h3 === buyAlbum.title && /^Vinyl wish list/.test(d.btns[0]) && d.btns.includes('Favourite') && d.btns.includes('Tracks') && d.btns.includes('Edit') && !!d.buy && /^Buy · /.test(d.buy.t) && d.buy.target === '_blank' && /noopener/.test(d.buy.rel), JSON.stringify(d));
-  await page.locator('#shelves .s-detail [data-sa="tracks"]').click();
+  await page.locator('.fpanel .s-detail [data-sa="tracks"]').click();
   await page.waitForFunction(() => document.getElementById('tracksDlg').open);
   record(n, 'Collection: the detail strip\'s Tracks button opens the tracks dialog for that album', (await page.locator('#trkTitle').textContent()) === buyAlbum.title);
   await page.locator('#trkClose').click(); await page.waitForFunction(() => !document.getElementById('tracksDlg').open);
-  await page.locator('#shelves .s-detail [data-sa="edit"]').click();
+  await page.locator('.fpanel .s-detail [data-sa="edit"]').click();
   await page.waitForFunction(() => document.getElementById('albumDlg').open);
   record(n, 'Collection: the detail strip\'s Edit button opens the album dialog', (await page.locator('#dlgTitle').textContent()) === 'Edit album');
   const sel = await page.evaluate(() => [...document.getElementById('f-status').options].map(o => o.value));
   record(n, 'Album dialog: Status offers Didn\'t like', sel.includes("Didn't like") && sel.length === 7, sel.join());
   await page.locator('#dlgClose').click();
-  await page.locator('#shelves .s-detail [data-sa="close"]').click();
-  record(n, 'Collection: the detail strip closes', (await page.locator('#shelves .s-detail').count()) === 0);
+  await page.locator('.fpanel .fpanel-x').click();
+  record(n, 'Collection: the detail panel closes', (await page.locator('.fpanel').count()) === 0);
   // a sleeve with no buy link has no Buy pill
   const plain = await page.evaluate(() => { const a = state.albums.find(x => !x.buy && labelOf(x) === 'heard' && toNum(x.id)); return String(toNum(a.id)); });
   await expandShelf(page, 'heard');
   await page.locator(`${shelfSel('heard')} .s-it[data-id="${plain}"] .s-art`).click();
-  record(n, 'Collection: no Buy pill when the album has no buy link', (await page.locator('#shelves .s-detail').count()) === 1 && (await page.locator('#shelves .s-detail a.s-buy').count()) === 0);
-  await page.locator('#shelves .s-detail [data-sa="close"]').click();
+  record(n, 'Collection: no Buy pill when the album has no buy link', (await page.locator('.fpanel .s-detail').count()) === 1 && (await page.locator('.fpanel .s-detail a.s-buy').count()) === 0);
+  await page.locator('.fpanel .fpanel-x').click();
 
   // search filters shelves by title / artist / genre and hides shelves with no match
   const tq = 'Test Album 060';
@@ -1648,7 +1648,7 @@ async function findCard(page, k, rowsById, pred, notIds = []) {
   }
   return null;
 }
-const detailTitle = page => page.evaluate(() => { const e = document.querySelector('#shelves .s-detail h3'); return e ? e.textContent : null; });
+const detailTitle = page => page.evaluate(() => { const e = document.querySelector('.fpanel .s-detail h3'); return e ? e.textContent : null; });
 
 async function stackTests(browser, vp, seed, url) {
   const n = vp.name, phone = vp.width < 560;
@@ -1706,7 +1706,7 @@ async function stackTests(browser, vp, seed, url) {
   await page.mouse.click(cc.x, cc.y); await page.waitForTimeout(250);
   const crow = rows.find(r => r[COLS.id] === cid);
   record(n, 'Stack hover: clicking a fanned card selects it and the detail strip shows that album', cid === cid2 && (await detailTitle(page)) === crow[0] && (await page.locator(`${stackSel('hear')} .slice[data-id="${cid}"].sel`).count()) === 1, String(await detailTitle(page)));
-  await page.locator('#shelves .s-detail [data-sa="close"]').click();
+  await page.locator('.fpanel .fpanel-x').click();
   record(n, 'Stack: browsing, hovering and selecting write nothing', (await gw(page)).length === 0);
 
   // label chip and pick on a fanned card
@@ -1767,7 +1767,10 @@ async function stackTests(browser, vp, seed, url) {
     await page.keyboard.press('Enter'); await page.waitForTimeout(250);
     const row1 = rows.find(r => r[COLS.id] === ids[1]);
     const a3 = await act();
-    record(n, 'Stack keys: Enter selects the focused slice (detail strip shows it) and focus stays on it', (await detailTitle(page)) === row1[0] && a3.id === ids[1] && (await fannedIds(page, 'hear')).includes(ids[1]), `${await detailTitle(page)} ${JSON.stringify(a3)}`);
+    record(n, 'Stack keys: Enter selects the focused slice (the floating panel shows it) and focus moves to the panel heading', (await detailTitle(page)) === row1[0] && a3.role === 'H3' && (await page.locator('.fpanel').count()) === 1, `${await detailTitle(page)} ${JSON.stringify(a3)}`);
+    await page.keyboard.press('Escape');   // first Esc: focus is in the panel, so it closes the panel and focus goes back to the slice
+    const a3b = await act();
+    record(n, 'Stack keys: Esc in the panel closes it and returns focus to the slice (the fan stays open)', (await page.locator('.fpanel').count()) === 0 && a3b.id === ids[1] && (await fannedIds(page, 'hear')).includes(ids[1]), JSON.stringify(a3b));
     await page.keyboard.press('Escape');
     const a4 = await act();
     record(n, 'Stack keys: Esc packs the stack and returns focus to the stack', (await fannedIds(page, 'hear')).length === 0 && a4.stack, JSON.stringify(a4));
@@ -1801,7 +1804,7 @@ async function stackTests(browser, vp, seed, url) {
     const tid = top.id;
     await page.touchscreen.tap(top.x, top.y); await page.waitForTimeout(250);
     record(n, 'Stack touch: tapping a fanned card selects it', (await detailTitle(page)) === rows.find(r => r[COLS.id] === tid)[0], String(await detailTitle(page)));
-    await page.locator('#shelves .s-detail [data-sa="close"]').tap();
+    await page.locator('.fpanel .fpanel-x').tap();
     const h = await boxCenter(page.locator(`${shelfSel('hear')} h2`));
     await page.touchscreen.tap(h.x, h.y); await page.waitForTimeout(250);
     record(n, 'Stack touch: tapping outside packs the stack again', (await fannedIds(page, 'hear')).length === 0 && (await page.locator(`${stackSel('hear')}.touch`).count()) === 0);
@@ -2139,10 +2142,10 @@ async function pickTests(browser, vp, seed, seedL, url) {
   // from the detail strip
   await cw(page);
   await page.locator(`${shelfSel('heard')} .s-it[data-id="${id}"] .s-art`).click();
-  await page.locator('#shelves .s-detail .s-pickbtn').click();
+  await page.locator('.fpanel .s-detail .s-pickbtn').click();
   await waitWrites(page, 1); await settle(page);
   w = await gw(page);
-  record(n, 'Pick: the detail strip button writes the same single cell', w.length === 1 && w[0].range === `'🎸'!Q${sr}` && w[0].v === todayIso && (await page.locator('#shelves .s-detail .s-pickbtn').getAttribute('aria-pressed')) === 'true', JSON.stringify(w));
+  record(n, 'Pick: the detail strip button writes the same single cell', w.length === 1 && w[0].range === `'🎸'!Q${sr}` && w[0].v === todayIso && (await page.locator('.fpanel .s-detail .s-pickbtn').getAttribute('aria-pressed')) === 'true', JSON.stringify(w));
   // from the Table view
   await cw(page);
   await toTable(page);
@@ -3093,10 +3096,10 @@ async function coverTests(browser, vp, seed, seedC, url) {
   const pickSleeve = hearStand.find(x => x.img);
   await page.locator(`${shelfSel('hear')} .s-standing .s-it[data-id="${pickSleeve.id}"] .s-art`).click();
   await page.waitForTimeout(700);
-  const det = await coverImgs(page, `${shelfSel('hear')} .s-detail .s-dcover[data-cv]`);
+  const det = await coverImgs(page, `.fpanel .s-detail .s-dcover[data-cv]`);
   record(n, 'Covers: the detail strip shows the large cover (square, data: src)', det.length === 1 && det[0].img && det[0].data && det[0].nw === det[0].nh && Math.abs(det[0].w - det[0].h) < 1.5 && det[0].w >= 70, JSON.stringify(det.map(x => ({ ...x, src: undefined }))));
   await page.locator(shelfSel('hear')).screenshot({ path: join(OUT, `${n}-covers-shelf.png`) });
-  await page.locator(`${shelfSel('hear')} .s-detail`).screenshot({ path: join(OUT, `${n}-covers-detail.png`) });
+  await page.locator(`.fpanel .s-detail`).screenshot({ path: join(OUT, `${n}-covers-detail.png`) });
   // the Show all grid and ash tiles
   await expandShelf(page, 'nope');
   await page.locator(shelfSel('nope')).evaluate(el => el.scrollIntoView({ block: 'center' }));
@@ -3849,15 +3852,15 @@ async function covPage(browser, vp, seed, url, { tab = 'collection', noArt = [],
   await ctx.page.waitForTimeout(250);
   return { ...ctx, ctl };
 }
-const covStripBtn = (page, shelf, act) => page.locator(`${shelfSel(shelf)} .s-detail [data-sa="${act}"]`);
+const covStripBtn = (page, shelf, act) => page.locator(`.fpanel .s-detail [data-sa="${act}"]`);
 async function covSelect(page, id, shelf) {
   await expandShelf(page, shelf);
   const title = await page.evaluate(i => window.__sg.state.ix.byId.get(i).title, String(id));
-  if (await page.locator(`${shelfSel(shelf)} .s-detail h3`).filter({ hasText: title }).count()) return;   // already selected: another tap would close it
+  if (await page.locator(`.fpanel .s-detail h3`).filter({ hasText: title }).count()) return;   // already selected: another tap would close it
   const art = page.locator(`${shelfSel(shelf)} .s-it[data-id="${id}"] .s-art`);
   await art.scrollIntoViewIfNeeded();
   await art.click();
-  await page.locator(`${shelfSel(shelf)} .s-detail h3`).filter({ hasText: title }).waitFor();
+  await page.locator(`.fpanel .s-detail h3`).filter({ hasText: title }).waitFor();
 }
 async function covOpenFor(page, id, shelf) {
   await covSelect(page, id, shelf);
@@ -3899,7 +3902,7 @@ async function findCoverTests(browser, vp, url) {
   record(n, P + 'sleeve pictures are only ever asked for at front-500', ctl.caa.length > 0 && ctl.caa.every(r => r.size === '500'), JSON.stringify(ctl.caa.slice(0, 3)));
   record(n, P + 'the blank row in the middle of the tab is skipped when reading', refs.refs.length + refs.none.length === 3);
   record(n, P + 'showing covers asks MusicBrainz nothing and writes nothing', ctl.mb.length === 0 && (await page.evaluate(() => window.__writes.length)) === 0);
-  const strip = async id => { await covSelect(page, id, 'owned'); return (await page.locator(`${shelfSel('owned')} .s-detail .s-dact button`).allTextContents()).map(t => t.trim()); };
+  const strip = async id => { await covSelect(page, id, 'owned'); return (await page.locator(`.fpanel .s-detail .s-dact button`).allTextContents()).map(t => t.trim()); };
   const sa = await strip(X.A), sc = await strip(X.C);
   record(n, P + 'detail strip: Change cover and Remove cover choice when a reference exists', sa.includes('Change cover') && sa.includes('Remove cover choice') && !sa.includes('Find cover'), sa.join(' | '));
   record(n, P + 'detail strip: Find cover (only) for an album marked none, so it can be retried', sc.includes('Find cover') && !sc.includes('Remove cover choice') && !sc.includes('Change cover'), sc.join(' | '));
@@ -3939,8 +3942,8 @@ async function findCoverTests(browser, vp, url) {
   // 4. the tab is missing: nothing is offered, the message is clear, the rest of the app carries on
   f = await covPage(browser, vp, buildSeed({ covTab: 'none' }), url); ({ page, ctl, problems } = f);
   await covSelect(page, X.D, 'hear');
-  record(n, P + 'tab missing: no Find cover button in the detail strip', (await covStripBtn(page, 'hear', 'cover').count()) === 0 && (await page.locator(`${shelfSel('hear')} .s-detail [data-sa="edit"]`).count()) === 1);
-  await page.locator(`${shelfSel('hear')} .s-detail [data-sa="edit"]`).click();
+  record(n, P + 'tab missing: no Find cover button in the detail strip', (await covStripBtn(page, 'hear', 'cover').count()) === 0 && (await page.locator(`.fpanel .s-detail [data-sa="edit"]`).count()) === 1);
+  await page.locator(`.fpanel .s-detail [data-sa="edit"]`).click();
   await page.waitForFunction(() => document.getElementById('albumDlg').open);
   record(n, P + 'tab missing: no Find cover button in the Edit album dialog', await page.locator('#dlgCover').isHidden() && await page.locator('#dlgTracks').isVisible());
   await page.locator('#dlgClose').click();
@@ -3954,7 +3957,7 @@ async function findCoverTests(browser, vp, url) {
   f = await covPage(browser, vp, buildSeed({ covTab: 'empty' }), url); ({ page, ctl, problems } = f);
   await covSelect(page, X.D, 'hear');
   record(n, P + 'empty tab: the detail strip offers Find cover', (await covStripBtn(page, 'hear', 'cover').textContent()).trim() === 'Find cover' && (await covStripBtn(page, 'hear', 'coverx').count()) === 0);
-  await page.locator(`${shelfSel('hear')} .s-detail [data-sa="edit"]`).click();
+  await page.locator(`.fpanel .s-detail [data-sa="edit"]`).click();
   await page.waitForFunction(() => document.getElementById('albumDlg').open);
   record(n, P + 'empty tab: the Edit album footer offers Find cover', (await page.locator('#dlgCover').textContent()) === 'Find cover' && await page.locator('#dlgCover').isVisible() && await page.locator('#dlgCover').isEnabled());
   await page.locator('#dlgCover').click();
@@ -4283,6 +4286,167 @@ async function findCoverWritesTests(browser, vp, url) {
   await f.context.close();
 }
 
+// ----- Floating album panel: replaces the detail strip under a shelf
+const fpRect = page => page.evaluate(() => { const e = document.querySelector('.fpanel'); if (!e) return null; const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; });
+const fpFocus = page => page.evaluate(() => { const a = document.activeElement; return { id: a && a.id, onSleeve: a && a.matches && a.matches('.s-art') ? a.dataset.id : null, inPanel: !!(a && a.closest && a.closest('.fpanel')), tag: a && a.tagName }; });
+const fpTitle = page => page.evaluate(() => { const e = document.querySelector('.fpanel h3'); return e ? e.textContent : null; });
+const sleeve = (page, shelf, id) => page.locator(`${shelfSel(shelf)} .s-it[data-id="${id}"] .s-art`);
+async function floatPanelTests(browser, vp, seed, url) {
+  const n = 'floatpanel';
+  const V = (w, h) => ({ name: `${w}x${h}`, width: w, height: h });
+  const titleOf = (page, id) => page.evaluate(i => window.__sg.state.ix.byId.get(i).title, String(id));
+
+  // 1. wide screen: docked on the left, stays put while the page scrolls, never blocks the page
+  let f = await freshPage(browser, V(1280, 900), seed, url, 'collection'), page = f.page; await cw(page);
+  await expandShelf(page, 'heard');
+  const heard = await shelfIds(page, 'heard'), own = (await shelfIds(page, 'owned'))[0];
+  const first = heard[0];
+  const art = sleeve(page, 'heard', first); await art.scrollIntoViewIfNeeded();
+  const y0 = await page.evaluate(() => scrollY);
+  await art.click();
+  await page.locator('.fpanel').waitFor(); await page.waitForTimeout(300);
+  const t1 = await titleOf(page, first), r1 = await fpRect(page), y1 = await page.evaluate(() => scrollY);
+  record(n, 'at 1280x900 a sleeve click opens one floating panel docked on the left (left 16, width 320)', !!r1 && Math.abs(r1.left - 16) <= 1 && Math.abs(r1.width - 320) <= 1 && (await page.locator('.fpanel').count()) === 1, JSON.stringify(r1));
+  record(n, 'the panel is below the header area (top 96) and inside the viewport', !!r1 && Math.abs(r1.top - 96) <= 1 && r1.bottom <= 900 + 1 && r1.height <= 900 - 96 - 16 + 1, JSON.stringify(r1));
+  record(n, 'selecting the FIRST album of an expanded "Show all" shelf shows the panel in view without scrolling the page', y1 === y0 && !!r1 && r1.top >= 0 && r1.bottom <= 901, `${y0} vs ${y1}`);
+  record(n, 'no detail strip is drawn inside the shelf any more', (await page.locator('#shelves .s-detail').count()) === 0 && (await page.locator('.fpanel .s-detail').count()) === 1);
+  const sem = await page.evaluate(() => { const e = document.querySelector('.fpanel'), h = e.querySelector('h3'); return { role: e.getAttribute('role'), modal: e.getAttribute('aria-modal'), lb: e.getAttribute('aria-labelledby'), hid: h.id, tab: h.getAttribute('tabindex'), act: document.activeElement === h, fixed: getComputedStyle(e).position, z: +getComputedStyle(e).zIndex }; });
+  record(n, 'the panel is role=dialog, aria-modal=false, labelled by its heading, and focus moves to the heading', sem.role === 'dialog' && sem.modal === 'false' && sem.lb === sem.hid && !!sem.hid && sem.tab === '-1' && sem.act && sem.fixed === 'fixed', JSON.stringify(sem));
+  record(n, 'the panel shows the album (title, cover, label chip, Favourite, Tracks, Edit, Find cover)', t1 === await titleOf(page, first) && (await page.locator('.fpanel .s-dcover').count()) === 1 && (await page.locator('.fpanel .lblchip').count()) === 1 && (await page.locator('.fpanel .s-pickbtn').count()) === 1 && (await page.locator('.fpanel [data-sa="tracks"]').count()) === 1 && (await page.locator('.fpanel [data-sa="edit"]').count()) === 1);
+  const cov = await page.evaluate(() => { const c = document.querySelector('.fpanel .s-dcover').getBoundingClientRect(), p = document.querySelector('.fpanel').getBoundingClientRect(); return { w: c.width, h: c.height, pw: p.width }; });
+  record(n, 'the cover is a large square across the panel width', Math.abs(cov.w - cov.h) <= 1 && cov.w >= cov.pw - 40, JSON.stringify(cov));
+  record(n, 'the selected sleeve is highlighted', (await page.locator(`${shelfSel('heard')} .s-it[data-id="${first}"].sel`).count()) === 1 && (await page.locator('#shelves .s-it.sel').count()) === 1);
+  await page.mouse.wheel(0, 700); await page.waitForTimeout(250);
+  const r2 = await fpRect(page), y2 = await page.evaluate(() => scrollY);
+  record(n, 'the panel stays put while the page scrolls', y2 > y1 && !!r2 && Math.abs(r2.top - r1.top) <= 1 && Math.abs(r2.left - r1.left) <= 1, `scrollY ${y1} to ${y2}, top ${r1.top} to ${r2.top}`);
+  await page.evaluate(() => scrollTo(0, 0));
+
+  // 2. swap: another shelf's sleeve replaces the content, it does not add a second panel
+  await sleeve(page, 'owned', own).click(); await page.waitForTimeout(200);
+  const t2 = await fpTitle(page);
+  record(n, 'clicking a sleeve on another shelf swaps the panel content (one panel, new highlight)', t2 === await titleOf(page, own) && t2 !== t1 && (await page.locator('.fpanel').count()) === 1 && (await page.locator('#shelves .s-it.sel').count()) === 1 && (await page.locator(`${shelfSel('owned')} .s-it[data-id="${own}"].sel`).count()) === 1, `${t1} -> ${t2}`);
+  // 3. freshness: a favourite from inside the panel redraws it in place
+  const before = await page.locator('.fpanel .s-pickbtn').getAttribute('aria-pressed');
+  await page.locator('.fpanel .s-pickbtn').click(); await page.waitForTimeout(250);
+  const after = await page.locator('.fpanel .s-pickbtn').getAttribute('aria-pressed'), w = await gw(page);
+  record(n, 'Favourite in the panel updates the panel in place (still open, same album, one cell written)', before !== after && (await fpTitle(page)) === t2 && w.length === 1 && (await fpFocus(page)).inPanel, `${before}->${after} ${JSON.stringify(w)}`);
+  await cw(page);
+
+  // 4. closing: x, Escape in the panel, Escape on a sleeve, clicking the selected sleeve; focus goes back to the sleeve
+  await page.locator('.fpanel .fpanel-x').click(); await page.waitForTimeout(100);
+  let ff = await fpFocus(page);
+  record(n, 'the x button closes the panel and returns focus to the sleeve that opened it', (await page.locator('.fpanel').count()) === 0 && ff.onSleeve === own && (await page.locator('#shelves .s-it.sel').count()) === 0 && !(await page.evaluate(() => document.body.classList.contains('fp-open'))), JSON.stringify(ff));
+  await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor();
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  ff = await fpFocus(page);
+  record(n, 'Escape with focus in the panel closes it and returns focus to the sleeve', (await page.locator('.fpanel').count()) === 0 && ff.onSleeve === own, JSON.stringify(ff));
+  await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor();
+  await sleeve(page, 'owned', own).focus(); await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  record(n, 'Escape with focus on a sleeve closes the panel', (await page.locator('.fpanel').count()) === 0 && (await fpFocus(page)).onSleeve === own);
+  await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor();
+  await sleeve(page, 'owned', own).click(); await page.waitForTimeout(100);
+  ff = await fpFocus(page);
+  record(n, 'clicking the selected sleeve again closes the panel and keeps focus on the sleeve', (await page.locator('.fpanel').count()) === 0 && ff.onSleeve === own, JSON.stringify(ff));
+  record(n, 'opening, swapping and closing the panel writes nothing (apart from the one favourite above)', (await gw(page)).length === 0);
+
+  // 5. the label menu and the Edit dialog open above the panel and give focus back
+  await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor();
+  await page.locator('.fpanel .lblchip').click(); await page.locator('.s-menu').waitFor();
+  const mz = await page.evaluate(() => { const m = document.querySelector('.s-menu'), p = document.querySelector('.fpanel'), r = m.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { mz: +getComputedStyle(m).zIndex, pz: +getComputedStyle(p).zIndex, top: !!(hit && hit.closest('.s-menu')) }; });
+  record(n, 'the label menu opened from the panel sits above it', mz.mz > mz.pz && mz.top, JSON.stringify(mz));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  ff = await fpFocus(page);
+  record(n, 'Escape closes the menu only, and focus returns to the chip inside the panel (the panel stays open)', (await page.locator('.s-menu').count()) === 0 && (await page.locator('.fpanel').count()) === 1 && ff.inPanel && ff.tag === 'BUTTON', JSON.stringify(ff));
+  await page.locator('.fpanel [data-sa="edit"]').click(); await page.waitForFunction(() => document.getElementById('albumDlg').open);
+  const dz = await page.evaluate(() => { const d = document.getElementById('albumDlg'), r = d.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + 20); return !!(hit && d.contains(hit)); });
+  record(n, 'the Edit dialog opened from the panel is above it', dz);
+  await page.locator('#dlgClose').click(); await page.waitForFunction(() => !document.getElementById('albumDlg').open); await page.waitForTimeout(100);
+  ff = await fpFocus(page);
+  record(n, 'closing the Edit dialog returns focus to the Edit button in the panel', (await page.locator('.fpanel').count()) === 1 && ff.inPanel && (await page.evaluate(() => document.activeElement.dataset.sa)) === 'edit', JSON.stringify(ff));
+  await page.locator('.fpanel [data-sa="tracks"]').click(); await page.waitForFunction(() => document.getElementById('tracksDlg').open);
+  await page.locator('#trkClose').click(); await page.waitForFunction(() => !document.getElementById('tracksDlg').open); await page.waitForTimeout(100);
+  record(n, 'the Tracks dialog opened from the panel returns focus to the Tracks button', (await page.evaluate(() => document.activeElement.dataset.sa)) === 'tracks');
+  // 6. the panel belongs to its page: leaving the tab closes it
+  await page.locator('#tab-home').click(); await page.waitForTimeout(200);
+  record(n, 'switching tab closes the panel (and it does not come back on return)', (await page.locator('.fpanel').count()) === 0 && !(await page.evaluate(() => document.body.classList.contains('fp-open'))));
+  await page.locator('#tab-collection').click(); await page.waitForTimeout(200);
+  record(n, '...Collection shows no panel and no selection after coming back', (await page.locator('.fpanel').count()) === 0 && (await page.locator('#shelves .s-it.sel').count()) === 0);
+  // Home has shelves too: its own panel
+  await page.locator('#tab-home').click(); await page.waitForTimeout(200);
+  const hid = await page.evaluate(() => document.querySelector('#homeFav .s-standing .s-it .s-art').dataset.id);
+  await page.locator(`#homeFav .s-it[data-id="${hid}"] .s-art`).first().click(); await page.locator('.fpanel').waitFor();
+  record(n, 'Home: a Favourites sleeve opens the same panel', (await fpTitle(page)) === await titleOf(page, hid) && (await page.locator('#homeFav .s-detail').count()) === 0);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  record(n, 'Home: Escape closes it and focus returns to the sleeve', (await page.locator('.fpanel').count()) === 0 && (await fpFocus(page)).onSleeve === hid);
+  await page.locator(`#homeFav .s-it[data-id="${hid}"] .s-art`).first().click(); await page.locator('.fpanel').waitFor();
+  await page.locator('#tab-collection').click(); await page.waitForTimeout(200);
+  record(n, 'Home: leaving for Collection closes the panel', (await page.locator('.fpanel').count()) === 0);
+  record(n, 'no writes from opening, swapping, switching and closing', (await gw(page)).length === 0);
+  const o1 = await page.evaluate(overflow);
+  record(n, 'no sideways scroll at 1280', o1.sw <= o1.iw, JSON.stringify(o1));
+  record(n, 'no console errors (1280)', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  await page.screenshot({ path: join(OUT, 'floatpanel-1280.png') });
+  await f.context.close();
+
+  // 7. motion: a 180ms slide and fade, none with reduced motion
+  f = await freshPage(browser, V(1280, 900), seed, url, 'collection'); page = f.page;
+  await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor();
+  const an = await page.evaluate(() => { const c = getComputedStyle(document.querySelector('.fpanel')); return { n: c.animationName, d: c.animationDuration }; });
+  record(n, 'the panel slides in over 180ms', an.n === 'fpin' && an.d === '0.18s', JSON.stringify(an));
+  await f.context.close();
+  f = await freshPage(browser, V(1280, 900), seed, url, 'collection', { reducedMotion: 'reduce' }); page = f.page;
+  await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor();
+  const an2 = await page.evaluate(() => { const c = getComputedStyle(document.querySelector('.fpanel')); return { n: c.animationName, d: c.animationDuration, t: c.transitionDuration }; });
+  record(n, 'with reduced motion the panel has no animation or transition', an2.n === 'none' && /^0s/.test(an2.t), JSON.stringify(an2));
+  await f.context.close();
+
+  // 8. 901-1279px: the page content moves over so nothing sits under the panel; wide screens only when needed
+  for (const w of [901, 1000, 1100, 1279, 1600, 1920]) {
+    f = await freshPage(browser, V(w, 900), seed, url, 'collection'); page = f.page;
+    const base = await page.evaluate(() => getComputedStyle(document.querySelector('.wrap')).paddingLeft);
+    await sleeve(page, 'owned', own).click(); await page.locator('.fpanel').waitFor(); await page.waitForTimeout(250);
+    const m = await page.evaluate(() => {
+      const p = document.querySelector('.fpanel').getBoundingClientRect(), wrap = document.querySelector('.wrap');
+      const kids = [...wrap.children].filter(e => e.offsetParent !== null && e.getBoundingClientRect().height > 0);
+      return { pr: p.right, minLeft: Math.min(...kids.map(e => e.getBoundingClientRect().left)), pad: getComputedStyle(wrap).paddingLeft, sw: document.documentElement.scrollWidth, iw: innerWidth, n: kids.length };
+    });
+    record(n, `at ${w}px nothing on the page sits under the panel, with no sideways scroll`, m.minLeft >= m.pr + 8 && m.sw <= m.iw, JSON.stringify({ base, ...m }));
+    if (w >= 1920) record(n, `at ${w}px the page is not pushed over when it already clears the panel`, m.pad === base, `${base} vs ${m.pad}`);
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+    if (w === 1000) record(n, 'closing the panel gives the page its normal padding back', (await page.evaluate(() => getComputedStyle(document.querySelector('.wrap')).paddingLeft)) === base);
+    record(n, `no console errors (${w})`, f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+    await f.context.close();
+  }
+
+  // 9. phone: a bottom sheet
+  f = await freshPage(browser, V(390, 844), seed, url, 'collection', { touch: true }); page = f.page; await cw(page);
+  await page.locator(`${shelfSel('owned')} .s-standing .s-it .s-art`).first().tap();
+  await page.locator('.fpanel').waitFor(); await page.waitForTimeout(300);
+  const sh = await page.evaluate(() => {
+    const e = document.querySelector('.fpanel'), r = e.getBoundingClientRect(), c = getComputedStyle(e), cv = e.querySelector('.s-dcover').getBoundingClientRect(), info = e.querySelector('.s-dinfo').getBoundingClientRect();
+    const tiny = [...e.querySelectorAll('button, a')].map(b => ({ t: b.textContent.trim().slice(0, 14), h: b.getBoundingClientRect().height })).filter(b => b.h < 39.5);
+    return { left: r.left, right: r.right, bottom: r.bottom, h: r.height, cvw: cv.width, cvl: cv.left, infoL: info.left, grab: getComputedStyle(e.querySelector('.fpanel-grab')).display, rad: c.borderTopLeftRadius, tiny, sw: document.documentElement.scrollWidth, iw: innerWidth, ih: innerHeight, focus: document.activeElement.tagName };
+  });
+  record(n, 'at 390x844 the panel is a bottom sheet: bottom at the viewport edge, 8px side margins, max 70vh', Math.abs(sh.bottom - sh.ih) <= 1 && Math.abs(sh.left - 8) <= 1 && Math.abs(sh.right - (sh.iw - 8)) <= 1 && sh.h <= sh.ih * 0.7 + 1, JSON.stringify(sh));
+  record(n, 'the sheet has a grab bar, rounded top corners and the compact layout (cover 88px left, info right)', sh.grab === 'block' && parseFloat(sh.rad) >= 12 && Math.abs(sh.cvw - 88) <= 1 && sh.infoL > sh.cvl + 80, JSON.stringify(sh));
+  record(n, 'every tap target in the sheet is 40px or taller', sh.tiny.length === 0, JSON.stringify(sh.tiny));
+  record(n, 'no sideways scroll at 390 with the sheet open', sh.sw <= sh.iw, `${sh.sw} vs ${sh.iw}`);
+  await page.locator('.fpanel .lblchip').tap(); await page.locator('.s-menu').waitFor();
+  record(n, 'phone: the label menu works from the sheet', (await page.locator('.s-menu button').count()) === 7 || (await page.locator('.s-menu button').count()) > 3);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  await page.locator('.fpanel [data-sa="edit"]').tap(); await page.waitForFunction(() => document.getElementById('albumDlg').open);
+  await page.locator('#dlgClose').tap(); await page.waitForFunction(() => !document.getElementById('albumDlg').open);
+  record(n, 'phone: the Edit dialog opens from the sheet and closing it leaves the sheet open', (await page.locator('.fpanel').count()) === 1);
+  await page.locator('.fpanel .fpanel-x').tap(); await page.waitForTimeout(100);
+  record(n, 'phone: x closes the sheet', (await page.locator('.fpanel').count()) === 0);
+  await page.locator(`${shelfSel('owned')} .s-standing .s-it .s-art`).first().tap(); await page.locator('.fpanel').waitFor();
+  await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+  record(n, 'phone: Escape closes the sheet', (await page.locator('.fpanel').count()) === 0);
+  record(n, 'phone: opening and closing wrote nothing', (await gw(page)).length === 0);
+  record(n, 'no console errors (390)', f.problems.length === 0, f.problems.slice(0, 2).join(' | '));
+  await f.context.close();
+}
+
 async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, seedLC) {
   console.log(`\n[${vp.name} ${vp.width}x${vp.height}]`);
   const only = (process.env.SMOKE_ONLY || '').split(',').filter(Boolean);
@@ -4371,6 +4535,7 @@ async function runViewport(browser, vp, seed, seedL, wrapperUrl, rawUrl, seedC, 
   await run('menu', () => menuKeyboardTests(browser, vp, seed, wrapperUrl));
   await run('dnd', () => dragTests(browser, vp, seed, wrapperUrl));
   await run('stack', () => stackTests(browser, vp, seed, wrapperUrl));
+  if (vp.name === 'laptop') await run('floatpanel', () => floatPanelTests(browser, vp, seed, wrapperUrl));   // sets its own viewport sizes, so once is enough
   await run('inc', () => incTests(browser, vp, seed, seedL, wrapperUrl));
   await run('log', () => logSwitchTests(browser, vp, seed, wrapperUrl));
   await run('tracks', () => tracksTests(browser, vp, seed, wrapperUrl));
